@@ -128,3 +128,16 @@ export function getNextSundayStatus() {
     formattedCountdown: `${hours}h ${minutes}m ${seconds}s`,
   };
 }
+
+/**
+ * Extracts standard 11-character YouTube video ID from various URL formats
+ * (e.g. youtube.com/watch?v=..., youtu.be/..., youtube.com/shorts/...)
+ */
+export function extractYoutubeId(url) {
+  if (!url) return 'y9u2eQy5fmg';
+  const trimmed = url.trim();
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=|shorts\/)([^#\&\?]*).*/;
+  const match = trimmed.match(regExp);
+  return (match && match[2].length === 11) ? match[2] : (trimmed.length === 11 ? trimmed : 'y9u2eQy5fmg');
+}
+

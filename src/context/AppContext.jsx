@@ -1,10 +1,61 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import confetti from 'canvas-confetti';
-import { calculateEarnings, getNextSundayStatus } from '../utils/finance';
+import { calculateEarnings, getNextSundayStatus, extractYoutubeId } from '../utils/finance';
 
 const AppContext = createContext();
 
-const STORAGE_KEY = 'earnflow_pro_state_v6';
+const STORAGE_KEY = 'earnflow_pro_state_v8';
+
+export const INITIAL_VIDEO_TASKS = [
+  {
+    id: 'vid_101',
+    title: 'Brand Launch: Global Alpha Tech Review',
+    category: 'Video',
+    platform: 'YouTube',
+    videoUrl: 'https://www.youtube.com/watch?v=y9u2eQy5fmg',
+    youtubeId: 'y9u2eQy5fmg',
+    reward: 35.00,
+    duration: 20,
+    shareRequired: true,
+    sharePlatform: 'Facebook & Friends',
+    status: 'ACTIVE', // ACTIVE or PAUSED
+    totalShares: 1420,
+    description: 'Watch video for 20s and share to your Facebook feed or friends to claim reward.',
+    createdAt: new Date(Date.now() - 3 * 86400000).toISOString(),
+  },
+  {
+    id: 'vid_102',
+    title: 'Compound Wealth: 2026 Financial Freedom Roadmap',
+    category: 'Video',
+    platform: 'YouTube',
+    videoUrl: 'https://www.youtube.com/watch?v=OQznqM_9k8I',
+    youtubeId: 'OQznqM_9k8I',
+    reward: 50.00,
+    duration: 25,
+    shareRequired: true,
+    sharePlatform: 'Facebook & Friends',
+    status: 'ACTIVE',
+    totalShares: 980,
+    description: 'Watch video for 25s and share to your Facebook feed or friends to claim reward.',
+    createdAt: new Date(Date.now() - 2 * 86400000).toISOString(),
+  },
+  {
+    id: 'vid_103',
+    title: 'Smart Wealth Psychology & High-Performing Habits',
+    category: 'Video',
+    platform: 'YouTube',
+    videoUrl: 'https://www.youtube.com/watch?v=wfOkm4D04rU',
+    youtubeId: 'wfOkm4D04rU',
+    reward: 40.00,
+    duration: 20,
+    shareRequired: true,
+    sharePlatform: 'Facebook & Friends',
+    status: 'ACTIVE',
+    totalShares: 1150,
+    description: 'Watch video for 20s and share to your Facebook feed or friends to claim reward.',
+    createdAt: new Date(Date.now() - 1 * 86400000).toISOString(),
+  },
+];
 
 export const STREAK_REWARDS = {
   1: 5,
@@ -193,12 +244,15 @@ const INITIAL_STATE = {
     }
   ],
   tasksCompletedToday: {
-    video_1: true,
+    vid_101: true,
+    vid_102: false,
+    vid_103: false,
     music_1: false,
     spin_1: false,
     scratch_1: false,
     memory_1: false,
   },
+  dailyVideoTasks: INITIAL_VIDEO_TASKS,
   transactions: [
     {
       id: 'TXN-908124',
@@ -469,6 +523,9 @@ export function AppProvider({ children }) {
         ...prev.tasksCompletedToday,
         [taskId]: true,
       },
+      dailyVideoTasks: (prev.dailyVideoTasks || []).map((t) =>
+        t.id === taskId ? { ...t, totalShares: (t.totalShares || 0) + 1 } : t
+      ),
       transactions: [newTxn, ...prev.transactions],
     }));
 
@@ -1003,6 +1060,75 @@ export function AppProvider({ children }) {
     showToast('Platform reset to fresh state.');
   };
 
+  // Admin Task Management: Add new video task
+  const addVideoTask = (taskData) => {
+    const newTask = {
+      id: `vid_${Date.now().toString().slice(-4)}`,
+      title: taskData.title || 'Sponsored Video Campaign',
+      category: 'Video',
+      platform: taskData.platform || 'YouTube',
+      videoUrl: taskData.videoUrl || 'https://www.youtube.com/watch?v=y9u2eQy5fmg',
+      youtubeId: extractYoutubeId(taskData.videoUrl || 'y9u2eQy5fmg'),
+      reward: Number(taskData.reward) || 30.00,
+      duration: Number(taskData.duration) || 20,
+      shareRequired: taskData.shareRequired !== false,
+      sharePlatform: taskData.sharePlatform || 'Facebook & Friends',
+      status: 'ACTIVE',
+      totalShares: 0,
+      description: taskData.description || 'Watch full video and share on Facebook or with friends to receive instant cash reward.',
+      createdAt: new Date().toISOString(),
+    };
+
+    setState((prev) => ({
+      ...prev,
+      dailyVideoTasks: [newTask, ...(prev.dailyVideoTasks || [])],
+    }));
+
+    showToast(`✓ New task "${newTask.title}" published!`);
+    return newTask;
+  };
+
+  // Admin Task Management: Update existing video task
+  const updateVideoTask = (taskId, updatedData) => {
+    setState((prev) => ({
+      ...prev,
+      dailyVideoTasks: (prev.dailyVideoTasks || []).map((t) =>
+        t.id === taskId
+          ? {
+              ...t,
+              ...updatedData,
+              youtubeId: updatedData.videoUrl ? extractYoutubeId(updatedData.videoUrl) : t.youtubeId,
+            }
+          : t
+      ),
+    }));
+    showToast('Task updated successfully.');
+  };
+
+  // Admin Task Management: Delete video task
+  const deleteVideoTask = (taskId) => {
+    setState((prev) => ({
+      ...prev,
+      dailyVideoTasks: (prev.dailyVideoTasks || []).filter((t) => t.id !== taskId),
+    }));
+    showToast('Task removed from platform.', 'warning');
+  };
+
+  // Admin Task Management: Toggle video task active/paused status
+  const toggleVideoTaskStatus = (taskId) => {
+    setState((prev) => ({
+      ...prev,
+      dailyVideoTasks: (prev.dailyVideoTasks || []).map((t) => {
+        if (t.id === taskId) {
+          const nextStatus = t.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE';
+          showToast(`Task is now ${nextStatus === 'ACTIVE' ? 'ACTIVE (Visible to users)' : 'PAUSED (Hidden from users)'}`);
+          return { ...t, status: nextStatus };
+        }
+        return t;
+      }),
+    }));
+  };
+
   const sundayStatus = getNextSundayStatus();
   // 24/7 Anytime Payouts are active per investor policy (Min ₹100 • 1/day)
   const isWithdrawalAllowed = true;
@@ -1019,6 +1145,7 @@ export function AppProvider({ children }) {
     <AppContext.Provider
       value={{
         ...state,
+        dailyVideoTasks: state.dailyVideoTasks || INITIAL_VIDEO_TASKS,
         totalLockedPrincipal,
         totalDailyQuota,
         isWithdrawalAllowed,
@@ -1051,6 +1178,11 @@ export function AppProvider({ children }) {
         rejectDeposit,
         approveWithdrawal,
         rejectWithdrawal,
+        // Admin Task Management
+        addVideoTask,
+        updateVideoTask,
+        deleteVideoTask,
+        toggleVideoTaskStatus,
       }}
     >
       {children}

@@ -11,7 +11,8 @@ import {
   Gift, 
   Brain,
   Wallet,
-  ArrowDownCircle
+  ArrowDownCircle,
+  Share2
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { formatINR } from '../utils/finance';
@@ -102,7 +103,7 @@ const GAME_TASKS = [
 ];
 
 export default function TaskCenterView({ onOpenWithdraw }) {
-  const { rewardWallet, tasksCompletedToday, totalDailyQuota, isWithdrawalAllowed } = useApp();
+  const { rewardWallet, tasksCompletedToday, totalDailyQuota, isWithdrawalAllowed, dailyVideoTasks } = useApp();
 
   // Active modals
   const [activeVideoTask, setActiveVideoTask] = useState(null);
@@ -111,7 +112,11 @@ export default function TaskCenterView({ onOpenWithdraw }) {
   const [activeScratchTask, setActiveScratchTask] = useState(null);
   const [activeMemoryTask, setActiveMemoryTask] = useState(null);
 
-  const allTasks = [...VIDEO_TASKS, ...MUSIC_TASKS, ...GAME_TASKS];
+  const activeVideoTasks = (dailyVideoTasks && dailyVideoTasks.length > 0)
+    ? dailyVideoTasks.filter((t) => t.status !== 'PAUSED')
+    : VIDEO_TASKS;
+
+  const allTasks = [...activeVideoTasks, ...MUSIC_TASKS, ...GAME_TASKS];
   const completedCount = allTasks.filter((t) => tasksCompletedToday[t.id]).length;
   const totalCount = allTasks.length;
   const progressPercent = Math.round((completedCount / totalCount) * 100);
@@ -201,13 +206,13 @@ export default function TaskCenterView({ onOpenWithdraw }) {
             <Video size={20} />
           </div>
           <div>
-            <h3 style={{ fontSize: '1.3rem', fontWeight: 700 }}>Watch YouTube Videos</h3>
-            <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Watch curated educational videos to claim cash rewards</p>
+            <h3 style={{ fontSize: '1.3rem', fontWeight: 700 }}>Watch & Share Sponsor Videos</h3>
+            <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Watch promotional videos and share to Facebook friends to receive monetary rewards</p>
           </div>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.25rem' }}>
-          {VIDEO_TASKS.map((task) => {
+          {activeVideoTasks.map((task) => {
             const isDone = tasksCompletedToday[task.id];
             return (
               <div 
@@ -223,10 +228,15 @@ export default function TaskCenterView({ onOpenWithdraw }) {
                 }}
               >
                 <div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                    <span className="badge badge-gold" style={{ fontSize: '0.68rem' }}>
-                      <Clock size={11} /> {task.duration}s Watch
-                    </span>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.65rem' }}>
+                    <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                      <span className="badge badge-gold" style={{ fontSize: '0.68rem' }}>
+                        <Clock size={11} /> {task.duration}s Watch
+                      </span>
+                      <span className="badge" style={{ fontSize: '0.68rem', background: 'rgba(24, 119, 242, 0.15)', color: '#60a5fa', border: '1px solid rgba(24, 119, 242, 0.3)' }}>
+                        <Share2 size={11} /> Share to Facebook
+                      </span>
+                    </div>
                     <span style={{ fontSize: '1.15rem', fontWeight: 800, color: '#34d399' }}>
                       +{formatINR(task.reward)}
                     </span>
@@ -235,7 +245,7 @@ export default function TaskCenterView({ onOpenWithdraw }) {
                     {task.title}
                   </h4>
                   <p style={{ fontSize: '0.82rem', color: '#94a3b8', lineHeight: 1.4, marginBottom: '1.25rem' }}>
-                    {task.description}
+                    {task.description || 'Watch full duration and share on your Facebook wall to receive instant cash credit.'}
                   </p>
                 </div>
 
@@ -245,7 +255,7 @@ export default function TaskCenterView({ onOpenWithdraw }) {
                     style={{ width: '100%', color: '#34d399', cursor: 'default' }}
                     disabled
                   >
-                    <CheckCircle2 size={16} /> Completed & Credited (+{formatINR(task.reward)})
+                    <CheckCircle2 size={16} /> Completed & Shared (+{formatINR(task.reward)})
                   </button>
                 ) : (
                   <button 
@@ -253,7 +263,7 @@ export default function TaskCenterView({ onOpenWithdraw }) {
                     style={{ width: '100%' }}
                     onClick={() => setActiveVideoTask(task)}
                   >
-                    <PlayCircle size={16} /> Watch & Earn {formatINR(task.reward)}
+                    <PlayCircle size={16} /> Watch & Share to Earn {formatINR(task.reward)}
                   </button>
                 )}
               </div>

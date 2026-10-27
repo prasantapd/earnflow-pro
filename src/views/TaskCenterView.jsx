@@ -244,6 +244,14 @@ export default function TaskCenterView({ onOpenWithdraw }) {
             />
           </div>
         </div>
+
+        {/* Strict Task Completion Rule Notice */}
+        <div style={{ marginTop: '1.25rem', padding: '0.75rem 1rem', background: 'rgba(59, 130, 246, 0.08)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(59, 130, 246, 0.25)', display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+          <ShieldCheck size={18} color="#60a5fa" style={{ flexShrink: 0 }} />
+          <div style={{ fontSize: '0.8rem', color: '#cbd5e1' }}>
+            <strong style={{ color: '#60a5fa' }}>Pay-Per-Completion Rule:</strong> Payout is strictly eligible ONLY for tasks you <strong>actually complete</strong>. Any task you fail to finish, skip, or fail within the timer generates <strong style={{ color: '#f87171' }}>₹0.00 income</strong> and cannot be counted or withdrawn.
+          </div>
+        </div>
       </div>
 
       {/* Daily Login Streak Attendance Bonus Widget */}
@@ -326,6 +334,19 @@ export default function TaskCenterView({ onOpenWithdraw }) {
                     <p style={{ fontSize: '0.82rem', color: '#94a3b8', lineHeight: 1.4, marginBottom: '1.25rem', paddingLeft: '42px' }}>
                       {task.description}
                     </p>
+                  </div>
+
+                  <div style={{ marginBottom: '0.65rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.72rem' }}>
+                    <span style={{ color: '#94a3b8' }}>Payout Status:</span>
+                    {isDone ? (
+                      <span style={{ color: '#34d399', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                        <CheckCircle2 size={12} /> Counted in Wallet (+{formatINR(task.reward)})
+                      </span>
+                    ) : (
+                      <span style={{ color: '#f87171', fontWeight: 700 }}>
+                        Incomplete • ₹0.00 Counted
+                      </span>
+                    )}
                   </div>
 
                   {isDone ? (

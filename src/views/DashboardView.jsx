@@ -154,7 +154,7 @@ export default function DashboardView({
             ~{formatINR(totalDailyQuota)}
             <span style={{ fontSize: '0.85rem', color: '#94a3b8', fontWeight: 500 }}> / day</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
             <span style={{ fontSize: '0.78rem', color: '#cbd5e1' }}>
               ~{formatINR(totalDailyQuota * 7)} / week
             </span>
@@ -165,6 +165,9 @@ export default function DashboardView({
             >
               Do Tasks
             </button>
+          </div>
+          <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
+            *Must complete tasks to earn. Incomplete tasks earn ₹0.
           </div>
         </div>
 

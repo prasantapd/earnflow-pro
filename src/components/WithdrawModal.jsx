@@ -171,6 +171,13 @@ export default function WithdrawModal({ isOpen, onClose, onOpenPayoutSetup, onOp
               </span>
             </div>
 
+            <div style={{ padding: '0.6rem 0.85rem', background: 'rgba(59, 130, 246, 0.08)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(59, 130, 246, 0.25)', marginBottom: '0.85rem', fontSize: '0.75rem', color: '#cbd5e1', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <ShieldCheck size={16} color="#60a5fa" style={{ flexShrink: 0 }} />
+              <span>
+                <strong>Pay-Per-Completion Rule:</strong> Payout is strictly eligible only for tasks you have completed. Incomplete or skipped daily tasks generate <strong style={{ color: '#f87171' }}>₹0.00</strong> and are never counted.
+              </span>
+            </div>
+
             <div style={{ position: 'relative', marginBottom: '0.65rem' }}>
               <span style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', fontWeight: 700, color: '#34d399', fontSize: '1.15rem' }}>
                 ₹

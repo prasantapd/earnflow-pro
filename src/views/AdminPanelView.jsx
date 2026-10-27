@@ -27,7 +27,14 @@ import {
   ExternalLink,
   Clock,
   Play,
-  Gamepad2
+  Gamepad2,
+  Footprints,
+  Music,
+  Brain,
+  Grid,
+  Sparkles,
+  Zap,
+  Activity
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { formatINR, formatDate } from '../utils/finance';
@@ -50,15 +57,17 @@ export default function AdminPanelView() {
     forceSunday,
     toggleForceSunday,
     showToast,
-    dailyVideoTasks,
-    addVideoTask,
-    updateVideoTask,
-    deleteVideoTask,
-    toggleVideoTaskStatus,
+    dailyTaskRoster,
+    taskRosterPresets,
+    applyTaskRosterPreset,
+    addCustomDailyTask,
+    updateDailyTask,
+    deleteDailyTask,
+    toggleDailyTaskStatus,
     gamingStats
   } = useApp();
 
-  const [activeAdminTab, setActiveAdminTab] = useState('users'); // 'users', 'deposits', 'withdrawals', 'settings'
+  const [activeAdminTab, setActiveAdminTab] = useState('users'); // 'users', 'deposits', 'withdrawals', 'settings', 'tasks'
   const [userSearch, setUserSearch] = useState('');
   const [userStatusFilter, setUserStatusFilter] = useState('ALL');
 
@@ -68,6 +77,7 @@ export default function AdminPanelView() {
   const [rejectModal, setRejectModal] = useState({ isOpen: false, type: '', id: '', reason: '' });
   const [taskModal, setTaskModal] = useState({
     isOpen: false,
+    type: 'video',
     title: '',
     platform: 'YouTube',
     videoUrl: '',
@@ -838,15 +848,19 @@ export default function AdminPanelView() {
         </div>
       )}
 
-      {/* TAB 5: DAILY SPONSOR TASKS & VIRAL SHARES MANAGER */}
+      {/* TAB 5: DYNAMIC DAILY TASK ROSTER & CAMPAIGN ORCHESTRATOR */}
       {activeAdminTab === 'tasks' && (
         <div>
-          {/* Action Header & Summary Stats */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
+          {/* Action Header */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
             <div>
-              <h3 style={{ fontSize: '1.3rem', fontWeight: 800 }}>Daily Sponsor Video Tasks & Viral Shares Manager</h3>
-              <p style={{ fontSize: '0.82rem', color: '#94a3b8' }}>
-                Add sponsor YouTube/Facebook video URLs, set watch duration, and enforce mandatory Facebook share for user payouts.
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                <span className="badge badge-emerald">Daily Task Orchestrator</span>
+                <span className="badge badge-gold">Dynamic Combination Engine</span>
+              </div>
+              <h3 style={{ fontSize: '1.35rem', fontWeight: 800 }}>Daily Task Roster & Campaign Manager</h3>
+              <p style={{ fontSize: '0.82rem', color: '#94a3b8', maxWidth: '720px' }}>
+                Change what tasks users see each day (e.g. Video + Song + 3x3 Slide, Video + Games + Walk for 10 Mins). Timed skill games limit payout liability while increasing viral reach and retention.
               </p>
             </div>
             <button
@@ -854,6 +868,7 @@ export default function AdminPanelView() {
               style={{ fontWeight: 700 }}
               onClick={() => setTaskModal({
                 isOpen: true,
+                type: 'video',
                 title: '',
                 platform: 'YouTube',
                 videoUrl: '',
@@ -864,120 +879,174 @@ export default function AdminPanelView() {
                 description: '',
               })}
             >
-              <Plus size={16} /> Add Daily Video Task
+              <Plus size={16} /> Add Custom Task to Roster
             </button>
           </div>
 
+          {/* Quick Preset Combo Switcher */}
+          <div className="glass-card" style={{ padding: '1.25rem', marginBottom: '1.5rem', border: '1px solid rgba(99, 102, 241, 0.3)', background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(16, 185, 129, 0.05) 100%)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <Zap size={15} color="#fbbf24" /> 1-Click Daily Roster Presets (Switch Today's Mix Instantly)
+              </div>
+              <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
+                Admin can switch combinations anytime without coding
+              </span>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '0.75rem' }}>
+              {(taskRosterPresets || []).map((preset) => (
+                <div 
+                  key={preset.id}
+                  className="card-interactive"
+                  onClick={() => applyTaskRosterPreset(preset.id)}
+                  style={{
+                    padding: '0.85rem 1rem',
+                    borderRadius: 'var(--radius-md)',
+                    background: 'rgba(255, 255, 255, 0.04)',
+                    border: '1px solid var(--border-subtle)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between'
+                  }}
+                >
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
+                      <span className="badge badge-indigo" style={{ fontSize: '0.65rem' }}>{preset.badge}</span>
+                      <span style={{ fontSize: '0.68rem', color: '#34d399', fontWeight: 700 }}>Apply Combo →</span>
+                    </div>
+                    <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#f8fafc', marginBottom: '0.2rem' }}>
+                      {preset.name}
+                    </div>
+                    <div style={{ fontSize: '0.73rem', color: '#94a3b8', lineHeight: 1.3 }}>
+                      {preset.description}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
           {/* Stats Bar */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
             <div className="glass-card" style={{ padding: '1.15rem' }}>
-              <div style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>Active Video Tasks</div>
+              <div style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>Active Tasks Today</div>
               <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#34d399', margin: '0.2rem 0' }}>
-                {(dailyVideoTasks || []).filter((t) => t.status === 'ACTIVE').length} Active
+                {(dailyTaskRoster || []).filter((t) => t.status === 'ACTIVE').length} Active
               </div>
               <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                {(dailyVideoTasks || []).length} total campaigns in system
+                {(dailyTaskRoster || []).length} total configured in platform
               </div>
             </div>
 
             <div className="glass-card" style={{ padding: '1.15rem' }}>
-              <div style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>Total Viral Shares</div>
-              <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#60a5fa', margin: '0.2rem 0' }}>
-                {(dailyVideoTasks || []).reduce((sum, t) => sum + (t.totalShares || 0), 0).toLocaleString()} Shares
-              </div>
-              <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                Organic distribution on Facebook & networks
-              </div>
-            </div>
-
-            <div className="glass-card" style={{ padding: '1.15rem' }}>
-              <div style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>Average Task Payout</div>
+              <div style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>Max Potential Payout</div>
               <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#fbbf24', margin: '0.2rem 0' }}>
-                ₹{((dailyVideoTasks || []).reduce((sum, t) => sum + (Number(t.reward) || 0), 0) / Math.max(1, (dailyVideoTasks || []).length)).toFixed(2)}
+                {formatINR((dailyTaskRoster || []).filter((t) => t.status === 'ACTIVE').reduce((sum, t) => sum + (Number(t.reward) || 0), 0))}
               </div>
               <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                Per verified watch & share
+                If 100% of all tasks are completed
+              </div>
+            </div>
+
+            <div className="glass-card" style={{ padding: '1.15rem' }}>
+              <div style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>Skill-Barrier Tasks</div>
+              <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#c084fc', margin: '0.2rem 0' }}>
+                {(dailyTaskRoster || []).filter((t) => t.status === 'ACTIVE' && (t.type === 'slide3' || t.type === 'memory' || t.type === 'walk')).length} Timed Tasks
+              </div>
+              <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                Reduces company payout liability by ~50%
               </div>
             </div>
           </div>
 
-          {/* Tasks Table */}
+          {/* Dynamic Tasks Roster Table */}
           <div className="glass-card" style={{ padding: '1.25rem', overflowX: 'auto' }}>
-            {(!dailyVideoTasks || dailyVideoTasks.length === 0) ? (
+            <div style={{ fontSize: '0.95rem', fontWeight: 800, marginBottom: '0.85rem', color: '#f8fafc' }}>
+              Platform Task Catalog & Active Roster Status
+            </div>
+
+            {(!dailyTaskRoster || dailyTaskRoster.length === 0) ? (
               <div style={{ textAlign: 'center', padding: '2.5rem', color: '#94a3b8' }}>
                 <Video size={40} style={{ opacity: 0.3, marginBottom: '0.75rem' }} />
-                <p>No daily video tasks configured. Click <strong>"Add Daily Video Task"</strong> to publish your first campaign!</p>
+                <p>No tasks configured in roster. Click <strong>"Add Custom Task to Roster"</strong> to publish your first task!</p>
               </div>
             ) : (
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid var(--border-subtle)', color: '#94a3b8', textAlign: 'left' }}>
-                    <th style={{ padding: '0.75rem' }}>Campaign / Video</th>
-                    <th style={{ padding: '0.75rem' }}>Platform</th>
-                    <th style={{ padding: '0.75rem' }}>Watch Duration</th>
-                    <th style={{ padding: '0.75rem' }}>Share Rule</th>
+                    <th style={{ padding: '0.75rem' }}>Type</th>
+                    <th style={{ padding: '0.75rem' }}>Task Name & Description</th>
+                    <th style={{ padding: '0.75rem' }}>Category</th>
+                    <th style={{ padding: '0.75rem' }}>Duration / Timer Rule</th>
                     <th style={{ padding: '0.75rem' }}>Reward</th>
-                    <th style={{ padding: '0.75rem' }}>Completed Shares</th>
                     <th style={{ padding: '0.75rem' }}>Status</th>
                     <th style={{ padding: '0.75rem', textAlign: 'center' }}>Admin Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {dailyVideoTasks.map((t) => (
+                  {dailyTaskRoster.map((t) => (
                     <tr key={t.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
                       <td style={{ padding: '0.75rem' }}>
-                        <div style={{ fontWeight: 700, color: '#f8fafc', marginBottom: '0.15rem' }}>{t.title}</div>
-                        <a 
-                          href={t.videoUrl} 
-                          target="_blank" 
-                          rel="noreferrer" 
-                          style={{ fontSize: '0.75rem', color: '#60a5fa', display: 'flex', alignItems: 'center', gap: '0.25rem', textDecoration: 'none' }}
-                        >
-                          <ExternalLink size={11} /> View Video Link
-                        </a>
+                        <div style={{ width: 34, height: 34, borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: t.type === 'video' ? 'rgba(239, 68, 68, 0.2)' : t.type === 'walk' ? 'rgba(16, 185, 129, 0.2)' : t.type === 'slide3' ? 'rgba(99, 102, 241, 0.2)' : t.type === 'memory' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(245, 158, 11, 0.2)', color: t.type === 'video' ? '#f87171' : t.type === 'walk' ? '#34d399' : t.type === 'slide3' ? '#818cf8' : t.type === 'memory' ? '#60a5fa' : '#fbbf24' }}>
+                          {t.type === 'video' ? <Video size={17} /> : t.type === 'walk' ? <Footprints size={17} /> : t.type === 'slide3' ? <Grid size={17} /> : t.type === 'memory' ? <Brain size={17} /> : t.type === 'music' ? <Music size={17} /> : <Sparkles size={17} />}
+                        </div>
                       </td>
                       <td style={{ padding: '0.75rem' }}>
-                        <span className="badge badge-emerald" style={{ fontSize: '0.7rem' }}>
-                          {t.platform || 'YouTube'}
+                        <div style={{ fontWeight: 700, color: '#f8fafc', marginBottom: '0.15rem' }}>{t.title}</div>
+                        <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                          {t.description || 'Verified engagement task.'}
+                        </div>
+                        {t.videoUrl && (
+                          <a 
+                            href={t.videoUrl} 
+                            target="_blank" 
+                            rel="noreferrer" 
+                            style={{ fontSize: '0.72rem', color: '#60a5fa', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', textDecoration: 'none', marginTop: '0.2rem' }}
+                          >
+                            <ExternalLink size={10} /> {t.videoUrl}
+                          </a>
+                        )}
+                      </td>
+                      <td style={{ padding: '0.75rem' }}>
+                        <span className="badge badge-indigo" style={{ fontSize: '0.68rem' }}>
+                          {t.category || t.type}
                         </span>
                       </td>
                       <td style={{ padding: '0.75rem' }}>
                         <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#fbbf24', fontWeight: 600 }}>
-                          <Clock size={12} /> {t.duration}s
+                          <Clock size={12} /> {t.duration >= 60 ? `${Math.round(t.duration / 60)} min` : `${t.duration}s`}
                         </span>
-                      </td>
-                      <td style={{ padding: '0.75rem' }}>
-                        <span className="badge" style={{ fontSize: '0.7rem', background: 'rgba(24, 119, 242, 0.15)', color: '#60a5fa', border: '1px solid rgba(24, 119, 242, 0.3)' }}>
-                          <Share2 size={11} /> Mandatory FB Share
-                        </span>
+                        {t.type === 'slide3' && <span style={{ fontSize: '0.68rem', color: '#f87171' }}>Strict 60s countdown</span>}
+                        {t.type === 'memory' && <span style={{ fontSize: '0.68rem', color: '#f87171' }}>Strict 60s countdown</span>}
+                        {t.type === 'walk' && <span style={{ fontSize: '0.68rem', color: '#34d399' }}>1,200 Steps Pedometer</span>}
+                        {t.shareRequired && <span style={{ fontSize: '0.68rem', color: '#60a5fa' }}>+ Mandatory FB Share</span>}
                       </td>
                       <td style={{ padding: '0.75rem', fontWeight: 800, color: '#34d399' }}>
                         +{formatINR(t.reward)}
                       </td>
-                      <td style={{ padding: '0.75rem', fontWeight: 700, color: '#22d3ee' }}>
-                        {(t.totalShares || 0).toLocaleString()} shares
-                      </td>
                       <td style={{ padding: '0.75rem' }}>
                         <span className={`badge ${t.status === 'ACTIVE' ? 'badge-emerald' : 'badge-gold'}`} style={{ fontSize: '0.7rem' }}>
-                          {t.status}
+                          {t.status === 'ACTIVE' ? '🟢 ACTIVE TODAY' : '⚪ PAUSED'}
                         </span>
                       </td>
                       <td style={{ padding: '0.75rem', textAlign: 'center' }}>
                         <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center' }}>
                           <button
-                            className="btn btn-secondary btn-sm"
+                            className={`btn ${t.status === 'ACTIVE' ? 'btn-secondary' : 'btn-primary'} btn-sm`}
                             style={{ fontSize: '0.72rem', padding: '0.25rem 0.6rem' }}
-                            onClick={() => toggleVideoTaskStatus(t.id)}
-                            title="Toggle whether users can see and complete this task"
+                            onClick={() => toggleDailyTaskStatus(t.id)}
+                            title="Toggle whether users can see and complete this task today"
                           >
-                            {t.status === 'ACTIVE' ? 'Pause' : 'Activate'}
+                            {t.status === 'ACTIVE' ? 'Pause Task' : 'Activate Task'}
                           </button>
                           <button
                             className="btn btn-danger btn-sm"
                             style={{ fontSize: '0.72rem', padding: '0.25rem 0.5rem' }}
                             onClick={() => {
                               if (window.confirm(`Delete task "${t.title}" permanently?`)) {
-                                deleteVideoTask(t.id);
+                                deleteDailyTask(t.id);
                               }
                             }}
                             title="Delete task from platform"
@@ -1112,43 +1181,91 @@ export default function AdminPanelView() {
         </div>
       )}
 
-      {/* Modal: Add New Sponsor Video Task */}
+      {/* Modal: Add New Task to Daily Roster */}
       {taskModal.isOpen && (
         <div className="modal-overlay" onClick={() => setTaskModal({ ...taskModal, isOpen: false })}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 540 }}>
             <h3 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '0.35rem' }}>
-              Publish Daily Sponsor Video Task
+              Publish Task to Daily Roster
             </h3>
             <p style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '1.25rem' }}>
-              Add a new video campaign. Users will be required to watch and share to their Facebook network to claim payout.
+              Create a new task. You can choose Video & Share, Focus Music, 3×3 Slide Puzzle, Memory Match, or 10-Minute Walk.
             </p>
 
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-                if (!taskModal.title.trim() || !taskModal.videoUrl.trim()) {
-                  showToast('Please enter both title and video URL', 'error');
+                if (!taskModal.title.trim()) {
+                  showToast('Please enter task title', 'error');
                   return;
                 }
-                addVideoTask({
+                if (taskModal.type === 'video' && !taskModal.videoUrl.trim()) {
+                  showToast('Please enter video URL for video task', 'error');
+                  return;
+                }
+                addCustomDailyTask({
+                  type: taskModal.type,
                   title: taskModal.title,
-                  platform: taskModal.platform,
+                  platform: taskModal.platform || (taskModal.type === 'video' ? 'YouTube' : 'EarnFlow App'),
                   videoUrl: taskModal.videoUrl,
-                  duration: Number(taskModal.duration) || 20,
+                  duration: Number(taskModal.duration) || (taskModal.type === 'walk' ? 600 : taskModal.type === 'slide3' || taskModal.type === 'memory' ? 60 : 20),
                   reward: Number(taskModal.reward) || 35,
-                  shareRequired: taskModal.shareRequired,
+                  shareRequired: taskModal.type === 'video' ? taskModal.shareRequired : false,
                   sharePlatform: 'Facebook & Friends',
-                  description: taskModal.description || 'Watch full video and share to your Facebook feed or friends to claim reward.',
+                  description: taskModal.description,
                 });
                 setTaskModal({ ...taskModal, isOpen: false });
               }}
             >
               <div className="form-group" style={{ marginBottom: '1rem' }}>
-                <label className="form-label">Campaign Title / Sponsor Name</label>
+                <label className="form-label">Task Type / Category</label>
+                <select
+                  className="input-field"
+                  value={taskModal.type}
+                  onChange={(e) => {
+                    const newType = e.target.value;
+                    let defaultDuration = 20;
+                    let defaultTitle = '';
+                    if (newType === 'walk') {
+                      defaultDuration = 600;
+                      defaultTitle = 'Walk for 10 Minutes Health Challenge';
+                    } else if (newType === 'slide3') {
+                      defaultDuration = 60;
+                      defaultTitle = '3×3 Slide Number Puzzle Challenge';
+                    } else if (newType === 'memory') {
+                      defaultDuration = 60;
+                      defaultTitle = 'Wealth Icon Memory Match Challenge';
+                    } else if (newType === 'music') {
+                      defaultDuration = 20;
+                      defaultTitle = 'Focus Ambient Productivity Track';
+                    } else if (newType === 'video') {
+                      defaultDuration = 20;
+                      defaultTitle = 'Brand Launch: Tech & Wealth Review';
+                    }
+                    setTaskModal({
+                      ...taskModal,
+                      type: newType,
+                      duration: defaultDuration,
+                      title: defaultTitle || taskModal.title,
+                    });
+                  }}
+                >
+                  <option value="video">📹 Video Watch & Facebook Share</option>
+                  <option value="music">🎵 Focus Music Audio Listening</option>
+                  <option value="slide3">🧩 3×3 Slide Number Puzzle (60s Countdown)</option>
+                  <option value="memory">🧠 Wealth Memory Match (60s Countdown)</option>
+                  <option value="walk">🏃 Walk for 10 Minutes (1,200 Steps Pedometer)</option>
+                  <option value="spin">🎡 Lucky Spin Wheel</option>
+                  <option value="scratch">🎟️ Golden Scratch Card</option>
+                </select>
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label className="form-label">Task Title / Campaign Name</label>
                 <input
                   type="text"
                   className="input-field"
-                  placeholder="e.g. Brand Launch: Global Alpha Tech Review"
+                  placeholder="e.g. 3x3 Slide Puzzle or 10-Min Walk Challenge"
                   value={taskModal.title}
                   onChange={(e) => setTaskModal({ ...taskModal, title: e.target.value })}
                   required
@@ -1157,77 +1274,86 @@ export default function AdminPanelView() {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
                 <div>
-                  <label className="form-label">Platform</label>
-                  <select
+                  <label className="form-label">Reward Payout (₹)</label>
+                  <input
+                    type="number"
+                    min="5"
+                    max="500"
+                    step="1"
                     className="input-field"
-                    value={taskModal.platform}
-                    onChange={(e) => setTaskModal({ ...taskModal, platform: e.target.value })}
-                  >
-                    <option value="YouTube">YouTube Video</option>
-                    <option value="Facebook">Facebook Video / Reel</option>
-                  </select>
+                    value={taskModal.reward}
+                    onChange={(e) => setTaskModal({ ...taskModal, reward: e.target.value })}
+                    required
+                  />
                 </div>
                 <div>
-                  <label className="form-label">Watch Duration (Seconds)</label>
-                  <select
-                    className="input-field"
-                    value={taskModal.duration}
-                    onChange={(e) => setTaskModal({ ...taskModal, duration: Number(e.target.value) })}
-                  >
-                    <option value={15}>15 Seconds</option>
-                    <option value={20}>20 Seconds</option>
-                    <option value={30}>30 Seconds</option>
-                    <option value={45}>45 Seconds</option>
-                    <option value={60}>60 Seconds</option>
-                  </select>
+                  <label className="form-label">Duration / Countdown</label>
+                  {taskModal.type === 'walk' ? (
+                    <input
+                      type="text"
+                      className="input-field"
+                      value="10 Minutes (600s)"
+                      disabled
+                    />
+                  ) : taskModal.type === 'slide3' || taskModal.type === 'memory' ? (
+                    <select
+                      className="input-field"
+                      value={taskModal.duration}
+                      onChange={(e) => setTaskModal({ ...taskModal, duration: Number(e.target.value) })}
+                    >
+                      <option value={45}>45s Countdown (Very Hard)</option>
+                      <option value={60}>60s Countdown (Standard Skill)</option>
+                      <option value={90}>90s Countdown (Easy)</option>
+                    </select>
+                  ) : (
+                    <select
+                      className="input-field"
+                      value={taskModal.duration}
+                      onChange={(e) => setTaskModal({ ...taskModal, duration: Number(e.target.value) })}
+                    >
+                      <option value={15}>15 Seconds</option>
+                      <option value={20}>20 Seconds</option>
+                      <option value={30}>30 Seconds</option>
+                      <option value={60}>60 Seconds</option>
+                    </select>
+                  )}
                 </div>
               </div>
 
-              <div className="form-group" style={{ marginBottom: '1rem' }}>
-                <label className="form-label">Video URL (YouTube or Facebook link)</label>
-                <input
-                  type="url"
-                  className="input-field"
-                  placeholder="https://www.youtube.com/watch?v=... or https://youtu.be/..."
-                  value={taskModal.videoUrl}
-                  onChange={(e) => setTaskModal({ ...taskModal, videoUrl: e.target.value })}
-                  required
-                />
-              </div>
+              {taskModal.type === 'video' && (
+                <>
+                  <div className="form-group" style={{ marginBottom: '1rem' }}>
+                    <label className="form-label">Video URL (YouTube or Facebook link)</label>
+                    <input
+                      type="url"
+                      className="input-field"
+                      placeholder="https://www.youtube.com/watch?v=... or https://youtu.be/..."
+                      value={taskModal.videoUrl}
+                      onChange={(e) => setTaskModal({ ...taskModal, videoUrl: e.target.value })}
+                      required
+                    />
+                  </div>
 
-              <div className="form-group" style={{ marginBottom: '1rem' }}>
-                <label className="form-label">Reward Payout per Completion (₹)</label>
-                <input
-                  type="number"
-                  min="5"
-                  max="500"
-                  step="1"
-                  className="input-field"
-                  placeholder="35"
-                  value={taskModal.reward}
-                  onChange={(e) => setTaskModal({ ...taskModal, reward: e.target.value })}
-                  required
-                />
-              </div>
-
-              <div style={{ padding: '0.85rem', background: 'rgba(24, 119, 242, 0.08)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(24, 119, 242, 0.3)', marginBottom: '1.25rem' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, color: '#60a5fa' }}>
-                  <input
-                    type="checkbox"
-                    checked={taskModal.shareRequired}
-                    onChange={(e) => setTaskModal({ ...taskModal, shareRequired: e.target.checked })}
-                    style={{ width: 16, height: 16 }}
-                  />
-                  <span>Mandatory Facebook & Social Share Required</span>
-                </label>
-                <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: '0.25rem', marginLeft: '1.5rem' }}>
-                  User will not be allowed to claim the reward until they complete both the watch timer and share to Facebook.
-                </div>
-              </div>
+                  <div style={{ padding: '0.85rem', background: 'rgba(24, 119, 242, 0.08)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(24, 119, 242, 0.3)', marginBottom: '1.25rem' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, color: '#60a5fa' }}>
+                      <input
+                        type="checkbox"
+                        checked={taskModal.shareRequired}
+                        onChange={(e) => setTaskModal({ ...taskModal, shareRequired: e.target.checked })}
+                        style={{ width: 16, height: 16 }}
+                      />
+                      <span>Mandatory Facebook & Social Share Required</span>
+                    </label>
+                    <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: '0.25rem', marginLeft: '1.5rem' }}>
+                      User will not receive payout until they complete both the watch timer and share to Facebook.
+                    </div>
+                  </div>
+                </>
+              )}
 
               <div style={{ display: 'flex', gap: '0.75rem' }}>
                 <button type="submit" className="btn btn-primary btn-lg" style={{ flex: 1, fontWeight: 700 }}>
-                  <Plus size={16} /> Publish Task Now
+                  <Plus size={16} /> Publish Task to Roster
                 </button>
                 <button
                   type="button"

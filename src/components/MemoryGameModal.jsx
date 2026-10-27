@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { X, Sparkles, Brain, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, Sparkles, Brain, RefreshCw, Clock, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { formatINR } from '../utils/finance';
 
 const ICONS = ['💎', '🪙', '📈', '🏦', '🚀', '👑'];
+const TIME_LIMIT_SECONDS = 60;
 
 export default function MemoryGameModal({ isOpen, onClose, task }) {
   const { completeTask } = useApp();
@@ -11,7 +12,11 @@ export default function MemoryGameModal({ isOpen, onClose, task }) {
   const [flipped, setFlipped] = useState([]);
   const [matched, setMatched] = useState([]);
   const [isWon, setIsWon] = useState(false);
-  const rewardAmount = task?.reward || 50;
+  const [timeLeft, setTimeLeft] = useState(TIME_LIMIT_SECONDS);
+  const [isTimeUp, setIsTimeUp] = useState(false);
+  const timerRef = useRef(null);
+
+  const rewardAmount = task?.reward || 35.00;
 
   const shuffleCards = () => {
     const paired = [...ICONS, ...ICONS]
@@ -21,15 +26,40 @@ export default function MemoryGameModal({ isOpen, onClose, task }) {
     setFlipped([]);
     setMatched([]);
     setIsWon(false);
+    setTimeLeft(TIME_LIMIT_SECONDS);
+    setIsTimeUp(false);
   };
 
   useEffect(() => {
     if (isOpen) {
       shuffleCards();
+    } else {
+      if (timerRef.current) clearInterval(timerRef.current);
     }
   }, [isOpen]);
 
+  // Countdown timer effect
+  useEffect(() => {
+    if (isOpen && !isWon && !isTimeUp) {
+      timerRef.current = setInterval(() => {
+        setTimeLeft((prev) => {
+          if (prev <= 1) {
+            clearInterval(timerRef.current);
+            setIsTimeUp(true);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [isOpen, isWon, isTimeUp]);
+
   const handleCardClick = (index) => {
+    if (isTimeUp || isWon) return;
     if (flipped.length === 2 || flipped.includes(index) || matched.includes(index)) return;
 
     const newFlipped = [...flipped, index];
@@ -42,12 +72,13 @@ export default function MemoryGameModal({ isOpen, onClose, task }) {
           const next = [...prev, first, second];
           if (next.length === cards.length) {
             setIsWon(true);
+            if (timerRef.current) clearInterval(timerRef.current);
           }
           return next;
         });
         setFlipped([]);
       } else {
-        setTimeout(() => setFlipped([]), 800);
+        setTimeout(() => setFlipped([]), 700);
       }
     }
   };
@@ -55,11 +86,12 @@ export default function MemoryGameModal({ isOpen, onClose, task }) {
   if (!isOpen) return null;
 
   const handleClaim = () => {
+    if (!isWon || isTimeUp) return;
     completeTask({
       taskId: task?.id || 'memory_1',
-      taskTitle: 'Wealth Match Mini-Game',
+      taskTitle: task?.title || 'Wealth Icon Memory Match Challenge',
       rewardAmount: rewardAmount,
-      meta: 'Matched all memory pairs and won cash reward',
+      meta: `Matched all 6 pairs in ${TIME_LIMIT_SECONDS - timeLeft}s (Skill Verified)`,
     });
     onClose();
   };
@@ -75,7 +107,7 @@ export default function MemoryGameModal({ isOpen, onClose, task }) {
             <div style={{ textAlign: 'left' }}>
               <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Wealth Icon Match</h2>
               <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
-                Flip and pair all 6 wealth symbols to earn your reward
+                Flip & pair 6 symbols before 60s countdown expires
               </p>
             </div>
           </div>
@@ -84,8 +116,11 @@ export default function MemoryGameModal({ isOpen, onClose, task }) {
           </button>
         </div>
 
-        {/* Game Stats */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', padding: '0.5rem 1rem', background: 'rgba(255, 255, 255, 0.03)', borderRadius: 'var(--radius-md)' }}>
+        {/* Live Timer and Pairs Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', padding: '0.6rem 1rem', background: isTimeUp ? 'rgba(239, 68, 68, 0.15)' : 'rgba(255, 255, 255, 0.03)', borderRadius: 'var(--radius-md)', border: isTimeUp ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid var(--border-subtle)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.95rem', fontWeight: 800, color: timeLeft <= 15 ? '#f87171' : '#fbbf24' }}>
+            <Clock size={16} /> {timeLeft}s Left
+          </div>
           <span style={{ fontSize: '0.82rem', color: '#94a3b8' }}>
             Pairs Found: <strong style={{ color: '#34d399' }}>{matched.length / 2} / 6</strong>
           </span>
@@ -100,7 +135,7 @@ export default function MemoryGameModal({ isOpen, onClose, task }) {
         </div>
 
         {/* 4x3 Cards Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.6rem', marginBottom: '1.25rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.6rem', marginBottom: '1.25rem', opacity: isTimeUp ? 0.45 : 1, pointerEvents: isTimeUp ? 'none' : 'auto' }}>
           {cards.map((card, idx) => {
             const isCardFlipped = flipped.includes(idx) || matched.includes(idx);
             return (
@@ -133,6 +168,27 @@ export default function MemoryGameModal({ isOpen, onClose, task }) {
           })}
         </div>
 
+        {/* Failure / Timeout Banner */}
+        {isTimeUp && (
+          <div 
+            className="glass-card" 
+            style={{ 
+              padding: '1rem', 
+              background: 'rgba(239, 68, 68, 0.15)', 
+              borderColor: 'rgba(239, 68, 68, 0.4)',
+              marginBottom: '1.25rem',
+              color: '#f87171'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', fontWeight: 800, fontSize: '1.05rem', marginBottom: '0.2rem' }}>
+              <AlertTriangle size={18} /> Time Expired (Task Incomplete)
+            </div>
+            <p style={{ fontSize: '0.8rem', color: '#cbd5e1' }}>
+              You did not complete all 6 pairs within 60 seconds. Reward is forfeited for this round. Practice and try again tomorrow!
+            </p>
+          </div>
+        )}
+
         {/* Victory Card */}
         {isWon && (
           <div 
@@ -146,25 +202,36 @@ export default function MemoryGameModal({ isOpen, onClose, task }) {
             }}
           >
             <div style={{ fontSize: '0.8rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>
-              All Pairs Matched!
+              All 6 Pairs Matched in {TIME_LIMIT_SECONDS - timeLeft}s!
             </div>
             <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#34d399', margin: '0.15rem 0' }}>
               +{formatINR(rewardAmount)}
             </div>
-            <span className="badge badge-emerald">Ready to Deposit to Wallet</span>
+            <span className="badge badge-emerald">Pure Skill Verification Passed</span>
           </div>
         )}
 
         <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <button
-            type="button"
-            className="btn btn-primary btn-lg"
-            style={{ flex: 1 }}
-            disabled={!isWon}
-            onClick={handleClaim}
-          >
-            <Sparkles size={18} /> {isWon ? `Claim ${formatINR(rewardAmount)} Reward` : 'Match All 6 Pairs to Win'}
-          </button>
+          {isTimeUp ? (
+            <button
+              type="button"
+              className="btn btn-secondary btn-lg"
+              style={{ flex: 1 }}
+              onClick={shuffleCards}
+            >
+              <RefreshCw size={16} /> Try Practice Mode
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="btn btn-primary btn-lg"
+              style={{ flex: 1 }}
+              disabled={!isWon}
+              onClick={handleClaim}
+            >
+              <Sparkles size={18} /> {isWon ? `Claim ${formatINR(rewardAmount)} Reward` : 'Match All 6 Pairs to Win'}
+            </button>
+          )}
           <button type="button" className="btn btn-secondary" onClick={onClose}>
             Close
           </button>

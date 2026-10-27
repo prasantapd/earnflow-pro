@@ -4,13 +4,14 @@ import { calculateEarnings, getNextSundayStatus, extractYoutubeId } from '../uti
 
 const AppContext = createContext();
 
-const STORAGE_KEY = 'earnflow_pro_state_v9';
+const STORAGE_KEY = 'earnflow_pro_state_v10';
 
-export const INITIAL_VIDEO_TASKS = [
+export const INITIAL_DAILY_TASK_ROSTER = [
   {
     id: 'vid_101',
+    type: 'video',
     title: 'Brand Launch: Global Alpha Tech Review',
-    category: 'Video',
+    category: 'Video & Share',
     platform: 'YouTube',
     videoUrl: 'https://www.youtube.com/watch?v=y9u2eQy5fmg',
     youtubeId: 'y9u2eQy5fmg',
@@ -18,15 +19,16 @@ export const INITIAL_VIDEO_TASKS = [
     duration: 20,
     shareRequired: true,
     sharePlatform: 'Facebook & Friends',
-    status: 'ACTIVE', // ACTIVE or PAUSED
+    status: 'ACTIVE',
     totalShares: 1420,
     description: 'Watch video for 20s and share to your Facebook feed or friends to claim reward.',
     createdAt: new Date(Date.now() - 3 * 86400000).toISOString(),
   },
   {
     id: 'vid_102',
-    title: 'Compound Wealth: 2026 Financial Freedom Roadmap',
-    category: 'Video',
+    type: 'video',
+    title: 'Compound Wealth: 2026 Financial Roadmap',
+    category: 'Video & Share',
     platform: 'YouTube',
     videoUrl: 'https://www.youtube.com/watch?v=OQznqM_9k8I',
     youtubeId: 'OQznqM_9k8I',
@@ -40,22 +42,95 @@ export const INITIAL_VIDEO_TASKS = [
     createdAt: new Date(Date.now() - 2 * 86400000).toISOString(),
   },
   {
-    id: 'vid_103',
-    title: 'Smart Wealth Psychology & High-Performing Habits',
-    category: 'Video',
-    platform: 'YouTube',
-    videoUrl: 'https://www.youtube.com/watch?v=wfOkm4D04rU',
-    youtubeId: 'wfOkm4D04rU',
-    reward: 40.00,
+    id: 'music_1',
+    type: 'music',
+    title: 'Alpha Ambient Synthesizer Flow',
+    category: 'Focus Audio',
+    reward: 25.00,
     duration: 20,
-    shareRequired: true,
-    sharePlatform: 'Facebook & Friends',
     status: 'ACTIVE',
-    totalShares: 1150,
-    description: 'Watch video for 20s and share to your Facebook feed or friends to claim reward.',
+    description: 'Listen to ambient productivity audio track for 20s to claim cash.',
+    createdAt: new Date(Date.now() - 2 * 86400000).toISOString(),
+  },
+  {
+    id: 'slide3_1',
+    type: 'slide3',
+    title: '3×3 Slide Number Puzzle Challenge',
+    category: 'Skill Puzzle',
+    reward: 40.00,
+    duration: 60,
+    status: 'ACTIVE',
+    description: 'Solve the 3×3 logic tile puzzle within 60s countdown. Pure cognitive skill.',
+    createdAt: new Date(Date.now() - 1 * 86400000).toISOString(),
+  },
+  {
+    id: 'memory_1',
+    type: 'memory',
+    title: 'Wealth Icon Memory Match Challenge',
+    category: 'Brain Game',
+    reward: 35.00,
+    duration: 60,
+    status: 'ACTIVE',
+    description: 'Flip and match 6 wealth icon pairs before 60s timer expires.',
+    createdAt: new Date(Date.now() - 1 * 86400000).toISOString(),
+  },
+  {
+    id: 'walk_1',
+    type: 'walk',
+    title: 'Walk for 10 Minutes Health Pedometer',
+    category: 'Fitness Tracker',
+    reward: 40.00,
+    duration: 600,
+    targetSteps: 1200,
+    status: 'ACTIVE',
+    description: 'Active pedometer health verification. Complete 10 minutes (1,200 steps) of walking.',
+    createdAt: new Date(Date.now() - 1 * 86400000).toISOString(),
+  },
+  {
+    id: 'spin_1',
+    type: 'spin',
+    title: 'Lucky Wealth Spin Wheel',
+    category: 'Lucky Draw',
+    reward: 20.00,
+    duration: 10,
+    status: 'ACTIVE',
+    description: 'Spin high-tech wheel for instant reward.',
     createdAt: new Date(Date.now() - 1 * 86400000).toISOString(),
   },
 ];
+
+export const TASK_ROSTER_PRESETS = [
+  {
+    id: 'combo_balanced',
+    name: 'Combo A: Video + Song + 3×3 Slide',
+    badge: 'Standard Mix',
+    description: '1 Video Watch & Share, 1 Focus Music Track, and 1 3×3 Slide Puzzle (60s timer).',
+    activeIds: ['vid_101', 'music_1', 'slide3_1'],
+  },
+  {
+    id: 'combo_fitness_games',
+    name: 'Combo B: Video + 2 Games + Walk for 10 Mins',
+    badge: 'Fitness & Logic',
+    description: '1 Video, 1 Slide Puzzle (60s), 1 Memory Match (60s), and 1 10-Minute Walk Challenge.',
+    activeIds: ['vid_101', 'slide3_1', 'memory_1', 'walk_1'],
+  },
+  {
+    id: 'combo_high_skill',
+    name: 'Combo C: High-Skill & Payout Saver',
+    badge: 'Max Liability Saver',
+    description: '3×3 Slide Puzzle (60s) + Memory Match (60s) + 10-Min Walk + Video. Hardest tasks, lowest payout liability.',
+    activeIds: ['slide3_1', 'memory_1', 'walk_1', 'vid_102'],
+  },
+  {
+    id: 'combo_all',
+    name: 'Combo D: Full Daily Engagement',
+    badge: 'All Active',
+    description: 'All 7 tasks active (Videos, Music, 3×3 Slide, Memory Match, 10-Min Walk, Spin).',
+    activeIds: ['vid_101', 'vid_102', 'music_1', 'slide3_1', 'memory_1', 'walk_1', 'spin_1'],
+  },
+];
+
+export const INITIAL_VIDEO_TASKS = INITIAL_DAILY_TASK_ROSTER.filter((t) => t.type === 'video');
 
 export const STREAK_REWARDS = {
   1: 5,
@@ -246,13 +321,15 @@ const INITIAL_STATE = {
   tasksCompletedToday: {
     vid_101: true,
     vid_102: false,
-    vid_103: false,
     music_1: false,
+    slide3_1: false,
+    memory_1: false,
+    walk_1: false,
     spin_1: false,
     scratch_1: false,
-    memory_1: false,
   },
   dailyVideoTasks: INITIAL_VIDEO_TASKS,
+  dailyTaskRoster: INITIAL_DAILY_TASK_ROSTER,
   transactions: [
     {
       id: 'TXN-908124',
@@ -1200,39 +1277,67 @@ export function AppProvider({ children }) {
     showToast('Platform reset to fresh state.');
   };
 
-  // Admin Task Management: Add new video task
-  const addVideoTask = (taskData) => {
+  // Admin Task Orchestrator: Apply preset combo (e.g. Video + Song + 3x3, Video + 2 Games + Walk)
+  const applyTaskRosterPreset = (presetId) => {
+    const preset = TASK_ROSTER_PRESETS.find((p) => p.id === presetId);
+    if (!preset) return;
+
+    setState((prev) => {
+      const roster = prev.dailyTaskRoster || INITIAL_DAILY_TASK_ROSTER;
+      const updated = roster.map((t) => ({
+        ...t,
+        status: preset.activeIds.includes(t.id) ? 'ACTIVE' : 'PAUSED',
+      }));
+      showToast(`✓ Applied Daily Task Combo: "${preset.name}"!`);
+      return {
+        ...prev,
+        dailyTaskRoster: updated,
+      };
+    });
+  };
+
+  // Admin Task Management: Add new custom task of ANY type
+  const addCustomDailyTask = (taskData) => {
+    const type = taskData.type || 'video';
+    const newId = `task_${type}_${Date.now().toString().slice(-4)}`;
     const newTask = {
-      id: `vid_${Date.now().toString().slice(-4)}`,
-      title: taskData.title || 'Sponsored Video Campaign',
-      category: 'Video',
-      platform: taskData.platform || 'YouTube',
-      videoUrl: taskData.videoUrl || 'https://www.youtube.com/watch?v=y9u2eQy5fmg',
-      youtubeId: extractYoutubeId(taskData.videoUrl || 'y9u2eQy5fmg'),
-      reward: Number(taskData.reward) || 30.00,
-      duration: Number(taskData.duration) || 20,
+      id: newId,
+      type: type,
+      title: taskData.title || 'Daily Engagement Task',
+      category: taskData.category || (type === 'video' ? 'Video & Share' : type === 'walk' ? 'Fitness Tracker' : type === 'slide3' ? 'Skill Puzzle' : type === 'memory' ? 'Brain Game' : type === 'music' ? 'Focus Audio' : 'Special Task'),
+      platform: taskData.platform || (type === 'video' ? 'YouTube' : 'EarnFlow App'),
+      videoUrl: taskData.videoUrl || (type === 'video' ? 'https://www.youtube.com/watch?v=y9u2eQy5fmg' : ''),
+      youtubeId: type === 'video' ? extractYoutubeId(taskData.videoUrl || 'y9u2eQy5fmg') : '',
+      reward: Number(taskData.reward) || 35.00,
+      duration: Number(taskData.duration) || (type === 'walk' ? 600 : type === 'slide3' || type === 'memory' ? 60 : 20),
       shareRequired: taskData.shareRequired !== false,
       sharePlatform: taskData.sharePlatform || 'Facebook & Friends',
       status: 'ACTIVE',
       totalShares: 0,
-      description: taskData.description || 'Watch full video and share on Facebook or with friends to receive instant cash reward.',
+      description: taskData.description || (
+        type === 'walk' ? 'Walk for 10 minutes (1,200 steps) to verify health activity.' :
+        type === 'slide3' ? 'Arrange numbers 1-8 in 3x3 grid within 60s.' :
+        type === 'memory' ? 'Pair 6 wealth icons within 60s countdown.' :
+        type === 'music' ? 'Listen to ambient audio for 20s.' :
+        'Watch video and share to your social network.'
+      ),
       createdAt: new Date().toISOString(),
     };
 
     setState((prev) => ({
       ...prev,
-      dailyVideoTasks: [newTask, ...(prev.dailyVideoTasks || [])],
+      dailyTaskRoster: [newTask, ...(prev.dailyTaskRoster || INITIAL_DAILY_TASK_ROSTER)],
     }));
 
     showToast(`✓ New task "${newTask.title}" published!`);
     return newTask;
   };
 
-  // Admin Task Management: Update existing video task
-  const updateVideoTask = (taskId, updatedData) => {
+  // Admin Task Management: Update existing task
+  const updateDailyTask = (taskId, updatedData) => {
     setState((prev) => ({
       ...prev,
-      dailyVideoTasks: (prev.dailyVideoTasks || []).map((t) =>
+      dailyTaskRoster: (prev.dailyTaskRoster || INITIAL_DAILY_TASK_ROSTER).map((t) =>
         t.id === taskId
           ? {
               ...t,
@@ -1245,20 +1350,20 @@ export function AppProvider({ children }) {
     showToast('Task updated successfully.');
   };
 
-  // Admin Task Management: Delete video task
-  const deleteVideoTask = (taskId) => {
+  // Admin Task Management: Delete task
+  const deleteDailyTask = (taskId) => {
     setState((prev) => ({
       ...prev,
-      dailyVideoTasks: (prev.dailyVideoTasks || []).filter((t) => t.id !== taskId),
+      dailyTaskRoster: (prev.dailyTaskRoster || INITIAL_DAILY_TASK_ROSTER).filter((t) => t.id !== taskId),
     }));
     showToast('Task removed from platform.', 'warning');
   };
 
-  // Admin Task Management: Toggle video task active/paused status
-  const toggleVideoTaskStatus = (taskId) => {
+  // Admin Task Management: Toggle task active/paused status
+  const toggleDailyTaskStatus = (taskId) => {
     setState((prev) => ({
       ...prev,
-      dailyVideoTasks: (prev.dailyVideoTasks || []).map((t) => {
+      dailyTaskRoster: (prev.dailyTaskRoster || INITIAL_DAILY_TASK_ROSTER).map((t) => {
         if (t.id === taskId) {
           const nextStatus = t.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE';
           showToast(`Task is now ${nextStatus === 'ACTIVE' ? 'ACTIVE (Visible to users)' : 'PAUSED (Hidden from users)'}`);
@@ -1268,6 +1373,12 @@ export function AppProvider({ children }) {
       }),
     }));
   };
+
+  // Legacy aliases for backward compatibility
+  const addVideoTask = (taskData) => addCustomDailyTask({ ...taskData, type: 'video' });
+  const updateVideoTask = updateDailyTask;
+  const deleteVideoTask = deleteDailyTask;
+  const toggleVideoTaskStatusLegacy = toggleDailyTaskStatus;
 
   const sundayStatus = getNextSundayStatus();
   // 24/7 Anytime Payouts are active per investor policy (Min ₹100 • 1/day)
@@ -1318,11 +1429,17 @@ export function AppProvider({ children }) {
         rejectDeposit,
         approveWithdrawal,
         rejectWithdrawal,
-        // Admin Task Management
+        // Admin Dynamic Task Orchestrator & Presets
+        dailyTaskRoster: state.dailyTaskRoster || INITIAL_DAILY_TASK_ROSTER,
+        taskRosterPresets: TASK_ROSTER_PRESETS,
+        applyTaskRosterPreset,
+        addCustomDailyTask,
+        updateDailyTask,
+        deleteDailyTask,
+        toggleDailyTaskStatus,
         addVideoTask,
         updateVideoTask,
         deleteVideoTask,
-        toggleVideoTaskStatus,
         // Skill Gaming & PvP Multiplayer Engine
         gamingStats: state.gamingStats,
         playSoloSkillGame,

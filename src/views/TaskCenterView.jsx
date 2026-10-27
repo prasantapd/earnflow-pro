@@ -19,7 +19,10 @@ import {
   Spade,
   Users,
   Zap,
-  ShieldCheck
+  ShieldCheck,
+  Footprints,
+  Flame,
+  Award
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { formatINR } from '../utils/finance';
@@ -28,113 +31,145 @@ import MusicTaskModal from '../components/MusicTaskModal';
 import SpinWheelModal from '../components/SpinWheelModal';
 import ScratchCardModal from '../components/ScratchCardModal';
 import MemoryGameModal from '../components/MemoryGameModal';
+import WalkTaskModal from '../components/WalkTaskModal';
 import DailyStreakWidget from '../components/DailyStreakWidget';
 import SlidePuzzleModal from '../components/SlidePuzzleModal';
 import LudoArenaModal from '../components/LudoArenaModal';
 import CardGamesArenaModal from '../components/CardGamesArenaModal';
 
-const VIDEO_TASKS = [
-  {
-    id: 'video_1',
-    title: 'How Global Yield Funds Generate 10% Monthly Returns',
-    category: 'Video',
-    reward: 35.00,
-    duration: 20,
-    youtubeId: 'y9u2eQy5fmg',
-    description: 'Learn about algorithmic liquidity, treasury arbitrage, and low-risk yields.',
-  },
-  {
-    id: 'video_2',
-    title: 'Compound Interest: The 8th Wonder of the World',
-    category: 'Video',
-    reward: 50.00,
-    duration: 25,
-    youtubeId: 'OQznqM_9k8I',
-    description: 'See how consistent compounding turns modest capital into massive wealth.',
-  },
-  {
-    id: 'video_3',
-    title: 'Smart Wealth Psychology & Daily Habits',
-    category: 'Video',
-    reward: 40.00,
-    duration: 20,
-    youtubeId: 'wfOkm4D04rU',
-    description: 'Master the habits of high-performing investors.',
-  },
-];
-
-const MUSIC_TASKS = [
-  {
-    id: 'music_1',
-    title: 'Deep Alpha Mindset Lo-Fi Chill',
-    category: 'Music',
-    reward: 30.00,
-    duration: 20,
-    description: 'Listen to 432Hz ambient frequency synthesized chords for focus.',
-  },
-  {
-    id: 'music_2',
-    title: 'Cyberpunk Wealth Synthwave Beat',
-    category: 'Music',
-    reward: 45.00,
-    duration: 25,
-    description: 'High-energy electronic synthesizer track designed for productive mornings.',
-  },
-];
-
-const GAME_TASKS = [
-  {
-    id: 'spin_1',
-    title: 'Lucky Wealth Spin Wheel',
-    category: 'Game',
-    reward: 50.00, // sample
-    type: 'spin',
-    rewardRange: '₹15 - ₹200',
-    description: 'Spin the high-tech wheel to land on instant cash prizes.',
-  },
-  {
-    id: 'scratch_1',
-    title: 'Golden Scratch & Win Card',
-    category: 'Game',
-    reward: 45.00,
-    type: 'scratch',
-    rewardRange: 'Win up to ₹45',
-    description: 'Drag cursor or finger to scratch metallic foil and uncover rewards.',
-  },
-  {
-    id: 'memory_1',
-    title: 'Wealth Icon Memory Match',
-    category: 'Game',
-    reward: 50.00,
-    type: 'memory',
-    rewardRange: 'Win up to ₹50',
-    description: 'Test your brain and match 6 wealth symbol pairs within 60s.',
-  },
-];
-
 export default function TaskCenterView({ onOpenWithdraw }) {
-  const { rewardWallet, tasksCompletedToday, totalDailyQuota, isWithdrawalAllowed, dailyVideoTasks } = useApp();
+  const { rewardWallet, tasksCompletedToday, totalDailyQuota, isWithdrawalAllowed, dailyTaskRoster } = useApp();
 
-  // Active modals
+  // Active modals for daily tasks
   const [activeVideoTask, setActiveVideoTask] = useState(null);
   const [activeMusicTask, setActiveMusicTask] = useState(null);
   const [activeSpinTask, setActiveSpinTask] = useState(null);
   const [activeScratchTask, setActiveScratchTask] = useState(null);
   const [activeMemoryTask, setActiveMemoryTask] = useState(null);
+  const [activeWalkTask, setActiveWalkTask] = useState(null);
+  const [activeDailyPuzzleTask, setActiveDailyPuzzleTask] = useState(null);
 
-  // Skill Gaming & PvP Arena Modals
+  // Skill Gaming & PvP Arena Modals (Unlimited player matches)
   const [isPuzzleOpen, setIsPuzzleOpen] = useState(false);
   const [isLudoOpen, setIsLudoOpen] = useState(false);
   const [isCardGamesOpen, setIsCardGamesOpen] = useState(false);
 
-  const activeVideoTasks = (dailyVideoTasks && dailyVideoTasks.length > 0)
-    ? dailyVideoTasks.filter((t) => t.status !== 'PAUSED')
-    : VIDEO_TASKS;
+  // Active tasks for today dynamically controlled by Admin Roster
+  const activeRosterTasks = (dailyTaskRoster && dailyTaskRoster.length > 0)
+    ? dailyTaskRoster.filter((t) => t.status === 'ACTIVE')
+    : [];
 
-  const allTasks = [...activeVideoTasks, ...MUSIC_TASKS, ...GAME_TASKS];
-  const completedCount = allTasks.filter((t) => tasksCompletedToday[t.id]).length;
-  const totalCount = allTasks.length;
-  const progressPercent = Math.round((completedCount / totalCount) * 100);
+  const completedCount = activeRosterTasks.filter((t) => tasksCompletedToday[t.id]).length;
+  const totalCount = activeRosterTasks.length;
+  const progressPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+  const totalPotentialIncentive = activeRosterTasks.reduce((sum, t) => sum + (Number(t.reward) || 0), 0);
+
+  // Helper for task type badges and icons
+  const getTaskVisuals = (task) => {
+    switch (task.type) {
+      case 'video':
+        return {
+          icon: <Video size={20} />,
+          badgeClass: 'badge-gold',
+          badgeText: `${task.duration || 20}s Video`,
+          accentColor: '#f87171',
+          bgGlow: 'rgba(239, 68, 68, 0.12)',
+          buttonLabel: `Watch & Share (+${formatINR(task.reward)})`,
+        };
+      case 'music':
+        return {
+          icon: <Music size={20} />,
+          badgeClass: 'badge-indigo',
+          badgeText: `${task.duration || 20}s Audio`,
+          accentColor: '#818cf8',
+          bgGlow: 'rgba(99, 102, 241, 0.12)',
+          buttonLabel: `Listen Focus Track (+${formatINR(task.reward)})`,
+        };
+      case 'slide3':
+        return {
+          icon: <Grid size={20} />,
+          badgeClass: 'badge-emerald',
+          badgeText: `${task.duration || 60}s Countdown`,
+          accentColor: '#34d399',
+          bgGlow: 'rgba(16, 185, 129, 0.12)',
+          buttonLabel: `Play 3×3 Puzzle (+${formatINR(task.reward)})`,
+        };
+      case 'memory':
+        return {
+          icon: <Brain size={20} />,
+          badgeClass: 'badge-indigo',
+          badgeText: `${task.duration || 60}s Countdown`,
+          accentColor: '#60a5fa',
+          bgGlow: 'rgba(59, 130, 246, 0.12)',
+          buttonLabel: `Match Icons (+${formatINR(task.reward)})`,
+        };
+      case 'walk':
+        return {
+          icon: <Footprints size={20} />,
+          badgeClass: 'badge-emerald',
+          badgeText: '10 Mins / 1,200 Steps',
+          accentColor: '#10b981',
+          bgGlow: 'rgba(16, 185, 129, 0.15)',
+          buttonLabel: `Start 10-Min Walk (+${formatINR(task.reward)})`,
+        };
+      case 'spin':
+        return {
+          icon: <RotateCw size={20} />,
+          badgeClass: 'badge-gold',
+          badgeText: 'Instant Spin',
+          accentColor: '#fbbf24',
+          bgGlow: 'rgba(245, 158, 11, 0.12)',
+          buttonLabel: `Spin Wheel (+${formatINR(task.reward)})`,
+        };
+      case 'scratch':
+        return {
+          icon: <Gift size={20} />,
+          badgeClass: 'badge-gold',
+          badgeText: 'Instant Scratch',
+          accentColor: '#f59e0b',
+          bgGlow: 'rgba(245, 158, 11, 0.12)',
+          buttonLabel: `Scratch Card (+${formatINR(task.reward)})`,
+        };
+      default:
+        return {
+          icon: <Sparkles size={20} />,
+          badgeClass: 'badge-indigo',
+          badgeText: 'Special Task',
+          accentColor: '#a78bfa',
+          bgGlow: 'rgba(139, 92, 246, 0.12)',
+          buttonLabel: `Complete Task (+${formatINR(task.reward)})`,
+        };
+    }
+  };
+
+  const handleLaunchTask = (task) => {
+    switch (task.type) {
+      case 'video':
+        setActiveVideoTask(task);
+        break;
+      case 'music':
+        setActiveMusicTask(task);
+        break;
+      case 'slide3':
+        setActiveDailyPuzzleTask(task);
+        break;
+      case 'memory':
+        setActiveMemoryTask(task);
+        break;
+      case 'walk':
+        setActiveWalkTask(task);
+        break;
+      case 'spin':
+        setActiveSpinTask(task);
+        break;
+      case 'scratch':
+        setActiveScratchTask(task);
+        break;
+      default:
+        setActiveVideoTask(task);
+        break;
+    }
+  };
 
   return (
     <div>
@@ -156,7 +191,7 @@ export default function TaskCenterView({ onOpenWithdraw }) {
             </div>
             <h2 style={{ fontSize: '1.9rem', fontWeight: 800 }}>Task Earning Center</h2>
             <p style={{ fontSize: '0.9rem', color: '#cbd5e1', maxWidth: '650px', marginTop: '0.3rem' }}>
-              Complete tasks (watch videos, listen to music, play casual mini-games) to claim your daily monetary rewards. Rewards accumulate continuously in your wallet and can be withdrawn anytime 24/7 (Min. ₹100)!
+              Complete your daily tasks (videos, focus music, timed 3×3 puzzles, memory match, and 10-minute fitness walks) to claim verified cash rewards. Withdraw 24/7 anytime (Min. ₹100)!
             </p>
           </div>
 
@@ -188,9 +223,9 @@ export default function TaskCenterView({ onOpenWithdraw }) {
 
         {/* Progress Tracker Bar */}
         <div style={{ marginTop: '1.5rem', paddingTop: '1.25rem', borderTop: '1px solid var(--border-subtle)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.45rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.45rem', flexWrap: 'wrap', gap: '0.5rem' }}>
             <span style={{ color: '#cbd5e1' }}>
-              Today's Task Completion: <strong>{completedCount} / {totalCount} Done</strong>
+              Today's Task Completion: <strong>{completedCount} / {totalCount} Done</strong> • Estimated Potential: <strong style={{ color: '#34d399' }}>{formatINR(totalPotentialIncentive)}</strong>
             </span>
             <span style={{ fontWeight: 700, color: '#34d399' }}>
               {progressPercent}% Complete
@@ -205,7 +240,7 @@ export default function TaskCenterView({ onOpenWithdraw }) {
                 background: 'linear-gradient(90deg, #f59e0b, #10b981)',
                 borderRadius: '4px',
                 transition: 'width 0.5s ease'
-              }}
+              }} 
             />
           </div>
         </div>
@@ -214,189 +249,216 @@ export default function TaskCenterView({ onOpenWithdraw }) {
       {/* Daily Login Streak Attendance Bonus Widget */}
       <DailyStreakWidget />
 
-      {/* Section 1: YouTube Video Tasks */}
-      <div style={{ marginBottom: '2.5rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1.25rem' }}>
-          <div style={{ width: 36, height: 36, borderRadius: '10px', background: 'rgba(239, 68, 68, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f87171' }}>
-            <Video size={20} />
-          </div>
-          <div>
-            <h3 style={{ fontSize: '1.3rem', fontWeight: 700 }}>Watch & Share Sponsor Videos</h3>
-            <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Watch promotional videos and share to Facebook friends to receive monetary rewards</p>
-          </div>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.25rem' }}>
-          {activeVideoTasks.map((task) => {
-            const isDone = tasksCompletedToday[task.id];
-            return (
-              <div 
-                key={task.id} 
-                className="glass-card card-interactive"
-                style={{ 
-                  padding: '1.5rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  border: isDone ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid var(--border-subtle)',
-                  background: isDone ? 'rgba(16, 185, 129, 0.04)' : 'var(--bg-card)'
-                }}
-              >
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.65rem' }}>
-                    <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                      <span className="badge badge-gold" style={{ fontSize: '0.68rem' }}>
-                        <Clock size={11} /> {task.duration}s Watch
-                      </span>
-                      <span className="badge" style={{ fontSize: '0.68rem', background: 'rgba(24, 119, 242, 0.15)', color: '#60a5fa', border: '1px solid rgba(24, 119, 242, 0.3)' }}>
-                        <Share2 size={11} /> Share to Facebook
-                      </span>
-                    </div>
-                    <span style={{ fontSize: '1.15rem', fontWeight: 800, color: '#34d399' }}>
-                      +{formatINR(task.reward)}
-                    </span>
-                  </div>
-                  <h4 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '0.4rem', color: '#f8fafc' }}>
-                    {task.title}
-                  </h4>
-                  <p style={{ fontSize: '0.82rem', color: '#94a3b8', lineHeight: 1.4, marginBottom: '1.25rem' }}>
-                    {task.description || 'Watch full duration and share on your Facebook wall to receive instant cash credit.'}
-                  </p>
-                </div>
-
-                {isDone ? (
-                  <button 
-                    className="btn btn-secondary btn-sm" 
-                    style={{ width: '100%', color: '#34d399', cursor: 'default' }}
-                    disabled
-                  >
-                    <CheckCircle2 size={16} /> Completed & Shared (+{formatINR(task.reward)})
-                  </button>
-                ) : (
-                  <button 
-                    className="btn btn-primary"
-                    style={{ width: '100%' }}
-                    onClick={() => setActiveVideoTask(task)}
-                  >
-                    <PlayCircle size={16} /> Watch & Share to Earn {formatINR(task.reward)}
-                  </button>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Section: Skill Gaming & PvP Tournament Arena (10% House Rake) */}
-      <div style={{ marginBottom: '2.5rem' }}>
+      {/* Section 1: Today's Active Tasks Roster (Dynamic Admin Orchestrated) */}
+      <div style={{ marginBottom: '3rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-            <div style={{ width: 38, height: 38, borderRadius: '10px', background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff' }}>
-              <Trophy size={22} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <div style={{ width: 36, height: 36, borderRadius: '10px', background: 'rgba(245, 158, 11, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fbbf24' }}>
+              <Zap size={20} />
             </div>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <h3 style={{ fontSize: '1.35rem', fontWeight: 800 }}>Skill Gaming & PvP Tournament Arena</h3>
-                <span className="badge badge-gold" style={{ fontSize: '0.65rem' }}>10% House Rake</span>
-              </div>
+              <h3 style={{ fontSize: '1.3rem', fontWeight: 800 }}>Today's Active Task Roster</h3>
               <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
-                Challenge real players in Speed Ludo, 29 Cards, Call Bridge, or solve countdown slide puzzles to win the pot!
+                Complete these {totalCount} assigned tasks to unlock your daily monetary incentive
               </p>
             </div>
           </div>
+          <span className="badge badge-emerald" style={{ fontSize: '0.75rem' }}>
+            {completedCount}/{totalCount} Completed Today
+          </span>
+        </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '0.4rem 0.8rem', borderRadius: 'var(--radius-full)', fontSize: '0.78rem', color: '#34d399' }}>
-            <ShieldCheck size={15} />
-            <span>Strict Rule: Fees paid <strong>strictly</strong> from Task Wallet</span>
+        {activeRosterTasks.length === 0 ? (
+          <div className="glass-card" style={{ padding: '2.5rem', textAlign: 'center', color: '#94a3b8' }}>
+            <Clock size={36} style={{ margin: '0 auto 0.75rem auto', opacity: 0.4 }} />
+            <p>Admin is currently preparing today's task roster. Check back shortly!</p>
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.25rem' }}>
+            {activeRosterTasks.map((task) => {
+              const isDone = tasksCompletedToday[task.id];
+              const visuals = getTaskVisuals(task);
+
+              return (
+                <div 
+                  key={task.id} 
+                  className="glass-card card-interactive"
+                  style={{ 
+                    padding: '1.5rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    border: isDone ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid var(--border-subtle)',
+                    background: isDone ? 'rgba(16, 185, 129, 0.04)' : 'var(--bg-card)'
+                  }}
+                >
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.65rem' }}>
+                      <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                        <span className={`badge ${visuals.badgeClass}`} style={{ fontSize: '0.68rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                          <Clock size={11} /> {visuals.badgeText}
+                        </span>
+                        {task.shareRequired && (
+                          <span className="badge" style={{ fontSize: '0.68rem', background: 'rgba(24, 119, 242, 0.15)', color: '#60a5fa', border: '1px solid rgba(24, 119, 242, 0.3)' }}>
+                            <Share2 size={11} /> FB Share
+                          </span>
+                        )}
+                        {(task.type === 'slide3' || task.type === 'memory') && (
+                          <span className="badge badge-emerald" style={{ fontSize: '0.65rem' }}>
+                            Pure Skill
+                          </span>
+                        )}
+                      </div>
+                      <span style={{ fontSize: '1.15rem', fontWeight: 800, color: '#34d399' }}>
+                        +{formatINR(task.reward)}
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem', marginBottom: '0.4rem' }}>
+                      <div style={{ width: 34, height: 34, borderRadius: '8px', background: visuals.bgGlow, color: visuals.accentColor, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '2px' }}>
+                        {visuals.icon}
+                      </div>
+                      <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#f8fafc', lineHeight: 1.3 }}>
+                        {task.title}
+                      </h4>
+                    </div>
+
+                    <p style={{ fontSize: '0.82rem', color: '#94a3b8', lineHeight: 1.4, marginBottom: '1.25rem', paddingLeft: '42px' }}>
+                      {task.description}
+                    </p>
+                  </div>
+
+                  {isDone ? (
+                    <button 
+                      className="btn btn-secondary btn-sm" 
+                      style={{ width: '100%', color: '#34d399', cursor: 'default' }}
+                      disabled
+                    >
+                      <CheckCircle2 size={16} /> Completed (+{formatINR(task.reward)})
+                    </button>
+                  ) : (
+                    <button 
+                      className="btn btn-primary"
+                      style={{ width: '100%', fontWeight: 700 }}
+                      onClick={() => handleLaunchTask(task)}
+                    >
+                      {visuals.buttonLabel}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Section 2: Skill Gaming & PvP Tournament Arena (10% House Rake) */}
+      <div style={{ marginBottom: '2.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.35rem' }}>
+          <div style={{ width: 36, height: 36, borderRadius: '10px', background: 'rgba(236, 72, 153, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f472b6' }}>
+            <Gamepad2 size={20} />
+          </div>
+          <div>
+            <h3 style={{ fontSize: '1.3rem', fontWeight: 800 }}>Skill Gaming & PvP Tournament Arena</h3>
+            <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+              Real-time skill puzzles & multiplayer tournaments (Ludo, 29 Cards, Call Bridge). 10% platform commission deducted automatically.
+            </p>
           </div>
         </div>
 
-        {/* 4 Arena Cards */}
+        {/* Wallet Safeguard Notice */}
+        <div style={{ padding: '0.75rem 1rem', background: 'rgba(16, 185, 129, 0.08)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(16, 185, 129, 0.25)', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.82rem', color: '#cbd5e1' }}>
+          <ShieldCheck size={18} color="#34d399" />
+          <span>
+            <strong>Task Wallet Only:</strong> Entry fees are strictly funded from task earnings. Under no circumstances can membership principal be used.
+          </span>
+        </div>
+
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
-          {/* Card 1: Slide Number Puzzle */}
-          <div className="glass-card card-interactive" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          {/* Game 1: 3x3 & 4x4 Slide Puzzle */}
+          <div className="glass-card card-interactive" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', border: '1px solid rgba(99, 102, 241, 0.3)' }}>
             <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
-                <span className="badge badge-emerald" style={{ fontSize: '0.68rem' }}>
-                  <Grid size={12} /> Solo Brain Challenge
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                <span className="badge badge-indigo" style={{ fontSize: '0.68rem' }}>
+                  <Clock size={11} /> 60s / 120s Countdown
                 </span>
-                <span style={{ fontSize: '1.15rem', fontWeight: 800, color: '#34d399' }}>
-                  Win up to ₹16
+                <span style={{ fontSize: '1.15rem', fontWeight: 800, color: '#818cf8' }}>
+                  Win {formatINR(8)} - {formatINR(16)}
                 </span>
               </div>
               <h4 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '0.4rem' }}>
                 3×3 & 4×4 Slide Number Puzzle
               </h4>
               <p style={{ fontSize: '0.82rem', color: '#94a3b8', lineHeight: 1.4, marginBottom: '1.25rem' }}>
-                Arrange scrambled tiles into numerical order before the timer expires. 100% logic and brain power!
+                Pure logic skill. Slide numbered tiles into order within the strict countdown timer. 100% mathematically solvable boards.
               </p>
               <div style={{ fontSize: '0.75rem', color: '#cbd5e1', marginBottom: '1.25rem', padding: '0.5rem', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '6px' }}>
-                ⏱️ Countdown: 60s / 120s • Entry: ₹5 / ₹10 (Task Wallet)
+                🧠 Solo Skill • ₹5 (3×3) or ₹10 (4×4) Entry Fee
               </div>
             </div>
             <button className="btn btn-primary" style={{ width: '100%', fontWeight: 700 }} onClick={() => setIsPuzzleOpen(true)}>
-              <Grid size={16} /> Play Slide Puzzle
+              <Grid size={16} /> Play Slide Puzzle Arena
             </button>
           </div>
 
-          {/* Card 2: Speed Ludo PvP */}
-          <div className="glass-card card-interactive" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          {/* Game 2: Speed Ludo PvP */}
+          <div className="glass-card card-interactive" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
             <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                 <span className="badge badge-gold" style={{ fontSize: '0.68rem' }}>
-                  <Dice5 size={12} /> 2-4 Players Online
+                  <Users size={11} /> 2 or 4 Players Online
                 </span>
                 <span style={{ fontSize: '1.15rem', fontWeight: 800, color: '#fbbf24' }}>
-                  1st Rank Takes 90%
+                  Win {formatINR(9)} - {formatINR(18)}
                 </span>
               </div>
               <h4 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '0.4rem' }}>
                 Speed Ludo PvP Arena
               </h4>
               <p style={{ fontSize: '0.82rem', color: '#94a3b8', lineHeight: 1.4, marginBottom: '1.25rem' }}>
-                Battle 1v1 or 4 players in fast-paced Speed Ludo. App retains 10% commission, winner takes the pot!
+                Multiplayer battle. 2 or 4 players stake ₹5 each. 10% platform rake deducted from pot, winner takes 90% instant payout!
               </p>
               <div style={{ fontSize: '0.75rem', color: '#cbd5e1', marginBottom: '1.25rem', padding: '0.5rem', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '6px' }}>
-                🎲 Entry: ₹5 / ₹10 / ₹25 • 2P Pot: ₹9 • 4P Pot: ₹18
+                🎲 10% House Rake • 2P Pot: ₹9 | 4P Pot: ₹18
               </div>
             </div>
             <button className="btn btn-gold" style={{ width: '100%', fontWeight: 700 }} onClick={() => setIsLudoOpen(true)}>
-              <Dice5 size={16} /> Enter Ludo PvP Arena
+              <Dice5 size={16} /> Enter Ludo Arena
             </button>
           </div>
 
-          {/* Card 3: 29 Cards Championship */}
-          <div className="glass-card card-interactive" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          {/* Game 3: 29 Cards Championship */}
+          <div className="glass-card card-interactive" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
             <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
-                <span className="badge" style={{ fontSize: '0.68rem', background: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
-                  <Spade size={12} /> 4-Player Trick Taking
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                <span className="badge badge-emerald" style={{ fontSize: '0.68rem' }}>
+                  <Spade size={11} /> 4-Player Trick Arena
                 </span>
-                <span style={{ fontSize: '1.15rem', fontWeight: 800, color: '#60a5fa' }}>
-                  1st & 2nd Rank Pot
+                <span style={{ fontSize: '1.15rem', fontWeight: 800, color: '#34d399' }}>
+                  1st Rank Winner
                 </span>
               </div>
               <h4 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '0.4rem' }}>
                 29 Cards Championship
               </h4>
               <p style={{ fontSize: '0.82rem', color: '#94a3b8', lineHeight: 1.4, marginBottom: '1.25rem' }}>
-                South Asian classic 29 Cards trick play. Bid high, set trump, and outsmart opponents to rank top!
+                Traditional South Asian 29 trick-taking game. Strategic bidding, trump card revelation, and Jack/Nine trump points.
               </p>
               <div style={{ fontSize: '0.75rem', color: '#cbd5e1', marginBottom: '1.25rem', padding: '0.5rem', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '6px' }}>
-                ♠️ Entry: ₹5 / ₹10 • 1st Rank: 75% • 2nd Rank: 25%
+                ♠️ 10% House Rake • 1st Rank Takes 90% Net Pot
               </div>
             </div>
-            <button className="btn btn-secondary" style={{ width: '100%', fontWeight: 700 }} onClick={() => setIsCardGamesOpen(true)}>
-              <Spade size={16} /> Join 29 Cards Table
+            <button className="btn btn-primary" style={{ width: '100%', fontWeight: 700, background: 'linear-gradient(135deg, #059669 0%, #047857 100%)' }} onClick={() => setIsCardGamesOpen(true)}>
+              <Spade size={16} /> Play 29 Cards
             </button>
           </div>
 
-          {/* Card 4: Call Bridge Masters */}
-          <div className="glass-card card-interactive" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          {/* Game 4: Call Bridge Masters */}
+          <div className="glass-card card-interactive" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', border: '1px solid rgba(139, 92, 246, 0.3)' }}>
             <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
-                <span className="badge" style={{ fontSize: '0.68rem', background: 'rgba(168, 85, 247, 0.15)', color: '#c084fc', border: '1px solid rgba(168, 85, 247, 0.3)' }}>
-                  <Trophy size={12} /> 4-Player Tournament
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                <span className="badge badge-indigo" style={{ fontSize: '0.68rem' }}>
+                  <Trophy size={11} /> 4-Player Spades
                 </span>
                 <span style={{ fontSize: '1.15rem', fontWeight: 800, color: '#c084fc' }}>
                   Rank 1 Payout
@@ -419,147 +481,7 @@ export default function TaskCenterView({ onOpenWithdraw }) {
         </div>
       </div>
 
-      {/* Section 2: Music Listening Tasks */}
-      <div style={{ marginBottom: '2.5rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1.25rem' }}>
-          <div style={{ width: 36, height: 36, borderRadius: '10px', background: 'rgba(99, 102, 241, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#818cf8' }}>
-            <Music size={20} />
-          </div>
-          <div>
-            <h3 style={{ fontSize: '1.3rem', fontWeight: 700 }}>Listen to Focus Music</h3>
-            <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Synthesized ambient focus audio tracks with instant payouts</p>
-          </div>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.25rem' }}>
-          {MUSIC_TASKS.map((task) => {
-            const isDone = tasksCompletedToday[task.id];
-            return (
-              <div 
-                key={task.id} 
-                className="glass-card card-interactive"
-                style={{ 
-                  padding: '1.5rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  border: isDone ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid var(--border-subtle)',
-                  background: isDone ? 'rgba(16, 185, 129, 0.04)' : 'var(--bg-card)'
-                }}
-              >
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                    <span className="badge badge-indigo" style={{ fontSize: '0.68rem' }}>
-                      <Clock size={11} /> {task.duration}s Audio
-                    </span>
-                    <span style={{ fontSize: '1.15rem', fontWeight: 800, color: '#34d399' }}>
-                      +{formatINR(task.reward)}
-                    </span>
-                  </div>
-                  <h4 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '0.4rem', color: '#f8fafc' }}>
-                    {task.title}
-                  </h4>
-                  <p style={{ fontSize: '0.82rem', color: '#94a3b8', lineHeight: 1.4, marginBottom: '1.25rem' }}>
-                    {task.description}
-                  </p>
-                </div>
-
-                {isDone ? (
-                  <button 
-                    className="btn btn-secondary btn-sm" 
-                    style={{ width: '100%', color: '#34d399', cursor: 'default' }}
-                    disabled
-                  >
-                    <CheckCircle2 size={16} /> Completed & Credited (+{formatINR(task.reward)})
-                  </button>
-                ) : (
-                  <button 
-                    className="btn btn-primary"
-                    style={{ width: '100%', background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)' }}
-                    onClick={() => setActiveMusicTask(task)}
-                  >
-                    <PlayCircle size={16} /> Listen & Earn {formatINR(task.reward)}
-                  </button>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Section 3: Simple Interactive Mini-Games */}
-      <div style={{ marginBottom: '2.5rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1.25rem' }}>
-          <div style={{ width: 36, height: 36, borderRadius: '10px', background: 'rgba(245, 158, 11, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fbbf24' }}>
-            <Gamepad2 size={20} />
-          </div>
-          <div>
-            <h3 style={{ fontSize: '1.3rem', fontWeight: 700 }}>Play Simple Games</h3>
-            <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Interactive casual games with instant monetary rewards</p>
-          </div>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.25rem' }}>
-          {GAME_TASKS.map((task) => {
-            const isDone = tasksCompletedToday[task.id];
-            return (
-              <div 
-                key={task.id} 
-                className="glass-card card-interactive"
-                style={{ 
-                  padding: '1.5rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  border: isDone ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid var(--border-subtle)',
-                  background: isDone ? 'rgba(16, 185, 129, 0.04)' : 'var(--bg-card)'
-                }}
-              >
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                    <span className="badge badge-gold" style={{ fontSize: '0.68rem' }}>
-                      <Sparkles size={11} /> {task.rewardRange}
-                    </span>
-                    <span style={{ fontSize: '1.15rem', fontWeight: 800, color: '#fbbf24' }}>
-                      {task.rewardRange}
-                    </span>
-                  </div>
-                  <h4 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '0.4rem', color: '#f8fafc' }}>
-                    {task.title}
-                  </h4>
-                  <p style={{ fontSize: '0.82rem', color: '#94a3b8', lineHeight: 1.4, marginBottom: '1.25rem' }}>
-                    {task.description}
-                  </p>
-                </div>
-
-                {isDone ? (
-                  <button 
-                    className="btn btn-secondary btn-sm" 
-                    style={{ width: '100%', color: '#34d399', cursor: 'default' }}
-                    disabled
-                  >
-                    <CheckCircle2 size={16} /> Completed & Credited
-                  </button>
-                ) : (
-                  <button 
-                    className="btn btn-gold"
-                    style={{ width: '100%' }}
-                    onClick={() => {
-                      if (task.type === 'spin') setActiveSpinTask(task);
-                      else if (task.type === 'scratch') setActiveScratchTask(task);
-                      else if (task.type === 'memory') setActiveMemoryTask(task);
-                    }}
-                  >
-                    <Gamepad2 size={16} /> Play Game & Win Cash
-                  </button>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Modals */}
+      {/* Daily Task Modals */}
       <VideoTaskModal
         isOpen={Boolean(activeVideoTask)}
         onClose={() => setActiveVideoTask(null)}
@@ -590,12 +512,24 @@ export default function TaskCenterView({ onOpenWithdraw }) {
         task={activeMemoryTask}
       />
 
-      {/* Skill Gaming & PvP Modals */}
-      <SlidePuzzleModal
-        isOpen={isPuzzleOpen}
-        onClose={() => setIsPuzzleOpen(false)}
+      <WalkTaskModal
+        isOpen={Boolean(activeWalkTask)}
+        onClose={() => setActiveWalkTask(null)}
+        task={activeWalkTask}
       />
 
+      {/* Slide Puzzle (Handles Daily Task Mode & Solo Betting Mode) */}
+      <SlidePuzzleModal
+        isOpen={Boolean(activeDailyPuzzleTask) || isPuzzleOpen}
+        onClose={() => {
+          setActiveDailyPuzzleTask(null);
+          setIsPuzzleOpen(false);
+        }}
+        isDailyTask={Boolean(activeDailyPuzzleTask)}
+        task={activeDailyPuzzleTask}
+      />
+
+      {/* Multiplayer PvP Modals */}
       <LudoArenaModal
         isOpen={isLudoOpen}
         onClose={() => setIsLudoOpen(false)}

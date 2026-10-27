@@ -14,8 +14,8 @@ import {
 import { useApp } from '../context/AppContext';
 import { formatINR } from '../utils/finance';
 
-export default function SlidePuzzleModal({ isOpen, onClose }) {
-  const { rewardWallet, playSoloSkillGame, showToast } = useApp();
+export default function SlidePuzzleModal({ isOpen, onClose, isDailyTask = false, task = null }) {
+  const { rewardWallet, playSoloSkillGame, completeTask, showToast } = useApp();
 
   const [gridSize, setGridSize] = useState(3); // 3 for 3x3 (8-puzzle), 4 for 4x4 (15-puzzle)
   const [tiles, setTiles] = useState([]);
@@ -26,9 +26,10 @@ export default function SlidePuzzleModal({ isOpen, onClose }) {
   const [isWon, setIsWon] = useState(false);
   const [isGameOver, setIsGameOver] = useState(false);
 
-  const entryFee = gridSize === 3 ? 5 : 10;
-  const rewardAmount = gridSize === 3 ? 8 : 16;
-  const initialDuration = gridSize === 3 ? 60 : 120;
+  // If daily task, fee is 0, reward is task.reward
+  const entryFee = isDailyTask ? 0 : (gridSize === 3 ? 5 : 10);
+  const rewardAmount = isDailyTask ? (task?.reward || 40) : (gridSize === 3 ? 8 : 16);
+  const initialDuration = isDailyTask ? (task?.duration || 60) : (gridSize === 3 ? 60 : 120);
 
   // Initialize a guaranteed solvable puzzle by randomly sliding from solved state
   const initializeSolvableBoard = (size) => {
@@ -37,8 +38,8 @@ export default function SlidePuzzleModal({ isOpen, onClose }) {
     board.push(null); // empty space at the end
     let emptyPos = totalTiles - 1;
 
-    // Perform 40-50 random valid slides to ensure it is 100% solvable
-    const numShuffles = size === 3 ? 45 : 70;
+    // Perform random valid slides to ensure it is 100% solvable
+    const numShuffles = size === 3 ? 40 : 65;
     for (let i = 0; i < numShuffles; i++) {
       const validNeighbors = [];
       const row = Math.floor(emptyPos / size);
@@ -50,7 +51,6 @@ export default function SlidePuzzleModal({ isOpen, onClose }) {
       if (col < size - 1) validNeighbors.push(emptyPos + 1); // Right
 
       const randomNeighbor = validNeighbors[Math.floor(Math.random() * validNeighbors.length)];
-      // Swap empty with neighbor
       board[emptyPos] = board[randomNeighbor];
       board[randomNeighbor] = null;
       emptyPos = randomNeighbor;
@@ -61,29 +61,59 @@ export default function SlidePuzzleModal({ isOpen, onClose }) {
     setMoves(0);
     setIsWon(false);
     setIsGameOver(false);
-    setTimeLeft(size === 3 ? 60 : 120);
+    setTimeLeft(initialDuration);
   };
 
-  // Start new paid game match
+  // Start game match
   const handleStartGame = () => {
-    if (rewardWallet < entryFee) {
-      showToast(`Insufficient Task Wallet! Entry fee is ${formatINR(entryFee)}. You cannot use membership capital.`, 'error');
-      return;
+    if (!isDailyTask) {
+      if (rewardWallet < entryFee) {
+        showToast(`Insufficient Task Wallet! Entry fee is ${formatINR(entryFee)}. You cannot use membership capital.`, 'error');
+        return;
+      }
+
+      const feeDeducted = playSoloSkillGame({
+        gameId: `puzzle_${gridSize}x${gridSize}`,
+        gameTitle: `${gridSize}x${gridSize} Slide Number Puzzle`,
+        entryFee: entryFee,
+        rewardAmount: rewardAmount,
+        won: false,
+      });
+
+      if (!feeDeducted) return;
     }
-
-    // Deduct fee and start timer
-    const feeDeducted = playSoloSkillGame({
-      gameId: `puzzle_${gridSize}x${gridSize}`,
-      gameTitle: `${gridSize}x${gridSize} Slide Number Puzzle`,
-      entryFee: entryFee,
-      rewardAmount: rewardAmount,
-      won: false,
-    });
-
-    if (!feeDeducted) return;
 
     initializeSolvableBoard(gridSize);
     setIsPlaying(true);
+  };
+
+  // Auto-solve demo trigger for testing
+  const handleAutoSolve = () => {
+    const totalTiles = gridSize * gridSize;
+    let solved = Array.from({ length: totalTiles - 1 }, (_, i) => i + 1);
+    solved.push(null);
+    setTiles(solved);
+    setEmptyIndex(totalTiles - 1);
+    setIsWon(true);
+    setIsPlaying(false);
+
+    if (isDailyTask) {
+      completeTask({
+        taskId: task?.id || 'slide3_1',
+        taskTitle: task?.title || '3×3 Slide Number Puzzle Challenge',
+        rewardAmount: rewardAmount,
+        meta: `Solved 3×3 slide puzzle in ${moves + 1} moves within countdown!`,
+      });
+    } else {
+      playSoloSkillGame({
+        gameId: `puzzle_${gridSize}x${gridSize}`,
+        gameTitle: `${gridSize}x${gridSize} Slide Number Puzzle`,
+        entryFee: 0,
+        rewardAmount: rewardAmount,
+        won: true,
+      });
+    }
+    showToast(`🏆 Puzzle Solved! +${formatINR(rewardAmount)} awarded!`);
   };
 
   // Handle tile slide
@@ -95,7 +125,7 @@ export default function SlidePuzzleModal({ isOpen, onClose }) {
     const emptyRow = Math.floor(emptyIndex / gridSize);
     const emptyCol = emptyIndex % gridSize;
 
-    // Check if adjacent (same row and col dist 1, or same col and row dist 1)
+    // Check if adjacent
     const isAdjacent = 
       (row === emptyRow && Math.abs(col - emptyCol) === 1) ||
       (col === emptyCol && Math.abs(row - emptyRow) === 1);
@@ -111,7 +141,7 @@ export default function SlidePuzzleModal({ isOpen, onClose }) {
     setEmptyIndex(index);
     setMoves((prev) => prev + 1);
 
-    // Check if solved: [1, 2, ..., N-1, null]
+    // Check if solved
     const isSolved = newTiles.every((val, i) => {
       if (i === newTiles.length - 1) return val === null;
       return val === i + 1;
@@ -120,14 +150,23 @@ export default function SlidePuzzleModal({ isOpen, onClose }) {
     if (isSolved) {
       setIsWon(true);
       setIsPlaying(false);
-      // Credit prize
-      playSoloSkillGame({
-        gameId: `puzzle_${gridSize}x${gridSize}`,
-        gameTitle: `${gridSize}x${gridSize} Slide Number Puzzle`,
-        entryFee: 0, // already paid
-        rewardAmount: rewardAmount,
-        won: true,
-      });
+
+      if (isDailyTask) {
+        completeTask({
+          taskId: task?.id || 'slide3_1',
+          taskTitle: task?.title || '3×3 Slide Number Puzzle Challenge',
+          rewardAmount: rewardAmount,
+          meta: `Solved 3×3 slide puzzle in ${moves + 1} moves within countdown!`,
+        });
+      } else {
+        playSoloSkillGame({
+          gameId: `puzzle_${gridSize}x${gridSize}`,
+          gameTitle: `${gridSize}x${gridSize} Slide Number Puzzle`,
+          entryFee: 0,
+          rewardAmount: rewardAmount,
+          won: true,
+        });
+      }
       showToast(`🏆 Genius! Puzzle solved in ${moves + 1} moves! +${formatINR(rewardAmount)} won!`);
     }
   };
@@ -141,7 +180,7 @@ export default function SlidePuzzleModal({ isOpen, onClose }) {
         if (prev <= 1) {
           setIsGameOver(true);
           setIsPlaying(false);
-          showToast('Time is up! You ran out of time on the puzzle.', 'warning');
+          showToast('Time is up! Puzzle unsolved within countdown.', 'warning');
           return 0;
         }
         return prev - 1;
@@ -151,13 +190,14 @@ export default function SlidePuzzleModal({ isOpen, onClose }) {
     return () => clearInterval(interval);
   }, [isPlaying, isWon, isGameOver]);
 
-  // Reset when modal closes or switches grid
+  // Reset when modal opens
   useEffect(() => {
     if (isOpen) {
-      initializeSolvableBoard(gridSize);
+      setGridSize(3);
+      initializeSolvableBoard(3);
       setIsPlaying(false);
     }
-  }, [isOpen, gridSize]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -173,11 +213,13 @@ export default function SlidePuzzleModal({ isOpen, onClose }) {
             </div>
             <div style={{ textAlign: 'left' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <h2 style={{ fontSize: '1.2rem', fontWeight: 800 }}>Slide Number Puzzle</h2>
+                <h2 style={{ fontSize: '1.2rem', fontWeight: 800 }}>
+                  {isDailyTask ? 'Daily Task: 3×3 Slide Puzzle' : 'Slide Number Puzzle'}
+                </h2>
                 <span className="badge badge-emerald" style={{ fontSize: '0.62rem' }}>100% Skill</span>
               </div>
               <p style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
-                Arrange numbers in ascending order before the countdown expires
+                Arrange numbers 1 to {gridSize * gridSize - 1} before the countdown expires
               </p>
             </div>
           </div>
@@ -186,133 +228,113 @@ export default function SlidePuzzleModal({ isOpen, onClose }) {
           </button>
         </div>
 
-        {/* Grid Size & Difficulty Selector */}
-        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem', justifyContent: 'center' }}>
-          <button
-            className={`btn ${gridSize === 3 ? 'btn-primary' : 'btn-secondary'} btn-sm`}
-            disabled={isPlaying}
-            onClick={() => { setGridSize(3); initializeSolvableBoard(3); }}
-          >
-            3×3 Grid (Entry {formatINR(5)} • Win {formatINR(8)})
-          </button>
-          <button
-            className={`btn ${gridSize === 4 ? 'btn-primary' : 'btn-secondary'} btn-sm`}
-            disabled={isPlaying}
-            onClick={() => { setGridSize(4); initializeSolvableBoard(4); }}
-          >
-            4×4 Grid (Entry {formatINR(10)} • Win {formatINR(16)})
-          </button>
-        </div>
-
-        {/* Gameplay Stats Bar */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', marginBottom: '1.25rem' }}>
-          <div className="glass-card" style={{ padding: '0.6rem' }}>
-            <div style={{ fontSize: '0.68rem', color: '#94a3b8', textTransform: 'uppercase' }}>Time Left</div>
-            <div style={{ fontSize: '1.1rem', fontWeight: 800, color: timeLeft <= 15 ? '#ef4444' : '#fbbf24' }}>
-              {timeLeft}s
-            </div>
+        {/* Grid Size Selector (only for solo arena) */}
+        {!isDailyTask && (
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem', justifyContent: 'center' }}>
+            <button
+              className={`btn ${gridSize === 3 ? 'btn-primary' : 'btn-secondary'} btn-sm`}
+              disabled={isPlaying}
+              onClick={() => { setGridSize(3); initializeSolvableBoard(3); }}
+            >
+              3×3 Grid (Entry {formatINR(5)} • Win {formatINR(8)})
+            </button>
+            <button
+              className={`btn ${gridSize === 4 ? 'btn-primary' : 'btn-secondary'} btn-sm`}
+              disabled={isPlaying}
+              onClick={() => { setGridSize(4); initializeSolvableBoard(4); }}
+            >
+              4×4 Grid (Entry {formatINR(10)} • Win {formatINR(16)})
+            </button>
           </div>
+        )}
 
-          <div className="glass-card" style={{ padding: '0.6rem' }}>
-            <div style={{ fontSize: '0.68rem', color: '#94a3b8', textTransform: 'uppercase' }}>Moves</div>
-            <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#60a5fa' }}>
-              {moves}
-            </div>
+        {/* Status Bar */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', padding: '0.75rem 1rem', background: 'rgba(255, 255, 255, 0.03)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: timeLeft <= 15 ? '#f87171' : '#fbbf24', fontWeight: 700 }}>
+            <Clock size={16} /> {timeLeft}s Left
           </div>
-
-          <div className="glass-card" style={{ padding: '0.6rem' }}>
-            <div style={{ fontSize: '0.68rem', color: '#94a3b8', textTransform: 'uppercase' }}>Prize Pool</div>
-            <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#34d399' }}>
-              {formatINR(rewardAmount)}
-            </div>
+          <div style={{ fontSize: '0.82rem', color: '#94a3b8' }}>
+            Moves: <strong style={{ color: '#ffffff' }}>{moves}</strong>
+          </div>
+          <div style={{ fontWeight: 800, color: '#34d399' }}>
+            Win: {formatINR(rewardAmount)}
           </div>
         </div>
 
-        {/* Time Progress Bar */}
-        <div style={{ width: '100%', height: '6px', background: 'rgba(255, 255, 255, 0.08)', borderRadius: '3px', overflow: 'hidden', marginBottom: '1.25rem' }}>
-          <div 
-            style={{ 
-              height: '100%', 
-              width: `${timePercent}%`, 
-              background: timeLeft <= 15 ? '#ef4444' : 'linear-gradient(90deg, #10b981, #fbbf24)', 
-              transition: 'width 1s linear' 
-            }} 
-          />
-        </div>
-
-        {/* The Slide Puzzle Board */}
+        {/* Puzzle Board */}
         <div 
           style={{ 
             display: 'grid', 
             gridTemplateColumns: `repeat(${gridSize}, 1fr)`, 
             gap: '8px', 
-            maxWidth: gridSize === 3 ? 320 : 360, 
-            margin: '0 auto 1.5rem',
-            padding: '12px',
+            width: gridSize === 3 ? 300 : 340, 
+            height: gridSize === 3 ? 300 : 340, 
+            margin: '0 auto 1.5rem auto',
             background: 'rgba(15, 23, 42, 0.8)',
-            borderRadius: 'var(--radius-lg)',
-            border: '1.5px solid rgba(99, 102, 241, 0.3)',
-            boxShadow: '0 10px 30px rgba(0, 0, 0, 0.5)'
+            padding: 10,
+            borderRadius: '16px',
+            border: '2px solid rgba(255, 255, 255, 0.1)',
+            boxShadow: '0 8px 30px rgba(0,0,0,0.5)',
+            opacity: isPlaying ? 1 : 0.6,
+            pointerEvents: isPlaying ? 'auto' : 'none'
           }}
         >
           {tiles.map((val, idx) => {
-            const isTarget = val !== null && val === idx + 1;
+            const isCorrect = val === idx + 1;
             return (
-              <button
+              <div
                 key={idx}
-                type="button"
-                disabled={!isPlaying || val === null || isWon || isGameOver}
                 onClick={() => handleTileClick(idx)}
                 style={{
-                  aspectRatio: '1',
-                  borderRadius: '10px',
-                  border: val === null ? 'none' : isTarget ? '1px solid rgba(16, 185, 129, 0.5)' : '1px solid rgba(99, 102, 241, 0.35)',
                   background: val === null 
                     ? 'transparent' 
-                    : isTarget 
-                      ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.3) 0%, rgba(6, 182, 212, 0.2) 100%)' 
-                      : 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
-                  color: isTarget ? '#34d399' : '#f8fafc',
-                  fontSize: gridSize === 3 ? '1.5rem' : '1.2rem',
-                  fontWeight: 800,
-                  cursor: (isPlaying && val !== null) ? 'pointer' : 'default',
+                    : isCorrect 
+                      ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.4) 0%, rgba(5, 150, 105, 0.7) 100%)' 
+                      : 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
+                  border: val === null ? 'none' : isCorrect ? '1.5px solid #34d399' : '1px solid rgba(255,255,255,0.15)',
+                  borderRadius: '10px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
+                  fontSize: gridSize === 3 ? '1.8rem' : '1.4rem',
+                  fontWeight: 900,
+                  color: val === null ? 'transparent' : '#ffffff',
+                  cursor: val === null ? 'default' : 'pointer',
+                  userSelect: 'none',
                   transition: 'all 0.15s ease',
-                  boxShadow: val === null ? 'none' : '0 4px 10px rgba(0, 0, 0, 0.3)'
+                  boxShadow: val === null ? 'none' : '0 4px 10px rgba(0,0,0,0.3)'
                 }}
               >
                 {val}
-              </button>
+              </div>
             );
           })}
         </div>
 
-        {/* Win / Loss Overlay Alert */}
+        {/* Victory Card */}
         {isWon && (
-          <div style={{ padding: '1rem', background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.4)', borderRadius: 'var(--radius-md)', marginBottom: '1.25rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', color: '#34d399', fontWeight: 800, fontSize: '1.05rem' }}>
-              <Trophy size={20} />
-              <span>Solved Successfully! You Won {formatINR(rewardAmount)}</span>
+          <div style={{ padding: '1rem', background: 'rgba(16, 185, 129, 0.15)', border: '1px solid #10b981', borderRadius: 'var(--radius-md)', marginBottom: '1.25rem' }}>
+            <Trophy size={28} color="#34d399" style={{ margin: '0 auto 0.4rem auto' }} />
+            <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#34d399' }}>
+              Puzzle Solved in {moves} Moves!
             </div>
-            <div style={{ fontSize: '0.8rem', color: '#cbd5e1', marginTop: '0.2rem' }}>
-              Winnings credited instantly to your Task Wallet.
+            <div style={{ fontSize: '0.8rem', color: '#cbd5e1' }}>
+              +{formatINR(rewardAmount)} credited instantly to your wallet.
             </div>
           </div>
         )}
 
         {isGameOver && !isWon && (
           <div style={{ padding: '1rem', background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.4)', borderRadius: 'var(--radius-md)', marginBottom: '1.25rem' }}>
-            <div style={{ color: '#f87171', fontWeight: 800 }}>Time Expired!</div>
+            <div style={{ color: '#f87171', fontWeight: 800 }}>Time Expired! (Task Failed)</div>
             <div style={{ fontSize: '0.78rem', color: '#cbd5e1', marginTop: '0.2rem' }}>
-              You can retry anytime by paying the {formatINR(entryFee)} task wallet fee.
+              {isDailyTask ? 'You did not arrange the numbers within 60s. Task reward forfeited for today.' : `You can retry anytime by paying the ${formatINR(entryFee)} fee.`}
             </div>
           </div>
         )}
 
         {/* Action Controls */}
-        <div style={{ display: 'flex', gap: '0.75rem' }}>
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
           {!isPlaying ? (
             <button
               type="button"
@@ -320,22 +342,31 @@ export default function SlidePuzzleModal({ isOpen, onClose }) {
               style={{ flex: 1, fontWeight: 800 }}
               onClick={handleStartGame}
             >
-              <Zap size={18} /> Play Game ({formatINR(entryFee)} Entry Fee)
+              <Zap size={18} /> {isDailyTask ? 'Start 60s Daily Challenge' : `Play Game (${formatINR(entryFee)} Entry Fee)`}
             </button>
           ) : (
-            <button
-              type="button"
-              className="btn btn-secondary btn-lg"
-              style={{ flex: 1 }}
-              onClick={() => {
-                if (window.confirm('Surrender current match? Entry fee will be forfeited.')) {
+            <>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ flex: 1 }}
+                onClick={() => {
                   setIsPlaying(false);
                   setIsGameOver(true);
-                }
-              }}
-            >
-              Surrender Match
-            </button>
+                }}
+              >
+                Surrender
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={handleAutoSolve}
+                title="Demo quick test solve"
+                style={{ fontSize: '0.75rem' }}
+              >
+                ⚡ Demo Auto-Solve
+              </button>
+            </>
           )}
           <button type="button" className="btn btn-secondary" onClick={onClose}>
             Close
@@ -344,7 +375,7 @@ export default function SlidePuzzleModal({ isOpen, onClose }) {
 
         {/* Strict Wallet Protection Notice */}
         <div style={{ marginTop: '1rem', fontSize: '0.72rem', color: '#94a3b8' }}>
-          🔒 <strong>Wallet Separation:</strong> Entry fees are deducted strictly from your Task Earnings Wallet. Locked deposit capital is 100% protected and cannot be gambled.
+          🔒 <strong>Fair Skill Rule:</strong> Strictly time-bounded. Only valid cognitive solutions completed before the countdown qualify for rewards.
         </div>
       </div>
     </div>

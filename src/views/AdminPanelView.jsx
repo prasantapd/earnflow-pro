@@ -58,6 +58,7 @@ export default function AdminPanelView() {
     toggleForceSunday,
     showToast,
     dailyTaskRoster,
+    dailyVideoTasks,
     taskRosterPresets,
     applyTaskRosterPreset,
     addCustomDailyTask,
@@ -291,7 +292,7 @@ export default function AdminPanelView() {
           className={`btn ${activeAdminTab === 'tasks' ? 'btn-primary' : 'btn-secondary'} btn-sm`}
           onClick={() => setActiveAdminTab('tasks')}
         >
-          <Video size={16} /> Task & Share Manager ({dailyVideoTasks?.length || 0})
+          <Sliders size={16} /> Daily Task Roster ({(dailyTaskRoster || []).filter((t) => t.status === 'ACTIVE').length} Active)
         </button>
       </div>
 

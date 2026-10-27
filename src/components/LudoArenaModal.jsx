@@ -11,20 +11,27 @@ import {
   CheckCircle2, 
   ShieldCheck,
   TrendingUp,
-  Award
+  Award,
+  Globe
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { formatINR } from '../utils/finance';
 
-const OPPONENT_NAMES = [
-  'Rohan_M99', 'Priya_Pro', 'Kabir_Trader', 'Ananya_K', 'Siddharth_99', 'Vikram_Apex', 'Neha_Delhi'
+const OPPONENT_POOL = [
+  { name: 'Rohan_M99', tier: '🥉 Starter Sprint' },
+  { name: 'Priya_Pro', tier: '💎 Diamond VIP' },
+  { name: 'Kabir_Trader', tier: '🚀 Growth Alpha' },
+  { name: 'Ananya_K', tier: '⚡ Alpha VIP' },
+  { name: 'Siddharth_99', tier: '🥉 Starter Sprint' },
+  { name: 'Vikram_Apex', tier: '💎 Diamond VIP' },
+  { name: 'Neha_Delhi', tier: '🚀 Growth Alpha' }
 ];
 
 export default function LudoArenaModal({ isOpen, onClose }) {
-  const { rewardWallet, playMultiplayerPvPMatch, showToast } = useApp();
+  const { rewardWallet, playMultiplayerPvPMatch, showToast, userMembershipTier } = useApp();
 
   const [playersMode, setPlayersMode] = useState(2); // 2 or 4 players
-  const [entryFee, setEntryFee] = useState(5); // 5, 10, or 25
+  const [entryFee, setEntryFee] = useState(5); // 5, 10, 25, or 50
   const [gameState, setGameState] = useState('lobby'); // 'lobby', 'matching', 'playing', 'finished'
   const [matchingStep, setMatchingStep] = useState(0);
   const [opponents, setOpponents] = useState([]);
@@ -60,15 +67,15 @@ export default function LudoArenaModal({ isOpen, onClose }) {
   // Step 1: Join queue & matchmake
   const handleJoinMatch = () => {
     if (rewardWallet < entryFee) {
-      showToast(`Insufficient Task Wallet! Entry fee is ${formatINR(entryFee)}. You cannot use membership capital.`, 'error');
+      showToast(`Insufficient Task Wallet! Boot amount is ${formatINR(entryFee)}. You cannot use membership capital.`, 'error');
       return;
     }
 
     setGameState('matching');
     setMatchingStep(1);
 
-    // Pick random opponents
-    const shuffled = [...OPPONENT_NAMES].sort(() => 0.5 - Math.random());
+    // Pick random opponents with mixed membership tiers
+    const shuffled = [...OPPONENT_POOL].sort(() => 0.5 - Math.random());
     const matchedOpponents = shuffled.slice(0, playersMode - 1);
     setOpponents(matchedOpponents);
 
@@ -125,8 +132,8 @@ export default function LudoArenaModal({ isOpen, onClose }) {
   // Finish match & determine winner
   const finishMatch = (finalUserScore, finalOpponentScores) => {
     const allScores = [
-      { name: 'You (Player 1)', score: finalUserScore, isUser: true },
-      ...opponents.map((name, i) => ({ name, score: finalOpponentScores[i] || 0, isUser: false }))
+      { name: `You (${userMembershipTier?.tierBadge || 'Starter'})`, score: finalUserScore, isUser: true, tier: userMembershipTier?.tierBadge || 'Starter' },
+      ...opponents.map((opp, i) => ({ name: `${opp.name} (${opp.tier})`, score: finalOpponentScores[i] || 0, isUser: false, tier: opp.tier }))
     ].sort((a, b) => b.score - a.score);
 
     const userRank = allScores.findIndex((p) => p.isUser) + 1;
@@ -161,7 +168,7 @@ export default function LudoArenaModal({ isOpen, onClose }) {
             </div>
             <div style={{ textAlign: 'left' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <h2 style={{ fontSize: '1.25rem', fontWeight: 800 }}>Speed Ludo PvP Arena</h2>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: 800 }}>Speed Ludo P2P Arena</h2>
                 <span className="badge badge-gold" style={{ fontSize: '0.62rem' }}>10% House Rake</span>
               </div>
               <p style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
@@ -177,6 +184,14 @@ export default function LudoArenaModal({ isOpen, onClose }) {
         {/* LOBBY STATE */}
         {gameState === 'lobby' && (
           <div>
+            {/* Open-Tier Matchmaking Banner */}
+            <div style={{ marginBottom: '1.25rem', padding: '0.75rem 1rem', background: 'rgba(59, 130, 246, 0.08)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(59, 130, 246, 0.25)', display: 'flex', alignItems: 'center', gap: '0.65rem', textAlign: 'left' }}>
+              <Globe size={18} color="#60a5fa" style={{ flexShrink: 0 }} />
+              <div style={{ fontSize: '0.78rem', color: '#cbd5e1' }}>
+                <strong style={{ color: '#60a5fa' }}>🌐 Open-Tier Matchmaking:</strong> Any membership plan level (from Starter to Diamond VIP) can battle together on this table! Only the <strong>Boot Amount ({formatINR(entryFee)})</strong> from your Task Wallet is matched.
+              </div>
+            </div>
+
             {/* Player Mode Selector */}
             <div style={{ marginBottom: '1.25rem' }}>
               <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '0.4rem', fontWeight: 600 }}>
@@ -202,27 +217,27 @@ export default function LudoArenaModal({ isOpen, onClose }) {
               </div>
             </div>
 
-            {/* Entry Fee Selector */}
+            {/* Entry Fee (Boot Amount) Selector */}
             <div style={{ marginBottom: '1.5rem' }}>
               <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '0.4rem', fontWeight: 600 }}>
-                Select Entry Fee (Task Wallet Only)
+                Select Boot Amount (Task Wallet Only)
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
-                {[5, 10, 25].map((fee) => (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem' }}>
+                {[5, 10, 25, 50].map((fee) => (
                   <button
                     key={fee}
                     type="button"
                     className={`glass-card ${entryFee === fee ? 'card-interactive' : ''}`}
                     onClick={() => setEntryFee(fee)}
                     style={{
-                      padding: '0.75rem 0.5rem',
+                      padding: '0.75rem 0.35rem',
                       borderColor: entryFee === fee ? 'var(--gold-500)' : 'var(--border-subtle)',
                       background: entryFee === fee ? 'rgba(245, 158, 11, 0.12)' : 'rgba(255, 255, 255, 0.03)',
                       cursor: 'pointer'
                     }}
                   >
-                    <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Entry Fee</div>
-                    <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#fbbf24' }}>
+                    <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>Boot Amt</div>
+                    <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#fbbf24' }}>
                       {formatINR(fee)}
                     </div>
                   </button>
@@ -255,7 +270,7 @@ export default function LudoArenaModal({ isOpen, onClose }) {
               style={{ width: '100%', fontWeight: 800, fontSize: '1rem' }}
               onClick={handleJoinMatch}
             >
-              <Zap size={18} /> Join Match ({formatINR(entryFee)} Entry Fee)
+              <Zap size={18} /> Join Match ({formatINR(entryFee)} Boot Amount)
             </button>
           </div>
         )}
@@ -267,12 +282,24 @@ export default function LudoArenaModal({ isOpen, onClose }) {
               <Dice5 size={32} />
             </div>
             <h3 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '0.4rem' }}>
-              {matchingStep === 1 && 'Connecting to Game Server...'}
-              {matchingStep === 2 && `Finding ${playersMode - 1} Online Players in Queue...`}
-              {matchingStep === 3 && 'Opponents Matched! Starting Ludo Board...'}
+              {matchingStep === 1 && 'Connecting to Open Game Server...'}
+              {matchingStep === 2 && `Finding ${playersMode - 1} Online Players matching ₹${entryFee} Boot...`}
+              {matchingStep === 3 && 'All Tiers Matched! Starting Ludo Arena...'}
             </h3>
+            {matchingStep >= 2 && (
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.75rem', marginBottom: '0.5rem' }}>
+                <span className="badge badge-emerald" style={{ fontSize: '0.72rem' }}>
+                  You ({userMembershipTier?.tierBadge || 'Starter'})
+                </span>
+                {opponents.map((opp, i) => (
+                  <span key={i} className="badge badge-indigo" style={{ fontSize: '0.72rem' }}>
+                    {opp.name} ({opp.tier})
+                  </span>
+                ))}
+              </div>
+            )}
             <p style={{ fontSize: '0.82rem', color: '#94a3b8' }}>
-              Table: {playersMode}-Player Battle • Entry Fee: {formatINR(entryFee)} • Winner Takes: {formatINR(firstPrize)}
+              Table: {playersMode}-Player Open Arena • Boot Amount: {formatINR(entryFee)} • Winner Takes: {formatINR(firstPrize)}
             </p>
           </div>
         )}
@@ -300,6 +327,7 @@ export default function LudoArenaModal({ isOpen, onClose }) {
                 }}
               >
                 <div style={{ fontSize: '0.72rem', color: '#34d399', fontWeight: 700 }}>You (Green)</div>
+                <div style={{ fontSize: '0.62rem', color: '#94a3b8', marginBottom: '0.15rem' }}>{userMembershipTier?.tierBadge || 'Starter'}</div>
                 <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#f8fafc' }}>{userScore} pts</div>
                 <div style={{ fontSize: '0.68rem', color: turn === 'user' ? '#34d399' : '#64748b' }}>
                   {turn === 'user' ? '👉 Your Turn!' : 'Waiting'}
@@ -307,7 +335,7 @@ export default function LudoArenaModal({ isOpen, onClose }) {
               </div>
 
               {/* Opponents Scores */}
-              {opponents.map((oppName, idx) => (
+              {opponents.map((opp, idx) => (
                 <div 
                   key={idx} 
                   className="glass-card" 
@@ -317,7 +345,10 @@ export default function LudoArenaModal({ isOpen, onClose }) {
                   }}
                 >
                   <div style={{ fontSize: '0.72rem', color: idx === 0 ? '#f87171' : idx === 1 ? '#60a5fa' : '#fbbf24', fontWeight: 700 }}>
-                    {oppName}
+                    {opp.name}
+                  </div>
+                  <div style={{ fontSize: '0.62rem', color: '#94a3b8', marginBottom: '0.15rem' }}>
+                    {opp.tier}
                   </div>
                   <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#f8fafc' }}>
                     {opponentScores[idx] || 0} pts

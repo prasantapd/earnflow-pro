@@ -21,7 +21,8 @@ export default function DailyStreakWidget() {
     loginStreak, 
     claimDailyLoginBonus, 
     resetDailyStreak, 
-    fastForwardNextDay 
+    fastForwardNextDay,
+    userMembershipTier
   } = useApp();
 
   const [showDemoTools, setShowDemoTools] = useState(false);
@@ -34,9 +35,11 @@ export default function DailyStreakWidget() {
     history: [false, false, false, false, false, false, false],
   };
 
+  const loginMultiplier = userMembershipTier?.loginMultiplier || 1.0;
   const currentDay = Math.min(7, Math.max(1, streak.currentDay || 1));
   const claimedToday = streak.claimedToday;
-  const currentReward = STREAK_REWARDS[currentDay] || 5;
+  const baseReward = STREAK_REWARDS[currentDay] || 5;
+  const currentReward = Math.round(baseReward * loginMultiplier);
 
   return (
     <div 
@@ -83,16 +86,19 @@ export default function DailyStreakWidget() {
             <Flame size={24} />
           </div>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
               <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#f8fafc' }}>
                 Daily Login Streak Bonus
               </h3>
               <span className="badge badge-gold" style={{ fontSize: '0.68rem' }}>
                 🔥 Day {claimedToday ? currentDay - 1 || 7 : currentDay} of 7
               </span>
+              <span className={`badge ${userMembershipTier?.badgeClass || 'badge-cyan'}`} style={{ fontSize: '0.68rem' }}>
+                {userMembershipTier?.tierBadge || 'Starter'} • {loginMultiplier}× Boost
+              </span>
             </div>
             <p style={{ fontSize: '0.82rem', color: '#cbd5e1' }}>
-              Log in daily to earn cash rewards. Miss 1 day and streak resets to Day 1!
+              Log in daily to earn cash rewards. Higher membership plans yield up to 4.0× bonus! Miss 1 day and streak resets to Day 1.
             </p>
           </div>
         </div>
@@ -140,6 +146,7 @@ export default function DailyStreakWidget() {
         {STREAK_SCHEDULE.map((item, idx) => {
           const dayNum = item.day;
           const isGrandJackpot = dayNum === 7;
+          const scaledReward = Math.round(item.reward * loginMultiplier);
           
           // Determine status
           const isDone = (streak.history && streak.history[idx]) === true;
@@ -203,7 +210,7 @@ export default function DailyStreakWidget() {
                 Day {dayNum}
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.2rem', marginBottom: '0.35rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.2rem', marginBottom: '0.2rem' }}>
                 {isGrandJackpot ? (
                   <Trophy size={16} color="#fbbf24" />
                 ) : (
@@ -216,9 +223,15 @@ export default function DailyStreakWidget() {
                     color: isGrandJackpot ? '#fbbf24' : '#ffffff' 
                   }}
                 >
-                  ₹{item.reward}
+                  ₹{scaledReward}
                 </span>
               </div>
+
+              {loginMultiplier > 1 && (
+                <div style={{ fontSize: '0.62rem', color: '#34d399', fontWeight: 700, marginBottom: '0.3rem' }}>
+                  {loginMultiplier}× Tier Boost
+                </div>
+              )}
 
               <div 
                 style={{ 
@@ -247,10 +260,10 @@ export default function DailyStreakWidget() {
 
       {/* Main Claim Button Bar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: '#94a3b8' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: '#cbd5e1' }}>
           <AlertCircle size={15} color="#fbbf24" />
           <span>
-            <strong>Schedule:</strong> Days 1–3: ₹5/day • Days 4–6: ₹7/day • Day 7: ₹10
+            <strong>Schedule ({userMembershipTier?.tierBadge || 'Starter'}):</strong> Days 1–3: ₹{Math.round(5 * loginMultiplier)}/day • Days 4–6: ₹{Math.round(7 * loginMultiplier)}/day • Day 7: ₹{Math.round(10 * loginMultiplier)} Jackpot
           </span>
         </div>
 

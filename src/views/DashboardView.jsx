@@ -38,7 +38,8 @@ export default function DashboardView({
     isWithdrawalAllowed, 
     sundayStatus, 
     forceSunday, 
-    toggleForceSunday 
+    toggleForceSunday,
+    userMembershipTier
   } = useApp();
 
   const activePlans = plans.filter((p) => p.status === 'active' || p.status === 'matured');
@@ -58,8 +59,10 @@ export default function DashboardView({
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1.5rem' }}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem', flexWrap: 'wrap' }}>
               <span className="badge badge-emerald">Verified Investor</span>
+              <span className={`badge ${userMembershipTier?.badgeClass || 'badge-cyan'}`}>{userMembershipTier?.tierBadge || 'Starter Member'}</span>
+              <span className="badge badge-gold" style={{ fontSize: '0.68rem' }}>{userMembershipTier?.taskMultiplier || 1.0}× Task Boost</span>
               <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Member since {formatDate(user.joinedDate)}</span>
             </div>
             <h2 style={{ fontSize: '1.9rem', fontWeight: 800, letterSpacing: '-0.02em', color: '#ffffff' }}>

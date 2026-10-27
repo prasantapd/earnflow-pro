@@ -141,3 +141,71 @@ export function extractYoutubeId(url) {
   return (match && match[2].length === 11) ? match[2] : (trimmed.length === 11 ? trimmed : 'y9u2eQy5fmg');
 }
 
+/**
+ * Calculates membership tier, login streak bonus multiplier, and task income multiplier
+ * based on the user's active membership plan deposit amount / tier.
+ */
+export function getMembershipTier(activePlan) {
+  if (!activePlan || activePlan.status !== 'active') {
+    return {
+      tierKey: 'starter',
+      tierName: 'Starter Member',
+      tierBadge: 'Starter Member',
+      loginMultiplier: 1.0,
+      taskMultiplier: 1.0,
+      color: '#06b6d4',
+      badgeClass: 'badge-cyan',
+      description: '1.0× baseline daily login and task rewards.',
+    };
+  }
+
+  const amount = Number(activePlan.amount) || 0;
+  const months = Number(activePlan.months) || 1;
+
+  if (amount >= 50000 || months >= 12) {
+    return {
+      tierKey: 'diamond_vip',
+      tierName: 'Diamond VIP Tier',
+      tierBadge: '💎 Diamond VIP',
+      loginMultiplier: 4.0, // Day 1: ₹20 ... Day 7: ₹40
+      taskMultiplier: 4.0, // 4.0x Task Earnings
+      color: '#10b981',
+      badgeClass: 'badge-emerald',
+      description: '4.0× Premium Task & Daily Attendance Earning Multiplier.',
+    };
+  } else if (amount >= 20000 || months >= 6) {
+    return {
+      tierKey: 'alpha_vip',
+      tierName: 'Alpha Executive Tier',
+      tierBadge: '⚡ Alpha VIP',
+      loginMultiplier: 2.8, // Day 1: ₹14 ... Day 7: ₹28
+      taskMultiplier: 2.8,
+      color: '#8b5cf6',
+      badgeClass: 'badge-indigo',
+      description: '2.8× High-Yield Task & Attendance Reward Multiplier.',
+    };
+  } else if (amount >= 7500 || months >= 3) {
+    return {
+      tierKey: 'growth_alpha',
+      tierName: 'Quarterly Growth Tier',
+      tierBadge: '🚀 Growth Alpha',
+      loginMultiplier: 1.8, // Day 1: ₹9 ... Day 7: ₹18
+      taskMultiplier: 1.8,
+      color: '#3b82f6',
+      badgeClass: 'badge-indigo',
+      description: '1.8× Growth Task & Attendance Multiplier.',
+    };
+  } else {
+    return {
+      tierKey: 'starter_sprint',
+      tierName: 'Starter Sprint Tier',
+      tierBadge: '🥉 Starter Sprint',
+      loginMultiplier: 1.0,
+      taskMultiplier: 1.0,
+      color: '#06b6d4',
+      badgeClass: 'badge-cyan',
+      description: '1.0× Baseline Task & Attendance Multiplier.',
+    };
+  }
+}
+

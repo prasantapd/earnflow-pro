@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import confetti from 'canvas-confetti';
-import { calculateEarnings, getNextSundayStatus, extractYoutubeId } from '../utils/finance';
+import { calculateEarnings, getNextSundayStatus, extractYoutubeId, getMembershipTier } from '../utils/finance';
 
 const AppContext = createContext();
 
@@ -420,6 +420,10 @@ export function AppProvider({ children }) {
 
   const [toastMessage, setToastMessage] = useState(null);
 
+  // Derive active membership plan and tiered earning multipliers
+  const activePlan = (state.plans || []).find((p) => p.status === 'active');
+  const userMembershipTier = getMembershipTier(activePlan);
+
   // Sync state to localStorage
   useEffect(() => {
     try {
@@ -733,7 +737,8 @@ export function AppProvider({ children }) {
     }
 
     const currentDay = Math.min(7, Math.max(1, streak.currentDay || 1));
-    const reward = STREAK_REWARDS[currentDay] || 5;
+    const baseReward = STREAK_REWARDS[currentDay] || 5;
+    const reward = Math.round(baseReward * userMembershipTier.loginMultiplier);
 
     const newHistory = [...(streak.history || [false, false, false, false, false, false, false])];
     newHistory[currentDay - 1] = true;
@@ -748,7 +753,7 @@ export function AppProvider({ children }) {
       amount: reward,
       timestamp: new Date().toISOString(),
       status: 'COMPLETED',
-      meta: `Attendance bonus: ₹${reward.toFixed(2)} credited! ${currentDay === 7 ? '🎉 Completed 7-day streak milestone!' : `Next reward: ₹${STREAK_REWARDS[nextDay]}/day`}`,
+      meta: `Attendance bonus: ₹${reward.toFixed(2)} (${userMembershipTier.tierBadge} ${userMembershipTier.loginMultiplier}× Multiplier) credited! ${currentDay === 7 ? '🎉 Completed 7-day streak milestone!' : `Next reward: ₹${Math.round((STREAK_REWARDS[nextDay] || 5) * userMembershipTier.loginMultiplier)}/day`}`,
     };
 
     setState((prev) => ({
@@ -1444,6 +1449,9 @@ export function AppProvider({ children }) {
         gamingStats: state.gamingStats,
         playSoloSkillGame,
         playMultiplayerPvPMatch,
+        // Membership Plan Tier Scaling
+        userMembershipTier,
+        activePlan,
       }}
     >
       {children}

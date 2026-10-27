@@ -10,18 +10,24 @@ import {
   Club, 
   Heart, 
   Spade, 
-  Diamond 
+  Diamond,
+  Globe
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { formatINR } from '../utils/finance';
 
-const CARD_PLAYERS = ['Vikram_CardKing', 'Ankit_29Master', 'Suresh_CallPro', 'You (Hero)'];
+const CARD_OPPONENTS_POOL = [
+  { name: 'Vikram_CardKing', tier: '💎 Diamond VIP' },
+  { name: 'Ankit_29Master', tier: '🥉 Starter Sprint' },
+  { name: 'Suresh_CallPro', tier: '🚀 Growth Alpha' },
+  { name: 'Deepak_Bridge', tier: '⚡ Alpha VIP' }
+];
 
 export default function CardGamesArenaModal({ isOpen, onClose }) {
-  const { rewardWallet, playMultiplayerPvPMatch, showToast } = useApp();
+  const { rewardWallet, playMultiplayerPvPMatch, showToast, userMembershipTier } = useApp();
 
   const [selectedGame, setSelectedGame] = useState('29_cards'); // '29_cards' or 'call_bridge'
-  const [entryFee, setEntryFee] = useState(5); // ₹5, ₹10, ₹25
+  const [entryFee, setEntryFee] = useState(5); // ₹5, ₹10, ₹25, ₹50
   const [gameState, setGameState] = useState('lobby'); // 'lobby', 'bidding', 'playing', 'finished'
   const [currentRound, setCurrentRound] = useState(1);
   const [userScore, setUserScore] = useState(0);
@@ -96,10 +102,10 @@ export default function CardGamesArenaModal({ isOpen, onClose }) {
 
   const finishCardMatch = (finalUserScore, finalOppScores) => {
     const standings = [
-      { name: 'You (Hero)', score: finalUserScore, isUser: true },
-      { name: 'Vikram_CardKing', score: finalOppScores[0], isUser: false },
-      { name: 'Ankit_29Master', score: finalOppScores[1], isUser: false },
-      { name: 'Suresh_CallPro', score: finalOppScores[2], isUser: false }
+      { name: `You (${userMembershipTier?.tierBadge || 'Starter'})`, score: finalUserScore, isUser: true, tier: userMembershipTier?.tierBadge || 'Starter' },
+      { name: `Vikram (${CARD_OPPONENTS_POOL[0].tier})`, score: finalOppScores[0], isUser: false, tier: CARD_OPPONENTS_POOL[0].tier },
+      { name: `Ankit (${CARD_OPPONENTS_POOL[1].tier})`, score: finalOppScores[1], isUser: false, tier: CARD_OPPONENTS_POOL[1].tier },
+      { name: `Suresh (${CARD_OPPONENTS_POOL[2].tier})`, score: finalOppScores[2], isUser: false, tier: CARD_OPPONENTS_POOL[2].tier }
     ].sort((a, b) => b.score - a.score);
 
     const userRank = standings.findIndex((p) => p.isUser) + 1;
@@ -152,6 +158,14 @@ export default function CardGamesArenaModal({ isOpen, onClose }) {
         {/* LOBBY STATE */}
         {gameState === 'lobby' && (
           <div>
+            {/* Open Matchmaking Info */}
+            <div style={{ marginBottom: '1.25rem', padding: '0.75rem 1rem', background: 'rgba(59, 130, 246, 0.08)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(59, 130, 246, 0.25)', display: 'flex', alignItems: 'center', gap: '0.65rem', textAlign: 'left' }}>
+              <Globe size={18} color="#60a5fa" style={{ flexShrink: 0 }} />
+              <div style={{ fontSize: '0.78rem', color: '#cbd5e1' }}>
+                <strong style={{ color: '#60a5fa' }}>🌐 Open-Tier Matchmaking:</strong> Any membership plan level (Starter to Diamond VIP) can battle together on this table! Only the <strong>Boot Amount ({formatINR(entryFee)})</strong> from your Task Wallet is matched.
+              </div>
+            </div>
+
             {/* Game Selector */}
             <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem', justifyContent: 'center' }}>
               <button
@@ -172,27 +186,27 @@ export default function CardGamesArenaModal({ isOpen, onClose }) {
               </button>
             </div>
 
-            {/* Entry Fee Selection */}
+            {/* Entry Fee (Boot Amount) Selection */}
             <div style={{ marginBottom: '1.25rem' }}>
               <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '0.4rem', fontWeight: 600 }}>
-                Select Entry Fee (Task Wallet Only)
+                Select Boot Amount (Task Wallet Only)
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
-                {[5, 10, 25].map((fee) => (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem' }}>
+                {[5, 10, 25, 50].map((fee) => (
                   <button
                     key={fee}
                     type="button"
                     className={`glass-card ${entryFee === fee ? 'card-interactive' : ''}`}
                     onClick={() => setEntryFee(fee)}
                     style={{
-                      padding: '0.75rem 0.5rem',
+                      padding: '0.75rem 0.35rem',
                       borderColor: entryFee === fee ? '#3b82f6' : 'var(--border-subtle)',
                       background: entryFee === fee ? 'rgba(59, 130, 246, 0.15)' : 'rgba(255, 255, 255, 0.03)',
                       cursor: 'pointer'
                     }}
                   >
-                    <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Entry Fee</div>
-                    <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#60a5fa' }}>
+                    <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>Boot Amt</div>
+                    <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#60a5fa' }}>
                       {formatINR(fee)}
                     </div>
                   </button>
@@ -228,7 +242,7 @@ export default function CardGamesArenaModal({ isOpen, onClose }) {
               style={{ width: '100%', fontWeight: 800, fontSize: '1rem' }}
               onClick={handleStartTournament}
             >
-              <Zap size={18} /> Join 4-Player Table ({formatINR(entryFee)} Fee)
+              <Zap size={18} /> Join 4-Player Table ({formatINR(entryFee)} Boot)
             </button>
           </div>
         )}
@@ -241,7 +255,7 @@ export default function CardGamesArenaModal({ isOpen, onClose }) {
               Dealing 4 Hands & Setting Trump Suit...
             </h3>
             <p style={{ fontSize: '0.82rem', color: '#94a3b8' }}>
-              Matching with Vikram_CardKing, Ankit_29Master & Suresh_CallPro
+              Matched Opponents: Vikram (Diamond VIP), Ankit (Starter Sprint) & Suresh (Growth Alpha)
             </p>
           </div>
         )}
@@ -256,21 +270,25 @@ export default function CardGamesArenaModal({ isOpen, onClose }) {
 
             {/* Scorecard */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.4rem', marginBottom: '1.25rem' }}>
-              <div className="glass-card" style={{ padding: '0.6rem', border: '1.5px solid #34d399', background: 'rgba(16, 185, 129, 0.08)' }}>
+              <div className="glass-card" style={{ padding: '0.55rem', border: '1.5px solid #34d399', background: 'rgba(16, 185, 129, 0.08)' }}>
                 <div style={{ fontSize: '0.7rem', color: '#34d399', fontWeight: 700 }}>You</div>
-                <div style={{ fontSize: '1.2rem', fontWeight: 800 }}>{userScore} pts</div>
+                <div style={{ fontSize: '0.6rem', color: '#94a3b8' }}>{userMembershipTier?.tierBadge || 'Starter'}</div>
+                <div style={{ fontSize: '1.15rem', fontWeight: 800 }}>{userScore} pts</div>
               </div>
-              <div className="glass-card" style={{ padding: '0.6rem' }}>
-                <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>Vikram</div>
-                <div style={{ fontSize: '1.2rem', fontWeight: 800 }}>{oppScores[0]} pts</div>
+              <div className="glass-card" style={{ padding: '0.55rem' }}>
+                <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 700 }}>Vikram</div>
+                <div style={{ fontSize: '0.6rem', color: '#94a3b8' }}>Diamond VIP</div>
+                <div style={{ fontSize: '1.15rem', fontWeight: 800 }}>{oppScores[0]} pts</div>
               </div>
-              <div className="glass-card" style={{ padding: '0.6rem' }}>
-                <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>Ankit</div>
-                <div style={{ fontSize: '1.2rem', fontWeight: 800 }}>{oppScores[1]} pts</div>
+              <div className="glass-card" style={{ padding: '0.55rem' }}>
+                <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 700 }}>Ankit</div>
+                <div style={{ fontSize: '0.6rem', color: '#94a3b8' }}>Starter</div>
+                <div style={{ fontSize: '1.15rem', fontWeight: 800 }}>{oppScores[1]} pts</div>
               </div>
-              <div className="glass-card" style={{ padding: '0.6rem' }}>
-                <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>Suresh</div>
-                <div style={{ fontSize: '1.2rem', fontWeight: 800 }}>{oppScores[2]} pts</div>
+              <div className="glass-card" style={{ padding: '0.55rem' }}>
+                <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 700 }}>Suresh</div>
+                <div style={{ fontSize: '0.6rem', color: '#94a3b8' }}>Growth Alpha</div>
+                <div style={{ fontSize: '1.15rem', fontWeight: 800 }}>{oppScores[2]} pts</div>
               </div>
             </div>
 

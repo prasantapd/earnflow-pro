@@ -9,13 +9,14 @@ import {
   AlertCircle, 
   CheckCircle2, 
   Grid,
-  Zap
+  Zap,
+  Globe
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { formatINR } from '../utils/finance';
 
 export default function SlidePuzzleModal({ isOpen, onClose, isDailyTask = false, task = null }) {
-  const { rewardWallet, playSoloSkillGame, completeTask, showToast } = useApp();
+  const { rewardWallet, playSoloSkillGame, completeTask, showToast, userMembershipTier } = useApp();
 
   const [gridSize, setGridSize] = useState(3); // 3 for 3x3 (8-puzzle), 4 for 4x4 (15-puzzle)
   const [tiles, setTiles] = useState([]);
@@ -230,21 +231,30 @@ export default function SlidePuzzleModal({ isOpen, onClose, isDailyTask = false,
 
         {/* Grid Size Selector (only for solo arena) */}
         {!isDailyTask && (
-          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem', justifyContent: 'center' }}>
-            <button
-              className={`btn ${gridSize === 3 ? 'btn-primary' : 'btn-secondary'} btn-sm`}
-              disabled={isPlaying}
-              onClick={() => { setGridSize(3); initializeSolvableBoard(3); }}
-            >
-              3×3 Grid (Entry {formatINR(5)} • Win {formatINR(8)})
-            </button>
-            <button
-              className={`btn ${gridSize === 4 ? 'btn-primary' : 'btn-secondary'} btn-sm`}
-              disabled={isPlaying}
-              onClick={() => { setGridSize(4); initializeSolvableBoard(4); }}
-            >
-              4×4 Grid (Entry {formatINR(10)} • Win {formatINR(16)})
-            </button>
+          <div>
+            <div style={{ marginBottom: '1rem', padding: '0.65rem 0.85rem', background: 'rgba(59, 130, 246, 0.08)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(59, 130, 246, 0.25)', display: 'flex', alignItems: 'center', gap: '0.5rem', textAlign: 'left' }}>
+              <Globe size={16} color="#60a5fa" style={{ flexShrink: 0 }} />
+              <div style={{ fontSize: '0.75rem', color: '#cbd5e1' }}>
+                <strong style={{ color: '#60a5fa' }}>🌐 Open to All Members ({userMembershipTier?.tierBadge || 'Starter'}):</strong> Any membership tier can play solo wager matches by matching the Boot Amount from Task Wallet!
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem', justifyContent: 'center' }}>
+              <button
+                className={`btn ${gridSize === 3 ? 'btn-primary' : 'btn-secondary'} btn-sm`}
+                disabled={isPlaying}
+                onClick={() => { setGridSize(3); initializeSolvableBoard(3); }}
+              >
+                3×3 Grid (Boot {formatINR(5)} • Win {formatINR(8)})
+              </button>
+              <button
+                className={`btn ${gridSize === 4 ? 'btn-primary' : 'btn-secondary'} btn-sm`}
+                disabled={isPlaying}
+                onClick={() => { setGridSize(4); initializeSolvableBoard(4); }}
+              >
+                4×4 Grid (Boot {formatINR(10)} • Win {formatINR(16)})
+              </button>
+            </div>
           </div>
         )}
 

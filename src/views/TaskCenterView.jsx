@@ -22,7 +22,9 @@ import {
   ShieldCheck,
   Footprints,
   Flame,
-  Award
+  Award,
+  Crown,
+  Globe
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { formatINR } from '../utils/finance';
@@ -38,7 +40,14 @@ import LudoArenaModal from '../components/LudoArenaModal';
 import CardGamesArenaModal from '../components/CardGamesArenaModal';
 
 export default function TaskCenterView({ onOpenWithdraw }) {
-  const { rewardWallet, tasksCompletedToday, totalDailyQuota, isWithdrawalAllowed, dailyTaskRoster } = useApp();
+  const { 
+    rewardWallet, 
+    tasksCompletedToday, 
+    totalDailyQuota, 
+    isWithdrawalAllowed, 
+    dailyTaskRoster,
+    userMembershipTier
+  } = useApp();
 
   // Active modals for daily tasks
   const [activeVideoTask, setActiveVideoTask] = useState(null);
@@ -54,6 +63,8 @@ export default function TaskCenterView({ onOpenWithdraw }) {
   const [isLudoOpen, setIsLudoOpen] = useState(false);
   const [isCardGamesOpen, setIsCardGamesOpen] = useState(false);
 
+  const taskMultiplier = userMembershipTier?.taskMultiplier || 1.0;
+
   // Active tasks for today dynamically controlled by Admin Roster
   const activeRosterTasks = (dailyTaskRoster && dailyTaskRoster.length > 0)
     ? dailyTaskRoster.filter((t) => t.status === 'ACTIVE')
@@ -62,10 +73,11 @@ export default function TaskCenterView({ onOpenWithdraw }) {
   const completedCount = activeRosterTasks.filter((t) => tasksCompletedToday[t.id]).length;
   const totalCount = activeRosterTasks.length;
   const progressPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
-  const totalPotentialIncentive = activeRosterTasks.reduce((sum, t) => sum + (Number(t.reward) || 0), 0);
+  const totalPotentialIncentive = activeRosterTasks.reduce((sum, t) => sum + Math.round((Number(t.reward) || 0) * taskMultiplier), 0);
 
   // Helper for task type badges and icons
-  const getTaskVisuals = (task) => {
+  const getTaskVisuals = (task, effectiveReward) => {
+    const rewardVal = effectiveReward !== undefined ? effectiveReward : task.reward;
     switch (task.type) {
       case 'video':
         return {
@@ -74,7 +86,7 @@ export default function TaskCenterView({ onOpenWithdraw }) {
           badgeText: `${task.duration || 20}s Video`,
           accentColor: '#f87171',
           bgGlow: 'rgba(239, 68, 68, 0.12)',
-          buttonLabel: `Watch & Share (+${formatINR(task.reward)})`,
+          buttonLabel: `Watch & Share (+${formatINR(rewardVal)})`,
         };
       case 'music':
         return {
@@ -83,7 +95,7 @@ export default function TaskCenterView({ onOpenWithdraw }) {
           badgeText: `${task.duration || 20}s Audio`,
           accentColor: '#818cf8',
           bgGlow: 'rgba(99, 102, 241, 0.12)',
-          buttonLabel: `Listen Focus Track (+${formatINR(task.reward)})`,
+          buttonLabel: `Listen Focus Track (+${formatINR(rewardVal)})`,
         };
       case 'slide3':
         return {
@@ -92,7 +104,7 @@ export default function TaskCenterView({ onOpenWithdraw }) {
           badgeText: `${task.duration || 60}s Countdown`,
           accentColor: '#34d399',
           bgGlow: 'rgba(16, 185, 129, 0.12)',
-          buttonLabel: `Play 3×3 Puzzle (+${formatINR(task.reward)})`,
+          buttonLabel: `Play 3×3 Puzzle (+${formatINR(rewardVal)})`,
         };
       case 'memory':
         return {
@@ -101,7 +113,7 @@ export default function TaskCenterView({ onOpenWithdraw }) {
           badgeText: `${task.duration || 60}s Countdown`,
           accentColor: '#60a5fa',
           bgGlow: 'rgba(59, 130, 246, 0.12)',
-          buttonLabel: `Match Icons (+${formatINR(task.reward)})`,
+          buttonLabel: `Match Icons (+${formatINR(rewardVal)})`,
         };
       case 'walk':
         return {
@@ -110,7 +122,7 @@ export default function TaskCenterView({ onOpenWithdraw }) {
           badgeText: '10 Mins / 1,200 Steps',
           accentColor: '#10b981',
           bgGlow: 'rgba(16, 185, 129, 0.15)',
-          buttonLabel: `Start 10-Min Walk (+${formatINR(task.reward)})`,
+          buttonLabel: `Start 10-Min Walk (+${formatINR(rewardVal)})`,
         };
       case 'spin':
         return {
@@ -119,7 +131,7 @@ export default function TaskCenterView({ onOpenWithdraw }) {
           badgeText: 'Instant Spin',
           accentColor: '#fbbf24',
           bgGlow: 'rgba(245, 158, 11, 0.12)',
-          buttonLabel: `Spin Wheel (+${formatINR(task.reward)})`,
+          buttonLabel: `Spin Wheel (+${formatINR(rewardVal)})`,
         };
       case 'scratch':
         return {
@@ -128,7 +140,7 @@ export default function TaskCenterView({ onOpenWithdraw }) {
           badgeText: 'Instant Scratch',
           accentColor: '#f59e0b',
           bgGlow: 'rgba(245, 158, 11, 0.12)',
-          buttonLabel: `Scratch Card (+${formatINR(task.reward)})`,
+          buttonLabel: `Scratch Card (+${formatINR(rewardVal)})`,
         };
       default:
         return {
@@ -137,7 +149,7 @@ export default function TaskCenterView({ onOpenWithdraw }) {
           badgeText: 'Special Task',
           accentColor: '#a78bfa',
           bgGlow: 'rgba(139, 92, 246, 0.12)',
-          buttonLabel: `Complete Task (+${formatINR(task.reward)})`,
+          buttonLabel: `Complete Task (+${formatINR(rewardVal)})`,
         };
     }
   };
@@ -252,6 +264,28 @@ export default function TaskCenterView({ onOpenWithdraw }) {
             <strong style={{ color: '#60a5fa' }}>Pay-Per-Completion Rule:</strong> Payout is strictly eligible ONLY for tasks you <strong>actually complete</strong>. Any task you fail to finish, skip, or fail within the timer generates <strong style={{ color: '#f87171' }}>₹0.00 income</strong> and cannot be counted or withdrawn.
           </div>
         </div>
+
+        {/* Membership Tier Reward Scaling Banner */}
+        <div style={{ marginTop: '0.85rem', padding: '0.75rem 1.15rem', background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.12) 0%, rgba(16, 185, 129, 0.08) 100%)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(99, 102, 241, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+            <div style={{ width: 34, height: 34, borderRadius: '8px', background: 'rgba(99, 102, 241, 0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#a5b4fc', flexShrink: 0 }}>
+              <Crown size={18} />
+            </div>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
+                <strong style={{ fontSize: '0.88rem', color: '#f8fafc' }}>Membership Plan Tier:</strong>
+                <span className={`badge ${userMembershipTier?.badgeClass || 'badge-cyan'}`}>{userMembershipTier?.tierBadge || 'Starter Member'}</span>
+                <span className="badge badge-gold" style={{ fontSize: '0.68rem' }}>{taskMultiplier}× Task Multiplier</span>
+              </div>
+              <p style={{ fontSize: '0.78rem', color: '#cbd5e1', marginTop: '0.15rem' }}>
+                Daily task & login streak payouts scale automatically based on your active plan tier.
+              </p>
+            </div>
+          </div>
+          <span style={{ fontSize: '0.74rem', color: '#94a3b8' }}>
+            Higher plans unlock up to <strong style={{ color: '#34d399' }}>4.0× task cash yield</strong>
+          </span>
+        </div>
       </div>
 
       {/* Daily Login Streak Attendance Bonus Widget */}
@@ -265,7 +299,14 @@ export default function TaskCenterView({ onOpenWithdraw }) {
               <Zap size={20} />
             </div>
             <div>
-              <h3 style={{ fontSize: '1.3rem', fontWeight: 800 }}>Today's Active Task Roster</h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <h3 style={{ fontSize: '1.3rem', fontWeight: 800 }}>Today's Active Task Roster</h3>
+                {taskMultiplier > 1 && (
+                  <span className="badge badge-indigo" style={{ fontSize: '0.68rem' }}>
+                    {taskMultiplier}× Multiplied
+                  </span>
+                )}
+              </div>
               <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
                 Complete these {totalCount} assigned tasks to unlock your daily monetary incentive
               </p>
@@ -284,8 +325,10 @@ export default function TaskCenterView({ onOpenWithdraw }) {
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.25rem' }}>
             {activeRosterTasks.map((task) => {
+              const effectiveReward = Math.round((Number(task.reward) || 0) * taskMultiplier);
+              const effectiveTask = { ...task, reward: effectiveReward };
               const isDone = tasksCompletedToday[task.id];
-              const visuals = getTaskVisuals(task);
+              const visuals = getTaskVisuals(task, effectiveReward);
 
               return (
                 <div 
@@ -317,9 +360,16 @@ export default function TaskCenterView({ onOpenWithdraw }) {
                           </span>
                         )}
                       </div>
-                      <span style={{ fontSize: '1.15rem', fontWeight: 800, color: '#34d399' }}>
-                        +{formatINR(task.reward)}
-                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <span style={{ fontSize: '1.15rem', fontWeight: 800, color: '#34d399' }}>
+                          +{formatINR(effectiveReward)}
+                        </span>
+                        {taskMultiplier > 1 && (
+                          <span className="badge badge-indigo" style={{ fontSize: '0.62rem' }}>
+                            {taskMultiplier}×
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem', marginBottom: '0.4rem' }}>
@@ -340,7 +390,7 @@ export default function TaskCenterView({ onOpenWithdraw }) {
                     <span style={{ color: '#94a3b8' }}>Payout Status:</span>
                     {isDone ? (
                       <span style={{ color: '#34d399', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                        <CheckCircle2 size={12} /> Counted in Wallet (+{formatINR(task.reward)})
+                        <CheckCircle2 size={12} /> Counted in Wallet (+{formatINR(effectiveReward)})
                       </span>
                     ) : (
                       <span style={{ color: '#f87171', fontWeight: 700 }}>
@@ -355,13 +405,13 @@ export default function TaskCenterView({ onOpenWithdraw }) {
                       style={{ width: '100%', color: '#34d399', cursor: 'default' }}
                       disabled
                     >
-                      <CheckCircle2 size={16} /> Completed (+{formatINR(task.reward)})
+                      <CheckCircle2 size={16} /> Completed (+{formatINR(effectiveReward)})
                     </button>
                   ) : (
                     <button 
                       className="btn btn-primary"
                       style={{ width: '100%', fontWeight: 700 }}
-                      onClick={() => handleLaunchTask(task)}
+                      onClick={() => handleLaunchTask(effectiveTask)}
                     >
                       {visuals.buttonLabel}
                     </button>
@@ -380,19 +430,28 @@ export default function TaskCenterView({ onOpenWithdraw }) {
             <Gamepad2 size={20} />
           </div>
           <div>
-            <h3 style={{ fontSize: '1.3rem', fontWeight: 800 }}>Skill Gaming & PvP Tournament Arena</h3>
+            <h3 style={{ fontSize: '1.3rem', fontWeight: 800 }}>Skill Gaming & P2P Tournament Arena</h3>
             <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
-              Real-time skill puzzles & multiplayer tournaments (Ludo, 29 Cards, Call Bridge). 10% platform commission deducted automatically.
+              Real-time skill puzzles & multiplayer battles (Speed Ludo, 29 Cards, Call Bridge). 10% platform commission deducted automatically.
             </p>
           </div>
         </div>
 
-        {/* Wallet Safeguard Notice */}
-        <div style={{ padding: '0.75rem 1rem', background: 'rgba(16, 185, 129, 0.08)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(16, 185, 129, 0.25)', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.82rem', color: '#cbd5e1' }}>
-          <ShieldCheck size={18} color="#34d399" />
-          <span>
-            <strong>Task Wallet Only:</strong> Entry fees are strictly funded from task earnings. Under no circumstances can membership principal be used.
-          </span>
+        {/* Open Matchmaking & Wallet Safeguard Notice */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '0.75rem', marginBottom: '1.25rem' }}>
+          <div style={{ padding: '0.75rem 1rem', background: 'rgba(59, 130, 246, 0.08)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(59, 130, 246, 0.25)', display: 'flex', alignItems: 'center', gap: '0.65rem', fontSize: '0.82rem', color: '#cbd5e1' }}>
+            <Globe size={18} color="#60a5fa" style={{ flexShrink: 0 }} />
+            <span>
+              <strong style={{ color: '#60a5fa' }}>🌐 Open-Tier Matchmaking:</strong> Any membership level (Starter to Diamond VIP) can battle against any other member! Table matching is based <strong>only on matching the Boot Amount</strong> from your Task Wallet.
+            </span>
+          </div>
+
+          <div style={{ padding: '0.75rem 1rem', background: 'rgba(16, 185, 129, 0.08)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(16, 185, 129, 0.25)', display: 'flex', alignItems: 'center', gap: '0.65rem', fontSize: '0.82rem', color: '#cbd5e1' }}>
+            <ShieldCheck size={18} color="#34d399" style={{ flexShrink: 0 }} />
+            <span>
+              <strong style={{ color: '#34d399' }}>Task Wallet Only:</strong> Boot amounts are funded strictly from earned task income. Under no circumstances can membership principal be wagered.
+            </span>
+          </div>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>

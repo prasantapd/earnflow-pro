@@ -347,14 +347,14 @@ export default function DashboardView({
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
             <span className="badge badge-emerald">Fund Transparency</span>
-            <span className="badge badge-gold">Max 7% Monthly</span>
+            <span className="badge badge-gold">Max 7% per 30 Days</span>
           </div>
 
           <h3 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '0.4rem' }}>
             How Your Fund Yield Works
           </h3>
           <p style={{ fontSize: '0.82rem', color: '#94a3b8', lineHeight: 1.5, marginBottom: '1.25rem' }}>
-            The treasury deploys deposited capital to produce <strong>10% gross return per month</strong>. Up to <strong>7% per month</strong> is distributed to users via daily tasks, with monthly compounding for longer lock-ins.
+            The treasury deploys deposited capital to produce <strong>10% gross return per 30 days</strong>. Up to <strong>7% per 30 days</strong> is distributed to users via daily tasks, with 30-day compounding for longer lock-ins.
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: '1.25rem', fontSize: '0.82rem' }}>

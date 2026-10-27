@@ -537,7 +537,7 @@ export default function AdminPanelView() {
                       <td style={{ padding: '0.85rem 0.75rem' }}>
                         <div style={{ fontWeight: 600 }}>{dep.planTitle}</div>
                         <span className="badge badge-indigo" style={{ fontSize: '0.62rem' }}>
-                          {dep.planMonths}M Lock-in ({(dep.planMonthlyRate * 100).toFixed(1)}%/mo)
+                          {dep.planDays || dep.planMonths * 30} Days Lock-in
                         </span>
                       </td>
 

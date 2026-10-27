@@ -6,39 +6,43 @@ export const DEPOSIT_PRESETS = [2000, 3500, 5000, 7500, 10000, 25000, 50000];
 
 export const LOCKIN_PERIODS = [
   {
-    id: '1m',
+    id: '30d',
     months: 1,
-    label: '1 Month',
+    days: 30,
+    label: '30 Days',
     badge: 'Starter Sprint',
     tierFactor: 0.055, // internal task distribution factor
-    description: 'Standard membership period. Access daily task rewards with principal eligible for withdrawal upon maturity.',
+    description: '30-day membership cycle. Access daily task rewards with principal eligible for withdrawal upon 30-day maturity.',
     color: '#06b6d4',
   },
   {
-    id: '3m',
+    id: '90d',
     months: 3,
-    label: '3 Months',
+    days: 90,
+    label: '90 Days',
     badge: 'Quarterly Growth',
     tierFactor: 0.060,
-    description: 'Quarterly membership tier. Higher estimated daily task reward allocation and steady campaign access.',
+    description: '90-day membership tier. Higher estimated daily task reward allocation and steady campaign access.',
     color: '#3b82f6',
   },
   {
-    id: '6m',
+    id: '180d',
     months: 6,
-    label: '6 Months',
+    days: 180,
+    label: '180 Days',
     badge: 'Alpha Tier',
     tierFactor: 0.065,
-    description: 'Semi-annual membership tier. Advanced task earning potential with dedicated high-value brand campaigns.',
+    description: '180-day membership tier. Advanced task earning potential with dedicated high-value brand campaigns.',
     color: '#8b5cf6',
   },
   {
-    id: '12m',
+    id: '360d',
     months: 12,
-    label: '1 Year (12M)',
+    days: 360,
+    label: '360 Days',
     badge: 'Diamond VIP',
     tierFactor: 0.070,
-    description: 'Annual VIP membership tier. Maximum estimated daily task quota allocation and premium priority rewards.',
+    description: '360-day VIP membership tier. Maximum estimated daily task quota allocation and premium priority rewards.',
     color: '#10b981',
   },
 ];
@@ -160,51 +164,51 @@ export function getMembershipTier(activePlan) {
   }
 
   const amount = Number(activePlan.amount) || 0;
-  const months = Number(activePlan.months) || 1;
+  const days = Number(activePlan.days) || (Number(activePlan.months) || 1) * 30;
 
-  if (amount >= 50000 || months >= 12) {
+  if (amount >= 50000 || days >= 360) {
     return {
       tierKey: 'diamond_vip',
-      tierName: 'Diamond VIP Tier',
+      tierName: 'Diamond VIP Tier (360 Days)',
       tierBadge: '💎 Diamond VIP',
-      loginMultiplier: 4.0, // Day 1: ₹20 ... Day 7: ₹40
+      loginMultiplier: 4.0, // Multiplier for 30-day streak
       taskMultiplier: 4.0, // 4.0x Task Earnings
       color: '#10b981',
       badgeClass: 'badge-emerald',
-      description: '4.0× Premium Task & Daily Attendance Earning Multiplier.',
+      description: '4.0× Premium Task & 30-Day Attendance Streak Multiplier.',
     };
-  } else if (amount >= 20000 || months >= 6) {
+  } else if (amount >= 20000 || days >= 180) {
     return {
       tierKey: 'alpha_vip',
-      tierName: 'Alpha Executive Tier',
+      tierName: 'Alpha Executive Tier (180 Days)',
       tierBadge: '⚡ Alpha VIP',
-      loginMultiplier: 2.8, // Day 1: ₹14 ... Day 7: ₹28
+      loginMultiplier: 2.8,
       taskMultiplier: 2.8,
       color: '#8b5cf6',
       badgeClass: 'badge-indigo',
-      description: '2.8× High-Yield Task & Attendance Reward Multiplier.',
+      description: '2.8× High-Yield Task & 30-Day Streak Multiplier.',
     };
-  } else if (amount >= 7500 || months >= 3) {
+  } else if (amount >= 7500 || days >= 90) {
     return {
       tierKey: 'growth_alpha',
-      tierName: 'Quarterly Growth Tier',
+      tierName: 'Growth Alpha Tier (90 Days)',
       tierBadge: '🚀 Growth Alpha',
-      loginMultiplier: 1.8, // Day 1: ₹9 ... Day 7: ₹18
+      loginMultiplier: 1.8,
       taskMultiplier: 1.8,
       color: '#3b82f6',
       badgeClass: 'badge-indigo',
-      description: '1.8× Growth Task & Attendance Multiplier.',
+      description: '1.8× Growth Task & 30-Day Streak Multiplier.',
     };
   } else {
     return {
       tierKey: 'starter_sprint',
-      tierName: 'Starter Sprint Tier',
+      tierName: 'Starter Sprint Tier (30 Days)',
       tierBadge: '🥉 Starter Sprint',
       loginMultiplier: 1.0,
       taskMultiplier: 1.0,
       color: '#06b6d4',
       badgeClass: 'badge-cyan',
-      description: '1.0× Baseline Task & Attendance Multiplier.',
+      description: '1.0× Baseline Task & 30-Day Streak Multiplier.',
     };
   }
 }

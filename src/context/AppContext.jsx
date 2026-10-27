@@ -132,25 +132,81 @@ export const TASK_ROSTER_PRESETS = [
 
 export const INITIAL_VIDEO_TASKS = INITIAL_DAILY_TASK_ROSTER.filter((t) => t.type === 'video');
 
+/* =========================================================================
+   30-DAY PROGRESSIVE DAILY LOGIN STREAK REWARDS (Basic ₹2,000 Plan):
+   - Week 1 (Days 1–7):   1 + 2 + 3 + 4 + 5 + 6 + 7 = ₹28
+   - Week 2 (Days 8–14):  2 + 3 + 4 + 5 + 6 + 7 + 8 = ₹35
+   - Week 3 (Days 15–21): 3 + 4 + 5 + 6 + 7 + 8 + 9 = ₹42
+   - Week 4 (Days 22–30): 4 + 5 + 6 + 7 + 8 + 9 + 10 + 11 + 12 = ₹72 (30 Days completion)
+   - Cycle Rule: Completing Day 30 completes cycle and re-starts from Day 1.
+   - Missed Day Rule: Missing any day immediately resets streak back to Day 1!
+   - Scales with user's active membership plan tier multiplier (up to 4.0×).
+   ========================================================================= */
+
 export const STREAK_REWARDS = {
-  1: 5,
-  2: 5,
-  3: 5,
-  4: 7,
-  5: 7,
-  6: 7,
-  7: 10,
+  // Week 1: 1+2+3+4+5+6+7
+  1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7,
+  // Week 2: 2+3+4+5+6+7+8
+  8: 2, 9: 3, 10: 4, 11: 5, 12: 6, 13: 7, 14: 8,
+  // Week 3: 3+4+5+6+7+8+9
+  15: 3, 16: 4, 17: 5, 18: 6, 19: 7, 20: 8, 21: 9,
+  // Week 4 (to 30 Days): 4+5+6+7+8+9+10 + 11+12
+  22: 4, 23: 5, 24: 6, 25: 7, 26: 8, 27: 9, 28: 10,
+  29: 11, 30: 12,
 };
 
-export const STREAK_SCHEDULE = [
-  { day: 1, reward: 5, label: 'Day 1' },
-  { day: 2, reward: 5, label: 'Day 2' },
-  { day: 3, reward: 5, label: 'Day 3' },
-  { day: 4, reward: 7, label: 'Day 4' },
-  { day: 5, reward: 7, label: 'Day 5' },
-  { day: 6, reward: 7, label: 'Day 6' },
-  { day: 7, reward: 10, label: 'Day 7' },
+export const STREAK_WEEKS = [
+  {
+    weekNum: 1,
+    title: 'Week 1',
+    range: 'Days 1–7',
+    formula: '₹1 → ₹7',
+    startDay: 1,
+    endDay: 7,
+    baseSum: 28,
+  },
+  {
+    weekNum: 2,
+    title: 'Week 2',
+    range: 'Days 8–14',
+    formula: '₹2 → ₹8',
+    startDay: 8,
+    endDay: 14,
+    baseSum: 35,
+  },
+  {
+    weekNum: 3,
+    title: 'Week 3',
+    range: 'Days 15–21',
+    formula: '₹3 → ₹9',
+    startDay: 15,
+    endDay: 21,
+    baseSum: 42,
+  },
+  {
+    weekNum: 4,
+    title: 'Week 4 (30-Day Finale)',
+    range: 'Days 22–30',
+    formula: '₹4 → ₹12',
+    startDay: 22,
+    endDay: 30,
+    baseSum: 72,
+  },
 ];
+
+export const STREAK_SCHEDULE = Array.from({ length: 30 }, (_, i) => {
+  const day = i + 1;
+  const reward = STREAK_REWARDS[day] || 1;
+  const weekNum = day <= 7 ? 1 : day <= 14 ? 2 : day <= 21 ? 3 : 4;
+  return {
+    day,
+    reward,
+    label: `Day ${day}`,
+    week: weekNum,
+    isWeeklyFinish: day === 7 || day === 14 || day === 21,
+    isGrandFinish: day === 30,
+  };
+});
 
 const INITIAL_USERS = [
   {
@@ -210,6 +266,7 @@ const INITIAL_DEPOSIT_REQUESTS = [
     userName: 'Aarav Sharma',
     amount: 10000,
     planMonths: 3,
+    planDays: 90,
     planMonthlyRate: 0.060,
     planTitle: 'Quarterly Alpha Growth',
     utr: 'UTR892189283120',
@@ -223,8 +280,9 @@ const INITIAL_DEPOSIT_REQUESTS = [
     userName: 'Rohan Mehta',
     amount: 5000,
     planMonths: 1,
+    planDays: 30,
     planMonthlyRate: 0.055,
-    planTitle: '1 Month Starter Sprint',
+    planTitle: '30 Days Starter Sprint',
     utr: 'UTR772109283111',
     submittedAt: new Date(Date.now() - 120 * 60000).toISOString(),
     status: 'PENDING',
@@ -296,6 +354,7 @@ const INITIAL_STATE = {
       title: 'Wealth Growth Alpha',
       amount: 10000,
       months: 3,
+      days: 90,
       startDate: new Date(Date.now() - 35 * 86400000).toISOString(),
       maturityDate: new Date(Date.now() + 55 * 86400000).toISOString(),
       totalExpectedGain: 1910,
@@ -309,6 +368,7 @@ const INITIAL_STATE = {
       title: 'High Yield Sprint',
       amount: 5000,
       months: 1,
+      days: 30,
       startDate: new Date(Date.now() - 32 * 86400000).toISOString(),
       maturityDate: new Date(Date.now() - 2 * 86400000).toISOString(),
       totalExpectedGain: 275,
@@ -357,7 +417,7 @@ const INITIAL_STATE = {
       amount: 10000.00,
       timestamp: new Date(Date.now() - 35 * 86400000).toISOString(),
       status: 'COMPLETED',
-      meta: '3 Months Lock-in Plan (PLN-9421)',
+      meta: '90 Days Lock-in Plan (PLN-9421)',
     },
     {
       id: 'TXN-712890',
@@ -366,7 +426,7 @@ const INITIAL_STATE = {
       amount: 5000.00,
       timestamp: new Date(Date.now() - 32 * 86400000).toISOString(),
       status: 'COMPLETED',
-      meta: '1 Month Lock-in Plan (PLN-3819)',
+      meta: '30 Days Lock-in Plan (PLN-3819)',
     }
   ],
   mlmNetwork: {
@@ -391,11 +451,11 @@ const INITIAL_STATE = {
     ],
   },
   loginStreak: {
-    currentDay: 3, // Day 1-3 = ₹5, Day 4-6 = ₹7, Day 7 = ₹10
+    currentDay: 3, // Week 1 (Day 1: ₹1, Day 2: ₹2, Day 3: ₹3 ...)
     lastClaimedDate: new Date(Date.now() - 25 * 3600000).toISOString(),
     claimedToday: false,
-    totalStreakEarned: 10.00,
-    history: [true, true, false, false, false, false, false],
+    totalStreakEarned: 3.00,
+    history: Array.from({ length: 30 }, (_, i) => i < 2),
   },
   gamingStats: {
     totalGamingRakeCollected: 845.00, // 10% platform house rake from matches
@@ -516,6 +576,7 @@ export function AppProvider({ children }) {
       userName: state.user?.name || 'Aarav Sharma',
       amount: numAmount,
       planMonths: lockinPeriod.months,
+      planDays: lockinPeriod.days || lockinPeriod.months * 30,
       planTitle: title || `${lockinPeriod.label} Tier Plan`,
       isUpgrade: isUpgrade,
       previousPlanId: existingActivePlan?.id || null,
@@ -527,14 +588,16 @@ export function AppProvider({ children }) {
 
     const calc = calculateEarnings(numAmount, lockinPeriod.months, lockinPeriod.tierFactor);
     const startDate = new Date();
+    const totalDays = lockinPeriod.days || lockinPeriod.months * 30;
     const maturityDate = new Date();
-    maturityDate.setDate(startDate.getDate() + lockinPeriod.months * 30);
+    maturityDate.setDate(startDate.getDate() + totalDays);
 
     const newPlan = {
       id: `PLN-${Math.floor(1000 + Math.random() * 9000)}`,
       title: title || `${lockinPeriod.label} Tier Plan`,
       amount: numAmount,
       months: lockinPeriod.months,
+      days: totalDays,
       startDate: startDate.toISOString(),
       maturityDate: maturityDate.toISOString(),
       totalExpectedGain: calc.estimatedTotalIncome,
@@ -706,11 +769,14 @@ export function AppProvider({ children }) {
   };
 
   /* =========================================================================
-     DAILY LOGIN STREAK BONUS SYSTEM:
-     - Day 1-3: ₹5/day
-     - Day 4-6: ₹7/day
-     - Day 7: ₹10 (Grand Weekly Jackpot Bonus)
-     - Reset rule: If a day is missed, streak restarts at Day 1
+     30-DAY PROGRESSIVE DAILY LOGIN STREAK SYSTEM (Basic ₹2,000 Plan):
+     - Week 1 (Days 1–7):   ₹1 + ₹2 + ₹3 + ₹4 + ₹5 + ₹6 + ₹7
+     - Week 2 (Days 8–14):  ₹2 + ₹3 + ₹4 + ₹5 + ₹6 + ₹7 + ₹8
+     - Week 3 (Days 15–21): ₹3 + ₹4 + ₹5 + ₹6 + ₹7 + ₹8 + ₹9
+     - Week 4 (Days 22–30): ₹4 + ₹5 + ₹6 + ₹7 + ₹8 + ₹9 + ₹10 + ₹11 + ₹12 (30 Days)
+     - Completion Rule: Day 30 claims grand finish, then restarts from Day 1
+     - Missed Day Rule: Missing any single day resets streak back to Day 1
+     - Membership Multiplier: Scales with active plan tier (up to 4.0×)
      ========================================================================= */
 
   const claimDailyLoginBonus = () => {
@@ -728,7 +794,7 @@ export function AppProvider({ children }) {
       lastClaimedDate: null,
       claimedToday: false,
       totalStreakEarned: 0,
-      history: [false, false, false, false, false, false, false],
+      history: Array(30).fill(false),
     };
 
     if (streak.claimedToday) {
@@ -736,24 +802,25 @@ export function AppProvider({ children }) {
       return false;
     }
 
-    const currentDay = Math.min(7, Math.max(1, streak.currentDay || 1));
-    const baseReward = STREAK_REWARDS[currentDay] || 5;
+    const currentDay = Math.min(30, Math.max(1, streak.currentDay || 1));
+    const baseReward = STREAK_REWARDS[currentDay] || (currentDay >= 30 ? 12 : 1);
     const reward = Math.round(baseReward * userMembershipTier.loginMultiplier);
 
-    const newHistory = [...(streak.history || [false, false, false, false, false, false, false])];
+    const newHistory = [...(streak.history || Array(30).fill(false))];
     newHistory[currentDay - 1] = true;
 
-    // Next day advances: if Day 7 was claimed, user completed full 7-day streak! Loops back to Day 1
-    const nextDay = currentDay >= 7 ? 1 : currentDay + 1;
+    // Next day advances: if Day 30 was claimed, user completed full 30-day streak! Loops back to Day 1
+    const isCompletedMonth = currentDay >= 30;
+    const nextDay = isCompletedMonth ? 1 : currentDay + 1;
 
     const newTxn = {
       id: `TXN-${Math.floor(100000 + Math.random() * 900000)}`,
       type: 'LOGIN_BONUS',
-      title: `Daily Login Streak Bonus (Day ${currentDay})`,
+      title: `Daily Login Streak Bonus (Day ${currentDay} of 30)`,
       amount: reward,
       timestamp: new Date().toISOString(),
       status: 'COMPLETED',
-      meta: `Attendance bonus: ₹${reward.toFixed(2)} (${userMembershipTier.tierBadge} ${userMembershipTier.loginMultiplier}× Multiplier) credited! ${currentDay === 7 ? '🎉 Completed 7-day streak milestone!' : `Next reward: ₹${Math.round((STREAK_REWARDS[nextDay] || 5) * userMembershipTier.loginMultiplier)}/day`}`,
+      meta: `Attendance bonus: ₹${reward.toFixed(2)} (${userMembershipTier.tierBadge} ${userMembershipTier.loginMultiplier}× Multiplier) credited! ${isCompletedMonth ? '🎉 Completed full 30-day streak cycle! Restarting Day 1 tomorrow.' : `Next reward: Day ${nextDay} (₹${Math.round((STREAK_REWARDS[nextDay] || 1) * userMembershipTier.loginMultiplier)})`}`,
     };
 
     setState((prev) => ({
@@ -765,11 +832,15 @@ export function AppProvider({ children }) {
         lastClaimedDate: new Date().toISOString(),
         claimedToday: true,
         totalStreakEarned: +((streak.totalStreakEarned || 0) + reward).toFixed(2),
-        history: newHistory,
+        history: isCompletedMonth ? Array(30).fill(false) : newHistory,
       },
     }));
 
-    showToast(`🎉 Day ${currentDay} Bonus Claimed! +₹${reward.toFixed(2)} added to your Task Wallet.`);
+    if (isCompletedMonth) {
+      showToast(`🎉 Day 30 Grand Finish Claimed! +₹${reward.toFixed(2)} added! 30-day cycle complete, restarts Day 1.`);
+    } else {
+      showToast(`🎉 Day ${currentDay} Bonus Claimed! +₹${reward.toFixed(2)} added to your Task Wallet.`);
+    }
     triggerCelebration();
     return true;
   };
@@ -782,7 +853,7 @@ export function AppProvider({ children }) {
         lastClaimedDate: null,
         claimedToday: false,
         totalStreakEarned: prev.loginStreak?.totalStreakEarned || 0,
-        history: [false, false, false, false, false, false, false],
+        history: Array(30).fill(false),
       },
     }));
     showToast('Streak broken! Simulated missed day — reset to Day 1.', 'warning');

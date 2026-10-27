@@ -1,14 +1,14 @@
 import React, { useState, useMemo } from 'react';
-import { 
-  Coins, 
-  PlusCircle, 
-  Lock, 
-  Unlock, 
-  Calendar, 
-  TrendingUp, 
-  ShieldCheck, 
-  Calculator, 
-  CheckCircle2, 
+import {
+  Coins,
+  PlusCircle,
+  Lock,
+  Unlock,
+  Calendar,
+  TrendingUp,
+  ShieldCheck,
+  Calculator,
+  CheckCircle2,
   Sparkles,
   ArrowDownCircle,
   ArrowUpCircle,
@@ -32,7 +32,7 @@ export default function PlansView({ onOpenDeposit, onWithdrawPrincipal }) {
   // Inline simulator state
   const [selectedAmount, setSelectedAmount] = useState(defaultAmount);
   const [customAmount, setCustomAmount] = useState(defaultAmount.toString());
-  const [selectedLockin, setSelectedLockin] = useState(LOCKIN_PERIODS[1]); // Default 3 Months
+  const [selectedLockin, setSelectedLockin] = useState(LOCKIN_PERIODS[1]); // Default 90 Days
   const [planTitle, setPlanTitle] = useState('');
 
   const numAmount = Number(customAmount) || 0;
@@ -89,11 +89,11 @@ export default function PlansView({ onOpenDeposit, onWithdrawPrincipal }) {
 
       {/* Active Plan Notification Card */}
       {activePlan && (
-        <div 
-          className="glass-card" 
-          style={{ 
-            padding: '1.25rem 1.5rem', 
-            marginBottom: '2rem', 
+        <div
+          className="glass-card"
+          style={{
+            padding: '1.25rem 1.5rem',
+            marginBottom: '2rem',
             background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(16, 185, 129, 0.1) 100%)',
             borderColor: 'rgba(59, 130, 246, 0.4)',
             display: 'flex',
@@ -113,7 +113,7 @@ export default function PlansView({ onOpenDeposit, onWithdrawPrincipal }) {
                 <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>1 Plan Maximum Allowed</span>
               </div>
               <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#f8fafc' }}>
-                {activePlan.title} — {formatINR(activePlan.amount)} ({activePlan.months}M Tier)
+                {activePlan.title} — {formatINR(activePlan.amount)} ({activePlan.days || activePlan.months * 30} Days Tier)
               </h3>
               <p style={{ fontSize: '0.82rem', color: '#cbd5e1' }}>
                 Estimated Daily Quota: <strong>~{formatINR(activePlan.dailyQuota)}/day</strong> • To earn more, upgrade to a higher tier below.
@@ -128,10 +128,10 @@ export default function PlansView({ onOpenDeposit, onWithdrawPrincipal }) {
       )}
 
       {/* Interactive Simulator & Subscription Terminal */}
-      <div 
-        className="glass-card" 
-        style={{ 
-          padding: '2rem', 
+      <div
+        className="glass-card"
+        style={{
+          padding: '2rem',
           marginBottom: '2.5rem',
           background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(6, 182, 212, 0.06) 50%, rgba(15, 23, 42, 0.95) 100%)',
           borderColor: 'rgba(16, 185, 129, 0.3)'
@@ -146,8 +146,8 @@ export default function PlansView({ onOpenDeposit, onWithdrawPrincipal }) {
               {activePlan ? 'Membership Tier Upgrade Terminal' : 'Interactive Plan Simulator & Terminal'}
             </h3>
             <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
-              {activePlan 
-                ? `Current tier: ${formatINR(activePlan.amount)}. Select a higher amount to upgrade.` 
+              {activePlan
+                ? `Current tier: ${formatINR(activePlan.amount)}. Select a higher amount to upgrade.`
                 : 'Select your subscription amount and duration to preview estimated task income.'}
             </p>
           </div>
@@ -184,8 +184,8 @@ export default function PlansView({ onOpenDeposit, onWithdrawPrincipal }) {
                           borderRadius: 'var(--radius-md)',
                           background: isDisabled
                             ? 'rgba(255, 255, 255, 0.02)'
-                            : isSelected 
-                              ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.25) 0%, rgba(6, 182, 212, 0.2) 100%)' 
+                            : isSelected
+                              ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.25) 0%, rgba(6, 182, 212, 0.2) 100%)'
                               : 'rgba(255, 255, 255, 0.04)',
                           border: `1.5px solid ${isDisabled ? 'rgba(255, 255, 255, 0.05)' : isSelected ? 'var(--emerald-500)' : 'var(--border-subtle)'}`,
                           color: isDisabled ? '#64748b' : isSelected ? '#34d399' : '#e2e8f0',
@@ -226,9 +226,9 @@ export default function PlansView({ onOpenDeposit, onWithdrawPrincipal }) {
                     min={activePlan ? activePlan.amount + 1 : 2000}
                     step="500"
                     className="input-field"
-                    style={{ 
-                      paddingLeft: '2.5rem', 
-                      fontSize: '1.1rem', 
+                    style={{
+                      paddingLeft: '2.5rem',
+                      fontSize: '1.1rem',
                       fontWeight: 700,
                       borderColor: isDowngradeAttempt ? '#ef4444' : undefined
                     }}
@@ -305,10 +305,10 @@ export default function PlansView({ onOpenDeposit, onWithdrawPrincipal }) {
             </div>
 
             {/* Right Column: Live Projected Returns Card */}
-            <div 
-              className="glass-card" 
-              style={{ 
-                padding: '1.5rem', 
+            <div
+              className="glass-card"
+              style={{
+                padding: '1.5rem',
                 background: 'rgba(15, 23, 42, 0.7)',
                 borderColor: 'rgba(16, 185, 129, 0.35)',
                 display: 'flex',
@@ -349,9 +349,9 @@ export default function PlansView({ onOpenDeposit, onWithdrawPrincipal }) {
                   </div>
 
                   <div>
-                    <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Estimated Monthly Potential</div>
+                    <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Estimated 30 Days Potential</div>
                     <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#22d3ee' }}>
-                      ~{formatINR(calculation.estimatedMonthlyIncome)} / month
+                      ~{formatINR(calculation.estimatedMonthlyIncome)} / 30 days
                     </div>
                   </div>
                 </div>
@@ -363,14 +363,14 @@ export default function PlansView({ onOpenDeposit, onWithdrawPrincipal }) {
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', color: '#cbd5e1', marginTop: '0.25rem' }}>
                     <ShieldCheck size={14} color="#34d399" />
-                    <span>Original deposit {formatINR(calculation.principal)} eligible for full withdrawal after {selectedLockin.months} month(s)</span>
+                    <span>Original deposit {formatINR(calculation.principal)} eligible for full withdrawal after {selectedLockin.days || selectedLockin.months * 30} days</span>
                   </div>
                 </div>
               </div>
 
-              <button 
-                type="submit" 
-                className="btn btn-primary btn-lg" 
+              <button
+                type="submit"
+                className="btn btn-primary btn-lg"
                 style={{ width: '100%' }}
                 disabled={isDowngradeAttempt || numAmount < 2000}
               >
@@ -405,7 +405,7 @@ export default function PlansView({ onOpenDeposit, onWithdrawPrincipal }) {
                 <th style={{ padding: '0.75rem' }}>Duration Tier</th>
                 <th style={{ padding: '0.75rem' }}>Tier Classification</th>
                 <th style={{ padding: '0.75rem' }}>Estimated Daily Task Quota</th>
-                <th style={{ padding: '0.75rem' }}>Estimated Monthly Potential</th>
+                <th style={{ padding: '0.75rem' }}>Estimated 30 Days Potential</th>
                 <th style={{ padding: '0.75rem' }}>Sample Total on ₹10,000 Tier</th>
                 <th style={{ padding: '0.75rem' }}>Capital Status</th>
               </tr>
@@ -427,7 +427,7 @@ export default function PlansView({ onOpenDeposit, onWithdrawPrincipal }) {
                       ~{formatINR(sampleCalc.estimatedDailyIncome)} / day (on ₹10K)
                     </td>
                     <td style={{ padding: '0.85rem 0.75rem', color: '#22d3ee', fontWeight: 600 }}>
-                      ~{formatINR(sampleCalc.estimatedMonthlyIncome)} / month
+                      ~{formatINR(sampleCalc.estimatedMonthlyIncome)} / 30 days
                     </td>
                     <td style={{ padding: '0.85rem 0.75rem', fontWeight: 700, color: '#34d399' }}>
                       +{formatINR(sampleCalc.estimatedTotalIncome)}
@@ -466,9 +466,9 @@ export default function PlansView({ onOpenDeposit, onWithdrawPrincipal }) {
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
             {plans.map((plan) => (
-              <PlanCard 
-                key={plan.id} 
-                plan={plan} 
+              <PlanCard
+                key={plan.id}
+                plan={plan}
                 onWithdrawPrincipal={onWithdrawPrincipal}
               />
             ))}

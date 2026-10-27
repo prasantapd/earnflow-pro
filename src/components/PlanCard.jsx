@@ -49,7 +49,7 @@ export default function PlanCard({ plan, onWithdrawPrincipal }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
             <span style={{ fontFamily: 'monospace', fontSize: '0.75rem', color: '#94a3b8' }}>{plan.id}</span>
             <span className="badge badge-indigo" style={{ fontSize: '0.65rem' }}>
-              {plan.months} Month Tier
+              {plan.days || plan.months * 30} Days Tier
             </span>
           </div>
           <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#f8fafc' }}>{plan.title}</h3>

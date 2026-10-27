@@ -255,7 +255,7 @@ export default function WithdrawView({ onOpenWithdraw, onOpenPayout, onWithdrawP
                       <span className="badge badge-emerald">Matured</span>
                     </div>
                     <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
-                      {plan.months} Month Lock-in • Matured on {formatDate(plan.maturityDate)}
+                      {plan.days || plan.months * 30} Days Lock-in • Matured on {formatDate(plan.maturityDate)}
                     </div>
                     <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#ffffff', marginTop: '0.5rem' }}>
                       {formatINR(plan.amount)} Principal

@@ -253,7 +253,7 @@ export default function DepositCalculatorModal({ isOpen, onClose }) {
           <div style={{ marginBottom: '1.5rem' }}>
             <div className="form-label">
               <span style={{ fontWeight: 700, color: '#f8fafc' }}>2. Select Lock-in Duration</span>
-              <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>1 Month to 1 Year</span>
+              <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>30 Days to 360 Days</span>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.65rem' }}>
@@ -355,9 +355,9 @@ export default function DepositCalculatorModal({ isOpen, onClose }) {
               </div>
 
               <div>
-                <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Estimated Monthly Potential</div>
+                <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Estimated 30 Days Potential</div>
                 <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#22d3ee' }}>
-                  ~{formatINR(calculation.estimatedMonthlyIncome)} / month
+                  ~{formatINR(calculation.estimatedMonthlyIncome)} / 30 days
                 </div>
               </div>
             </div>
@@ -372,7 +372,7 @@ export default function DepositCalculatorModal({ isOpen, onClose }) {
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', color: '#cbd5e1', background: 'rgba(255, 255, 255, 0.04)', padding: '0.4rem 0.65rem', borderRadius: '8px' }}>
                 <ShieldCheck size={16} color="#34d399" />
-                <span>Principal refundable after {selectedLockin.months} month(s)</span>
+                <span>Principal refundable after {selectedLockin.days || selectedLockin.months * 30} days</span>
               </div>
             </div>
           </div>

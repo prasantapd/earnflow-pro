@@ -4,7 +4,7 @@ import { calculateEarnings, getNextSundayStatus, extractYoutubeId } from '../uti
 
 const AppContext = createContext();
 
-const STORAGE_KEY = 'earnflow_pro_state_v8';
+const STORAGE_KEY = 'earnflow_pro_state_v9';
 
 export const INITIAL_VIDEO_TASKS = [
   {
@@ -319,6 +319,12 @@ const INITIAL_STATE = {
     claimedToday: false,
     totalStreakEarned: 10.00,
     history: [true, true, false, false, false, false, false],
+  },
+  gamingStats: {
+    totalGamingRakeCollected: 845.00, // 10% platform house rake from matches
+    totalMatchesPlayed: 169,
+    userMatchesPlayed: 8,
+    userMatchesWon: 5,
   },
   lastWithdrawalTime: null,
   forceSunday: true, // 24/7 payouts active
@@ -766,6 +772,140 @@ export function AppProvider({ children }) {
   };
 
   /* =========================================================================
+     SKILL GAMING & PVP MULTIPLAYER ENGINE:
+     - Strict Wallet Separation: Entry fees deducted strictly from Task Wallet
+     - Membership/Deposit Principal is 100% locked & safe (cannot be gambled)
+     - 10% Platform House Rake: Deducted from gross pool before winner payout
+     - Solo Puzzle Games: Solved within countdown wins prize
+     - Multiplayer PvP: 1st Rank takes net pool (90% after 10% platform commission)
+     ========================================================================= */
+
+  const playSoloSkillGame = ({ gameId, gameTitle, entryFee, rewardAmount, won }) => {
+    if (state.user?.status === 'SUSPENDED') {
+      showToast('Account suspended: Cannot play games. Contact support.', 'error');
+      return false;
+    }
+
+    const fee = Number(entryFee) || 0;
+    const reward = Number(rewardAmount) || 0;
+
+    // Deduct entry fee when starting match
+    if (fee > 0) {
+      if (state.rewardWallet < fee) {
+        showToast(`Insufficient Task Wallet! Entry fee is ₹${fee}. You cannot use locked membership capital.`, 'error');
+        return false;
+      }
+
+      const feeTxn = {
+        id: `TXN-${Math.floor(100000 + Math.random() * 900000)}`,
+        type: 'GAME_ENTRY',
+        title: `${gameTitle} Entry Fee`,
+        amount: -fee,
+        timestamp: new Date().toISOString(),
+        status: 'COMPLETED',
+        meta: `Skill game entry fee deducted from Task Wallet (100% safe)`,
+      };
+
+      setState((prev) => ({
+        ...prev,
+        rewardWallet: +(prev.rewardWallet - fee).toFixed(2),
+        transactions: [feeTxn, ...prev.transactions],
+        gamingStats: {
+          ...prev.gamingStats,
+          totalMatchesPlayed: (prev.gamingStats?.totalMatchesPlayed || 0) + 1,
+          userMatchesPlayed: (prev.gamingStats?.userMatchesPlayed || 0) + 1,
+        },
+      }));
+
+      return true;
+    }
+
+    // Handle game win settlement
+    if (won && reward > 0) {
+      const winTxn = {
+        id: `TXN-${Math.floor(100000 + Math.random() * 900000)}`,
+        type: 'TASK_REWARD',
+        title: `🏆 ${gameTitle} Win Prize`,
+        amount: reward,
+        timestamp: new Date().toISOString(),
+        status: 'COMPLETED',
+        meta: `Solved puzzle within countdown time limit! Reward credited.`,
+      };
+
+      setState((prev) => ({
+        ...prev,
+        rewardWallet: +(prev.rewardWallet + reward).toFixed(2),
+        transactions: [winTxn, ...prev.transactions],
+        gamingStats: {
+          ...prev.gamingStats,
+          userMatchesWon: (prev.gamingStats?.userMatchesWon || 0) + 1,
+        },
+      }));
+
+      triggerCelebration();
+      return true;
+    }
+
+    return true;
+  };
+
+  const playMultiplayerPvPMatch = ({ gameTitle, playersCount, entryFee, userRank }) => {
+    if (state.user?.status === 'SUSPENDED') {
+      showToast('Account suspended: Cannot join PvP arenas. Contact support.', 'error');
+      return false;
+    }
+
+    const fee = Number(entryFee) || 5;
+    const players = Number(playersCount) || 2;
+    const grossPot = fee * players;
+    const platformCommission = +(grossPot * 0.10).toFixed(2); // 10% platform house rake
+    const netPool = +(grossPot - platformCommission).toFixed(2);
+
+    let winAmount = 0;
+    if (userRank === 1) {
+      winAmount = players === 2 ? netPool : +(netPool * 0.75).toFixed(2);
+    } else if (userRank === 2 && players === 4) {
+      winAmount = +(netPool * 0.25).toFixed(2);
+    }
+
+    const netChange = +(winAmount - fee).toFixed(2);
+
+    const matchTxn = {
+      id: `TXN-${Math.floor(100000 + Math.random() * 900000)}`,
+      type: winAmount > 0 ? 'TASK_REWARD' : 'GAME_ENTRY',
+      title: `${gameTitle} (Rank #${userRank})`,
+      amount: winAmount > 0 ? winAmount : -fee,
+      timestamp: new Date().toISOString(),
+      status: 'COMPLETED',
+      meta: `Pot: ₹${grossPot} • 10% Platform Rake: -₹${platformCommission} • Payout: ₹${winAmount}`,
+    };
+
+    setState((prev) => ({
+      ...prev,
+      rewardWallet: Math.max(0, +(prev.rewardWallet + netChange).toFixed(2)),
+      transactions: [matchTxn, ...prev.transactions],
+      gamingStats: {
+        ...prev.gamingStats,
+        totalGamingRakeCollected: +((prev.gamingStats?.totalGamingRakeCollected || 0) + platformCommission).toFixed(2),
+        totalMatchesPlayed: (prev.gamingStats?.totalMatchesPlayed || 0) + 1,
+        userMatchesPlayed: (prev.gamingStats?.userMatchesPlayed || 0) + 1,
+        userMatchesWon: (prev.gamingStats?.userMatchesWon || 0) + (userRank === 1 ? 1 : 0),
+      },
+    }));
+
+    if (userRank === 1) {
+      triggerCelebration();
+      showToast(`🏆 1st Rank in ${gameTitle}! +${formatINR(winAmount)} won!`);
+    } else if (winAmount > 0) {
+      showToast(`🥈 2nd Rank in ${gameTitle}! +${formatINR(winAmount)} runner-up prize won!`);
+    } else {
+      showToast(`Match ended (Rank #${userRank}). Entry fee ₹${fee} settled.`);
+    }
+
+    return true;
+  };
+
+  /* =========================================================================
      MLM 2:1 BINARY REFERRAL ENGINE:
      - 2:1 or 1:2 Pair Matching on Deposit Business Volume
      - Solvency Protection: 5% on matched pair volume (₹150 / ₹3000 pair)
@@ -1183,6 +1323,10 @@ export function AppProvider({ children }) {
         updateVideoTask,
         deleteVideoTask,
         toggleVideoTaskStatus,
+        // Skill Gaming & PvP Multiplayer Engine
+        gamingStats: state.gamingStats,
+        playSoloSkillGame,
+        playMultiplayerPvPMatch,
       }}
     >
       {children}

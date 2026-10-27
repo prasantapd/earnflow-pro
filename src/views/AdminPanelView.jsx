@@ -26,7 +26,8 @@ import {
   Share2,
   ExternalLink,
   Clock,
-  Play
+  Play,
+  Gamepad2
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { formatINR, formatDate } from '../utils/finance';
@@ -53,7 +54,8 @@ export default function AdminPanelView() {
     addVideoTask,
     updateVideoTask,
     deleteVideoTask,
-    toggleVideoTaskStatus
+    toggleVideoTaskStatus,
+    gamingStats
   } = useApp();
 
   const [activeAdminTab, setActiveAdminTab] = useState('users'); // 'users', 'deposits', 'withdrawals', 'settings'
@@ -219,6 +221,18 @@ export default function AdminPanelView() {
           </div>
           <div style={{ fontSize: '0.75rem', color: '#34d399' }}>
             10% Mo Generation active
+          </div>
+        </div>
+
+        <div className="glass-card" style={{ padding: '1.25rem', borderLeft: '4px solid #ec4899', background: 'rgba(236, 72, 153, 0.05)' }}>
+          <div style={{ fontSize: '0.75rem', color: '#f472b6', textTransform: 'uppercase', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+            <Gamepad2 size={13} /> 10% House Rake (PvP)
+          </div>
+          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#f472b6', margin: '0.2rem 0' }}>
+            {formatINR(gamingStats?.totalGamingRakeCollected || 845.00)}
+          </div>
+          <div style={{ fontSize: '0.75rem', color: '#cbd5e1' }}>
+            {gamingStats?.totalMatchesPlayed || 169} matches • 100% Risk-Free Profit
           </div>
         </div>
       </div>

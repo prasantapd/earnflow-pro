@@ -9,10 +9,17 @@ import {
   Clock, 
   RotateCw, 
   Gift, 
-  Brain,
-  Wallet,
-  ArrowDownCircle,
-  Share2
+  Brain, 
+  Wallet, 
+  ArrowDownCircle, 
+  Share2,
+  Grid,
+  Dice5,
+  Trophy,
+  Spade,
+  Users,
+  Zap,
+  ShieldCheck
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { formatINR } from '../utils/finance';
@@ -22,6 +29,9 @@ import SpinWheelModal from '../components/SpinWheelModal';
 import ScratchCardModal from '../components/ScratchCardModal';
 import MemoryGameModal from '../components/MemoryGameModal';
 import DailyStreakWidget from '../components/DailyStreakWidget';
+import SlidePuzzleModal from '../components/SlidePuzzleModal';
+import LudoArenaModal from '../components/LudoArenaModal';
+import CardGamesArenaModal from '../components/CardGamesArenaModal';
 
 const VIDEO_TASKS = [
   {
@@ -111,6 +121,11 @@ export default function TaskCenterView({ onOpenWithdraw }) {
   const [activeSpinTask, setActiveSpinTask] = useState(null);
   const [activeScratchTask, setActiveScratchTask] = useState(null);
   const [activeMemoryTask, setActiveMemoryTask] = useState(null);
+
+  // Skill Gaming & PvP Arena Modals
+  const [isPuzzleOpen, setIsPuzzleOpen] = useState(false);
+  const [isLudoOpen, setIsLudoOpen] = useState(false);
+  const [isCardGamesOpen, setIsCardGamesOpen] = useState(false);
 
   const activeVideoTasks = (dailyVideoTasks && dailyVideoTasks.length > 0)
     ? dailyVideoTasks.filter((t) => t.status !== 'PAUSED')
@@ -269,6 +284,138 @@ export default function TaskCenterView({ onOpenWithdraw }) {
               </div>
             );
           })}
+        </div>
+      </div>
+
+      {/* Section: Skill Gaming & PvP Tournament Arena (10% House Rake) */}
+      <div style={{ marginBottom: '2.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+            <div style={{ width: 38, height: 38, borderRadius: '10px', background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff' }}>
+              <Trophy size={22} />
+            </div>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <h3 style={{ fontSize: '1.35rem', fontWeight: 800 }}>Skill Gaming & PvP Tournament Arena</h3>
+                <span className="badge badge-gold" style={{ fontSize: '0.65rem' }}>10% House Rake</span>
+              </div>
+              <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+                Challenge real players in Speed Ludo, 29 Cards, Call Bridge, or solve countdown slide puzzles to win the pot!
+              </p>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '0.4rem 0.8rem', borderRadius: 'var(--radius-full)', fontSize: '0.78rem', color: '#34d399' }}>
+            <ShieldCheck size={15} />
+            <span>Strict Rule: Fees paid <strong>strictly</strong> from Task Wallet</span>
+          </div>
+        </div>
+
+        {/* 4 Arena Cards */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
+          {/* Card 1: Slide Number Puzzle */}
+          <div className="glass-card card-interactive" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
+                <span className="badge badge-emerald" style={{ fontSize: '0.68rem' }}>
+                  <Grid size={12} /> Solo Brain Challenge
+                </span>
+                <span style={{ fontSize: '1.15rem', fontWeight: 800, color: '#34d399' }}>
+                  Win up to ₹16
+                </span>
+              </div>
+              <h4 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '0.4rem' }}>
+                3×3 & 4×4 Slide Number Puzzle
+              </h4>
+              <p style={{ fontSize: '0.82rem', color: '#94a3b8', lineHeight: 1.4, marginBottom: '1.25rem' }}>
+                Arrange scrambled tiles into numerical order before the timer expires. 100% logic and brain power!
+              </p>
+              <div style={{ fontSize: '0.75rem', color: '#cbd5e1', marginBottom: '1.25rem', padding: '0.5rem', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '6px' }}>
+                ⏱️ Countdown: 60s / 120s • Entry: ₹5 / ₹10 (Task Wallet)
+              </div>
+            </div>
+            <button className="btn btn-primary" style={{ width: '100%', fontWeight: 700 }} onClick={() => setIsPuzzleOpen(true)}>
+              <Grid size={16} /> Play Slide Puzzle
+            </button>
+          </div>
+
+          {/* Card 2: Speed Ludo PvP */}
+          <div className="glass-card card-interactive" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
+                <span className="badge badge-gold" style={{ fontSize: '0.68rem' }}>
+                  <Dice5 size={12} /> 2-4 Players Online
+                </span>
+                <span style={{ fontSize: '1.15rem', fontWeight: 800, color: '#fbbf24' }}>
+                  1st Rank Takes 90%
+                </span>
+              </div>
+              <h4 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '0.4rem' }}>
+                Speed Ludo PvP Arena
+              </h4>
+              <p style={{ fontSize: '0.82rem', color: '#94a3b8', lineHeight: 1.4, marginBottom: '1.25rem' }}>
+                Battle 1v1 or 4 players in fast-paced Speed Ludo. App retains 10% commission, winner takes the pot!
+              </p>
+              <div style={{ fontSize: '0.75rem', color: '#cbd5e1', marginBottom: '1.25rem', padding: '0.5rem', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '6px' }}>
+                🎲 Entry: ₹5 / ₹10 / ₹25 • 2P Pot: ₹9 • 4P Pot: ₹18
+              </div>
+            </div>
+            <button className="btn btn-gold" style={{ width: '100%', fontWeight: 700 }} onClick={() => setIsLudoOpen(true)}>
+              <Dice5 size={16} /> Enter Ludo PvP Arena
+            </button>
+          </div>
+
+          {/* Card 3: 29 Cards Championship */}
+          <div className="glass-card card-interactive" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
+                <span className="badge" style={{ fontSize: '0.68rem', background: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
+                  <Spade size={12} /> 4-Player Trick Taking
+                </span>
+                <span style={{ fontSize: '1.15rem', fontWeight: 800, color: '#60a5fa' }}>
+                  1st & 2nd Rank Pot
+                </span>
+              </div>
+              <h4 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '0.4rem' }}>
+                29 Cards Championship
+              </h4>
+              <p style={{ fontSize: '0.82rem', color: '#94a3b8', lineHeight: 1.4, marginBottom: '1.25rem' }}>
+                South Asian classic 29 Cards trick play. Bid high, set trump, and outsmart opponents to rank top!
+              </p>
+              <div style={{ fontSize: '0.75rem', color: '#cbd5e1', marginBottom: '1.25rem', padding: '0.5rem', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '6px' }}>
+                ♠️ Entry: ₹5 / ₹10 • 1st Rank: 75% • 2nd Rank: 25%
+              </div>
+            </div>
+            <button className="btn btn-secondary" style={{ width: '100%', fontWeight: 700 }} onClick={() => setIsCardGamesOpen(true)}>
+              <Spade size={16} /> Join 29 Cards Table
+            </button>
+          </div>
+
+          {/* Card 4: Call Bridge Masters */}
+          <div className="glass-card card-interactive" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
+                <span className="badge" style={{ fontSize: '0.68rem', background: 'rgba(168, 85, 247, 0.15)', color: '#c084fc', border: '1px solid rgba(168, 85, 247, 0.3)' }}>
+                  <Trophy size={12} /> 4-Player Tournament
+                </span>
+                <span style={{ fontSize: '1.15rem', fontWeight: 800, color: '#c084fc' }}>
+                  Rank 1 Payout
+                </span>
+              </div>
+              <h4 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '0.4rem' }}>
+                Call Bridge Masters Arena
+              </h4>
+              <p style={{ fontSize: '0.82rem', color: '#94a3b8', lineHeight: 1.4, marginBottom: '1.25rem' }}>
+                Call your bids accurately and take tricks in competitive 4-player Spades bridge tournaments.
+              </p>
+              <div style={{ fontSize: '0.75rem', color: '#cbd5e1', marginBottom: '1.25rem', padding: '0.5rem', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '6px' }}>
+                ♣️ 10% House Rake • Pure Skill Strategy Tournament
+              </div>
+            </div>
+            <button className="btn btn-primary" style={{ width: '100%', fontWeight: 700, background: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)' }} onClick={() => setIsCardGamesOpen(true)}>
+              <Trophy size={16} /> Play Call Bridge
+            </button>
+          </div>
         </div>
       </div>
 
@@ -441,6 +588,22 @@ export default function TaskCenterView({ onOpenWithdraw }) {
         isOpen={Boolean(activeMemoryTask)}
         onClose={() => setActiveMemoryTask(null)}
         task={activeMemoryTask}
+      />
+
+      {/* Skill Gaming & PvP Modals */}
+      <SlidePuzzleModal
+        isOpen={isPuzzleOpen}
+        onClose={() => setIsPuzzleOpen(false)}
+      />
+
+      <LudoArenaModal
+        isOpen={isLudoOpen}
+        onClose={() => setIsLudoOpen(false)}
+      />
+
+      <CardGamesArenaModal
+        isOpen={isCardGamesOpen}
+        onClose={() => setIsCardGamesOpen(false)}
       />
     </div>
   );

@@ -208,6 +208,31 @@ export const STREAK_SCHEDULE = Array.from({ length: 30 }, (_, i) => {
   };
 });
 
+export const INITIAL_PAYMENT_SETTINGS = {
+  upiId: 'earnflowpro@icici',
+  upiPayeeName: 'EarnFlow Pro Treasury',
+  bankName: 'HDFC Bank',
+  accountName: 'EarnFlow Yield Private Limited',
+  accountNumber: '50200098412849',
+  ifscCode: 'HDFC0001234',
+  branch: 'BKC Corporate Financial Centre, Mumbai',
+  qrCodeUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=upi://pay?pa=earnflowpro@icici%26pn=EarnFlow%20Pro%20Treasury%26cu=INR',
+  instructions: '1. Pay the exact membership plan amount via Google Pay, PhonePe, Paytm, BHIM, or Net Banking.\n2. Note down the 12-digit UTR or UPI Reference Number from your payment receipt.\n3. Paste the 12-digit UTR in the deposit form below and click Submit.\n4. Admin treasury verifies your UTR within 5–15 minutes and your plan activates automatically!',
+  minDeposit: 2000,
+  isUpiEnabled: true,
+  isBankEnabled: true,
+  isQrEnabled: true,
+};
+
+export const INITIAL_ADMIN_ANNOUNCEMENT = {
+  active: true,
+  title: '📢 Fast Approvals & Live 30-Day Progressive Bonus Active!',
+  message: 'Welcome to EarnFlow Pro! Complete daily tasks (Video + Facebook share, Music, and Slide Puzzles) to earn guaranteed rewards. Deposit requests with valid 12-digit UTRs are verified within 5–15 minutes.',
+  type: 'info', // 'info', 'warning', 'success', 'critical'
+  updatedAt: new Date().toISOString(),
+  broadcastBy: 'Admin Treasury Desk',
+};
+
 const INITIAL_USERS = [
   {
     id: 'USR-101',
@@ -465,13 +490,29 @@ const INITIAL_STATE = {
   },
   lastWithdrawalTime: null,
   forceSunday: true, // 24/7 payouts active
+  paymentSettings: INITIAL_PAYMENT_SETTINGS,
+  adminAnnouncement: INITIAL_ADMIN_ANNOUNCEMENT,
 };
 
 export function AppProvider({ children }) {
   const [state, setState] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return {
+          ...INITIAL_STATE,
+          ...parsed,
+          paymentSettings: {
+            ...INITIAL_PAYMENT_SETTINGS,
+            ...(parsed.paymentSettings || {}),
+          },
+          adminAnnouncement: {
+            ...INITIAL_ADMIN_ANNOUNCEMENT,
+            ...(parsed.adminAnnouncement || {}),
+          },
+        };
+      }
     } catch (e) {
       console.warn('Failed to parse saved state, using default:', e);
     }
@@ -1468,6 +1509,31 @@ export function AppProvider({ children }) {
     .filter((p) => p.status === 'active')
     .reduce((sum, p) => sum + p.dailyQuota, 0);
 
+  // Update Payment & Banking Gateway Settings
+  const updatePaymentSettings = (newSettings) => {
+    setState((prev) => ({
+      ...prev,
+      paymentSettings: {
+        ...(prev.paymentSettings || INITIAL_PAYMENT_SETTINGS),
+        ...newSettings,
+      },
+    }));
+    showToast('Payment & Banking Gateway Details updated successfully!');
+  };
+
+  // Update Admin Broadcast Announcement
+  const updateAdminAnnouncement = (newAnnouncement) => {
+    setState((prev) => ({
+      ...prev,
+      adminAnnouncement: {
+        ...(prev.adminAnnouncement || INITIAL_ADMIN_ANNOUNCEMENT),
+        ...newAnnouncement,
+        updatedAt: new Date().toISOString(),
+      },
+    }));
+    showToast('Admin Announcement published live!');
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -1523,6 +1589,12 @@ export function AppProvider({ children }) {
         // Membership Plan Tier Scaling
         userMembershipTier,
         activePlan,
+        // Payment & Banking Gateway Settings
+        paymentSettings: state.paymentSettings || INITIAL_PAYMENT_SETTINGS,
+        updatePaymentSettings,
+        // Admin Broadcast Announcement
+        adminAnnouncement: state.adminAnnouncement || INITIAL_ADMIN_ANNOUNCEMENT,
+        updateAdminAnnouncement,
       }}
     >
       {children}

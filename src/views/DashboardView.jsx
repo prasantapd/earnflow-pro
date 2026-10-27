@@ -18,6 +18,7 @@ import { useApp } from '../context/AppContext';
 import { formatINR, formatDate } from '../utils/finance';
 import PlanCard from '../components/PlanCard';
 import DailyStreakWidget from '../components/DailyStreakWidget';
+import AdminAnnouncementBanner from '../components/AdminAnnouncementBanner';
 
 export default function DashboardView({ 
   onOpenDeposit, 
@@ -47,6 +48,9 @@ export default function DashboardView({
 
   return (
     <div>
+      {/* Admin Broadcast Notice Banner */}
+      <AdminAnnouncementBanner />
+
       {/* Welcome Banner */}
       <div 
         className="glass-card" 

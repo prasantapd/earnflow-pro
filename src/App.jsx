@@ -9,6 +9,7 @@ import WithdrawModal from './components/WithdrawModal';
 import ReceiptModal from './components/ReceiptModal';
 
 import AdminLoginModal from './components/AdminLoginModal';
+import LiveActivityTicker from './components/LiveActivityTicker';
 
 import DashboardView from './views/DashboardView';
 import PlansView from './views/PlansView';
@@ -92,6 +93,9 @@ function MainApp() {
         onOpenDeposit={() => setIsDepositOpen(true)}
         onOpenAdminLogin={() => setIsAdminLoginOpen(true)}
       />
+
+      {/* Live Activity Real-Time Stream Marquee */}
+      <LiveActivityTicker />
 
       {/* Main Content Area */}
       <main className="app-container" style={{ flex: 1 }}>

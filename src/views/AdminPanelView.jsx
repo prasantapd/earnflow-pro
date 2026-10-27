@@ -34,7 +34,13 @@ import {
   Grid,
   Sparkles,
   Zap,
-  Activity
+  Activity,
+  Building2,
+  QrCode,
+  Megaphone,
+  Copy,
+  Check,
+  Save
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { formatINR, formatDate } from '../utils/finance';
@@ -65,12 +71,37 @@ export default function AdminPanelView() {
     updateDailyTask,
     deleteDailyTask,
     toggleDailyTaskStatus,
-    gamingStats
+    gamingStats,
+    paymentSettings,
+    updatePaymentSettings,
+    adminAnnouncement,
+    updateAdminAnnouncement
   } = useApp();
 
-  const [activeAdminTab, setActiveAdminTab] = useState('users'); // 'users', 'deposits', 'withdrawals', 'settings', 'tasks'
+  const [activeAdminTab, setActiveAdminTab] = useState('users'); // 'users', 'deposits', 'withdrawals', 'settings', 'tasks', 'payments', 'broadcast'
   const [userSearch, setUserSearch] = useState('');
   const [userStatusFilter, setUserStatusFilter] = useState('ALL');
+
+  // Banking Gateway Form state
+  const [bankingForm, setBankingForm] = useState(() => ({
+    upiId: paymentSettings?.upiId || 'earnflowpro@icici',
+    upiPayeeName: paymentSettings?.upiPayeeName || 'EarnFlow Pro Treasury',
+    bankName: paymentSettings?.bankName || 'HDFC Bank',
+    accountName: paymentSettings?.accountName || 'EarnFlow Yield Private Limited',
+    accountNumber: paymentSettings?.accountNumber || '50200098412849',
+    ifscCode: paymentSettings?.ifscCode || 'HDFC0001234',
+    branch: paymentSettings?.branch || 'BKC Corporate Financial Centre, Mumbai',
+    instructions: paymentSettings?.instructions || '',
+  }));
+
+  // Announcement Broadcast Form state
+  const [announcementForm, setAnnouncementForm] = useState(() => ({
+    active: adminAnnouncement?.active ?? true,
+    title: adminAnnouncement?.title || '',
+    message: adminAnnouncement?.message || '',
+    type: adminAnnouncement?.type || 'info',
+    broadcastBy: adminAnnouncement?.broadcastBy || 'Admin Treasury Desk',
+  }));
 
   // Modals inside admin
   const [suspensionModal, setSuspensionModal] = useState({ isOpen: false, user: null, reason: '' });
@@ -293,6 +324,25 @@ export default function AdminPanelView() {
           onClick={() => setActiveAdminTab('tasks')}
         >
           <Sliders size={16} /> Daily Task Roster ({(dailyTaskRoster || []).filter((t) => t.status === 'ACTIVE').length} Active)
+        </button>
+
+        <button
+          className={`btn ${activeAdminTab === 'payments' ? 'btn-primary' : 'btn-secondary'} btn-sm`}
+          onClick={() => setActiveAdminTab('payments')}
+        >
+          <Building2 size={16} /> Banking & UPI Setup
+        </button>
+
+        <button
+          className={`btn ${activeAdminTab === 'broadcast' ? 'btn-primary' : 'btn-secondary'} btn-sm`}
+          onClick={() => setActiveAdminTab('broadcast')}
+        >
+          <Megaphone size={16} /> Broadcast Message
+          {adminAnnouncement?.active && (
+            <span className="badge badge-emerald" style={{ marginLeft: '0.35rem', fontSize: '0.62rem' }}>
+              LIVE
+            </span>
+          )}
         </button>
       </div>
 
@@ -1061,6 +1111,343 @@ export default function AdminPanelView() {
                 </tbody>
               </table>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 6: BANKING, UPI & QR DEPOSIT GATEWAY SETUP */}
+      {activeAdminTab === 'payments' && (
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                <span className="badge badge-emerald">Payment Gateway</span>
+                <span className="badge badge-cyan">User Deposit Instructions</span>
+              </div>
+              <h3 style={{ fontSize: '1.35rem', fontWeight: 800 }}>Deposit Gateway & Banking Details</h3>
+              <p style={{ fontSize: '0.82rem', color: '#94a3b8', maxWidth: '720px' }}>
+                Set your UPI ID, QR Code and Bank Account information. When users deposit, this is the exact account they will transfer to before submitting their 12-digit UTR.
+              </p>
+            </div>
+          </div>
+
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              updatePaymentSettings({
+                ...bankingForm,
+                qrCodeUrl: `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=upi://pay?pa=${encodeURIComponent(bankingForm.upiId)}%26pn=${encodeURIComponent(bankingForm.upiPayeeName)}%26cu=INR`
+              });
+            }}
+          >
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem', marginBottom: '1.5rem' }}>
+              {/* Card 1: UPI & QR Code Settings */}
+              <div className="glass-card" style={{ padding: '1.5rem', borderLeft: '4px solid #10b981' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                  <QrCode size={18} color="#34d399" />
+                  <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#f8fafc' }}>UPI & QR Code Details</h4>
+                </div>
+
+                <div className="form-group" style={{ marginBottom: '1rem' }}>
+                  <label className="form-label">
+                    <span>Admin Official UPI ID *</span>
+                  </label>
+                  <input
+                    type="text"
+                    className="input-field"
+                    value={bankingForm.upiId}
+                    onChange={(e) => setBankingForm({ ...bankingForm, upiId: e.target.value })}
+                    placeholder="e.g. earnflowpro@icici or yourname@okhdfcbank"
+                    required
+                    style={{ fontFamily: 'monospace', fontWeight: 700 }}
+                  />
+                  <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: '0.25rem' }}>
+                    Users copy this UPI ID directly to transfer via Google Pay, PhonePe, Paytm, or BHIM.
+                  </div>
+                </div>
+
+                <div className="form-group" style={{ marginBottom: '1rem' }}>
+                  <label className="form-label">
+                    <span>UPI Payee / Business Name *</span>
+                  </label>
+                  <input
+                    type="text"
+                    className="input-field"
+                    value={bankingForm.upiPayeeName}
+                    onChange={(e) => setBankingForm({ ...bankingForm, upiPayeeName: e.target.value })}
+                    placeholder="e.g. EarnFlow Enterprise Treasury"
+                    required
+                  />
+                </div>
+
+                {/* Live QR Preview Box */}
+                <div style={{ marginTop: '1rem', padding: '1rem', background: 'rgba(255, 255, 255, 0.03)', borderRadius: 'var(--radius-md)', textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '0.5rem' }}>
+                    Auto-Generated Scannable QR Code Preview
+                  </div>
+                  <div style={{ background: '#ffffff', padding: '8px', borderRadius: '10px', display: 'inline-block' }}>
+                    <img
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=upi://pay?pa=${encodeURIComponent(bankingForm.upiId)}%26pn=${encodeURIComponent(bankingForm.upiPayeeName)}%26cu=INR`}
+                      alt="UPI QR Code"
+                      style={{ width: 130, height: 130, display: 'block' }}
+                    />
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: '#34d399', marginTop: '0.4rem', fontWeight: 600 }}>
+                    upi://pay?pa={bankingForm.upiId}
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 2: Direct Bank Account Settings */}
+              <div className="glass-card" style={{ padding: '1.5rem', borderLeft: '4px solid #06b6d4' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                  <Building2 size={18} color="#22d3ee" />
+                  <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#f8fafc' }}>Direct Bank Account (IMPS/NEFT)</h4>
+                </div>
+
+                <div className="form-group" style={{ marginBottom: '1rem' }}>
+                  <label className="form-label">Bank Name</label>
+                  <input
+                    type="text"
+                    className="input-field"
+                    value={bankingForm.bankName}
+                    onChange={(e) => setBankingForm({ ...bankingForm, bankName: e.target.value })}
+                    placeholder="e.g. HDFC Bank, ICICI Bank, SBI"
+                    required
+                  />
+                </div>
+
+                <div className="form-group" style={{ marginBottom: '1rem' }}>
+                  <label className="form-label">Account Holder / Entity Name</label>
+                  <input
+                    type="text"
+                    className="input-field"
+                    value={bankingForm.accountName}
+                    onChange={(e) => setBankingForm({ ...bankingForm, accountName: e.target.value })}
+                    placeholder="e.g. EarnFlow Yield Private Limited"
+                    required
+                  />
+                </div>
+
+                <div className="form-group" style={{ marginBottom: '1rem' }}>
+                  <label className="form-label">Account Number</label>
+                  <input
+                    type="text"
+                    className="input-field"
+                    value={bankingForm.accountNumber}
+                    onChange={(e) => setBankingForm({ ...bankingForm, accountNumber: e.target.value })}
+                    placeholder="e.g. 50200098412849"
+                    required
+                    style={{ fontFamily: 'monospace', fontWeight: 700 }}
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem' }}>
+                  <div className="form-group" style={{ marginBottom: '1rem' }}>
+                    <label className="form-label">IFSC Code</label>
+                    <input
+                      type="text"
+                      className="input-field"
+                      value={bankingForm.ifscCode}
+                      onChange={(e) => setBankingForm({ ...bankingForm, ifscCode: e.target.value.toUpperCase() })}
+                      placeholder="e.g. HDFC0001234"
+                      required
+                      style={{ fontFamily: 'monospace', textTransform: 'uppercase', fontWeight: 700 }}
+                    />
+                  </div>
+
+                  <div className="form-group" style={{ marginBottom: '1rem' }}>
+                    <label className="form-label">Branch City / Name</label>
+                    <input
+                      type="text"
+                      className="input-field"
+                      value={bankingForm.branch}
+                      onChange={(e) => setBankingForm({ ...bankingForm, branch: e.target.value })}
+                      placeholder="e.g. Mumbai Main Branch"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Card 3: Custom Deposit Instructions for Users */}
+            <div className="glass-card" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                <FileText size={18} color="#fbbf24" />
+                <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#f8fafc' }}>
+                  Deposit Step-by-Step Instructions (Shown to Users)
+                </h4>
+              </div>
+              <textarea
+                className="input-field"
+                rows={4}
+                value={bankingForm.instructions}
+                onChange={(e) => setBankingForm({ ...bankingForm, instructions: e.target.value })}
+                placeholder="Enter step-by-step payment instructions for users..."
+                style={{ fontSize: '0.85rem', lineHeight: 1.6 }}
+              />
+              <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: '0.35rem' }}>
+                These instructions appear on the user's deposit modal below the QR code and bank details.
+              </div>
+            </div>
+
+            <button type="submit" className="btn btn-primary btn-lg" style={{ fontWeight: 800 }}>
+              <Save size={18} /> Save Banking & Payment Gateway Details
+            </button>
+          </form>
+        </div>
+      )}
+
+      {/* TAB 7: ADMIN BROADCAST MESSAGE & NOTICE */}
+      {activeAdminTab === 'broadcast' && (
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                <span className="badge badge-gold">Live Announcements</span>
+                <span className="badge badge-emerald">User Dashboard Banner</span>
+              </div>
+              <h3 style={{ fontSize: '1.35rem', fontWeight: 800 }}>Admin Broadcast & Notice Center</h3>
+              <p style={{ fontSize: '0.82rem', color: '#94a3b8', maxWidth: '720px' }}>
+                Broadcast messages, maintenance notices, withdrawal timings, or festival bonuses to all registered users. This banner appears prominently on the user dashboard.
+              </p>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
+            {/* Form */}
+            <div className="glass-card" style={{ padding: '1.5rem' }}>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (!announcementForm.title.trim()) {
+                    showToast('Please provide an announcement title', 'error');
+                    return;
+                  }
+                  updateAdminAnnouncement(announcementForm);
+                }}
+              >
+                {/* Active Toggle */}
+                <div style={{ padding: '0.85rem', background: 'rgba(255, 255, 255, 0.04)', borderRadius: 'var(--radius-md)', marginBottom: '1.25rem', border: '1px solid var(--border-subtle)' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#ffffff' }}>Broadcast Visibility</div>
+                      <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Toggle whether users currently see this banner on their dashboard</div>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={announcementForm.active}
+                      onChange={(e) => setAnnouncementForm({ ...announcementForm, active: e.target.checked })}
+                      style={{ width: 20, height: 20, accentColor: '#10b981' }}
+                    />
+                  </label>
+                </div>
+
+                <div className="form-group" style={{ marginBottom: '1rem' }}>
+                  <label className="form-label">
+                    <span>Notice Type / Severity</span>
+                  </label>
+                  <select
+                    className="input-field"
+                    value={announcementForm.type}
+                    onChange={(e) => setAnnouncementForm({ ...announcementForm, type: e.target.value })}
+                  >
+                    <option value="info">Info (Cyan) — General Updates & Features</option>
+                    <option value="warning">Notice / Alert (Amber) — Deadlines & Instructions</option>
+                    <option value="success">Success / Event (Emerald) — Bonuses & Milestones</option>
+                    <option value="critical">Critical (Red) — Urgent Warnings & Maintenance</option>
+                  </select>
+                </div>
+
+                <div className="form-group" style={{ marginBottom: '1rem' }}>
+                  <label className="form-label">
+                    <span>Announcement Headline *</span>
+                  </label>
+                  <input
+                    type="text"
+                    className="input-field"
+                    value={announcementForm.title}
+                    onChange={(e) => setAnnouncementForm({ ...announcementForm, title: e.target.value })}
+                    placeholder="e.g. 📢 Special Notice: Sunday Weekly Payouts are Live!"
+                    required
+                    style={{ fontWeight: 700 }}
+                  />
+                </div>
+
+                <div className="form-group" style={{ marginBottom: '1rem' }}>
+                  <label className="form-label">
+                    <span>Message Body *</span>
+                  </label>
+                  <textarea
+                    className="input-field"
+                    rows={4}
+                    value={announcementForm.message}
+                    onChange={(e) => setAnnouncementForm({ ...announcementForm, message: e.target.value })}
+                    placeholder="Type the detailed broadcast message here..."
+                    required
+                    style={{ lineHeight: 1.5, fontSize: '0.85rem' }}
+                  />
+                </div>
+
+                <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+                  <label className="form-label">
+                    <span>Broadcasted By</span>
+                  </label>
+                  <input
+                    type="text"
+                    className="input-field"
+                    value={announcementForm.broadcastBy}
+                    onChange={(e) => setAnnouncementForm({ ...announcementForm, broadcastBy: e.target.value })}
+                    placeholder="e.g. Admin Treasury Desk"
+                  />
+                </div>
+
+                <button type="submit" className="btn btn-gold btn-lg" style={{ width: '100%', fontWeight: 800 }}>
+                  <Megaphone size={18} /> Publish Broadcast Announcement
+                </button>
+              </form>
+            </div>
+
+            {/* Live Preview Card */}
+            <div>
+              <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#94a3b8', marginBottom: '0.5rem', textTransform: 'uppercase' }}>
+                👁️ Live User Dashboard Preview
+              </div>
+
+              {announcementForm.active ? (
+                <div
+                  className="glass-card"
+                  style={{
+                    padding: '1.25rem',
+                    border: `1.5px solid ${announcementForm.type === 'warning' ? '#f59e0b' : announcementForm.type === 'success' ? '#10b981' : announcementForm.type === 'critical' ? '#f43f5e' : '#06b6d4'}`,
+                    background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(15, 23, 42, 0.9) 100%)',
+                    borderRadius: 'var(--radius-md)'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem', flexWrap: 'wrap' }}>
+                    <span className="badge badge-gold" style={{ fontSize: '0.65rem' }}>
+                      <Megaphone size={11} /> Admin Broadcast
+                    </span>
+                    <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
+                      Just Now • Posted by {announcementForm.broadcastBy || 'Admin'}
+                    </span>
+                  </div>
+
+                  <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#ffffff', marginBottom: '0.35rem' }}>
+                    {announcementForm.title || 'Headline goes here'}
+                  </h4>
+
+                  <p style={{ fontSize: '0.85rem', color: '#cbd5e1', lineHeight: 1.5, whiteSpace: 'pre-line' }}>
+                    {announcementForm.message || 'Message content will be shown here to all users.'}
+                  </p>
+                </div>
+              ) : (
+                <div className="glass-card" style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>
+                  <div>Broadcast is currently <strong>PAUSED</strong>.</div>
+                  <div style={{ fontSize: '0.75rem', marginTop: '0.25rem' }}>Enable the checkbox on the left to activate this notice for users.</div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

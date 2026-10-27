@@ -1,0 +1,18 @@
+{
+  "short_name": "EarnFlow",
+  "name": "EarnFlow Pro — Compound Yield & Task Rewards",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "192x192 512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#080c14",
+  "theme_color": "#10b981",
+  "display": "standalone",
+  "orientation": "portrait",
+  "categories": ["finance", "productivity", "utilities"]
+}

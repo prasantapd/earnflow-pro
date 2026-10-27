@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">EarnFlow Pro</string>
+    <string name="title_activity_main">EarnFlow Pro</string>
+    <string name="package_name">com.earnflow.pro</string>
+    <string name="custom_url_scheme">com.earnflow.pro</string>
+</resources>

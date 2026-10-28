@@ -42,7 +42,10 @@ import {
   Check,
   Save,
   Calendar,
-  Globe
+  Globe,
+  Eye,
+  EyeOff,
+  KeyRound
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { formatINR, formatDate } from '../utils/finance';
@@ -86,12 +89,29 @@ export default function AdminPanelView() {
     deleteTaskForDate,
     toggleTaskStatusForDate,
     copyTasksToDate,
-    applyPresetToDate
+    applyPresetToDate,
+    // Admin Master Authentication & Password
+    adminPassword,
+    updateAdminPassword,
+    switchRole
   } = useApp();
 
-  const [activeAdminTab, setActiveAdminTab] = useState('users'); // 'users', 'deposits', 'withdrawals', 'settings', 'tasks', 'payments', 'broadcast'
+  const [activeAdminTab, setActiveAdminTab] = useState('users'); // 'users', 'deposits', 'withdrawals', 'settings', 'tasks', 'payments', 'broadcast', 'security'
   const [userSearch, setUserSearch] = useState('');
   const [userStatusFilter, setUserStatusFilter] = useState('ALL');
+
+  // Admin Master Password Form state
+  const [adminPassForm, setAdminPassForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+  const [showAdminPassFields, setShowAdminPassFields] = useState({
+    current: false,
+    new: false,
+    confirm: false,
+  });
+  const [passChangeStatus, setPassChangeStatus] = useState({ error: '', success: false });
 
   // 7-Day Schedule Selector state
   const upcoming7Days = getUpcoming7Days();
@@ -118,6 +138,44 @@ export default function AdminPanelView() {
     type: adminAnnouncement?.type || 'info',
     broadcastBy: adminAnnouncement?.broadcastBy || 'Admin Treasury Desk',
   }));
+
+  const handleUpdateAdminPassword = (e) => {
+    e.preventDefault();
+    setPassChangeStatus({ error: '', success: false });
+
+    if (!adminPassForm.currentPassword) {
+      setPassChangeStatus({ error: 'Please enter your current admin password.', success: false });
+      return;
+    }
+
+    const currentExpected = (adminPassword || 'admin123').trim();
+    if (adminPassForm.currentPassword.trim() !== currentExpected) {
+      setPassChangeStatus({ error: 'Current admin password does not match.', success: false });
+      return;
+    }
+
+    if (!adminPassForm.newPassword || adminPassForm.newPassword.trim().length < 4) {
+      setPassChangeStatus({ error: 'New password must be at least 4 characters long.', success: false });
+      return;
+    }
+
+    if (adminPassForm.newPassword.trim() !== adminPassForm.confirmPassword.trim()) {
+      setPassChangeStatus({ error: 'New password and confirmation do not match.', success: false });
+      return;
+    }
+
+    const res = updateAdminPassword(adminPassForm.newPassword.trim(), adminPassForm.currentPassword.trim());
+    if (res && res.success) {
+      setPassChangeStatus({ error: '', success: true });
+      setAdminPassForm({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
+      });
+    } else {
+      setPassChangeStatus({ error: res?.error || 'Failed to update admin password.', success: false });
+    }
+  };
 
   // Modals inside admin
   const [suspensionModal, setSuspensionModal] = useState({ isOpen: false, user: null, reason: '' });
@@ -228,6 +286,13 @@ export default function AdminPanelView() {
 
           <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
             <button 
+              className={`btn ${activeAdminTab === 'security' ? 'btn-primary' : 'btn-secondary'} btn-sm`}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', borderColor: 'rgba(239, 68, 68, 0.4)' }}
+              onClick={() => setActiveAdminTab('security')}
+            >
+              <Key size={15} color="#fca5a5" /> Change Admin Password
+            </button>
+            <button 
               className="btn btn-secondary btn-sm"
               onClick={toggleForceSunday}
             >
@@ -332,13 +397,6 @@ export default function AdminPanelView() {
         </button>
 
         <button
-          className={`btn ${activeAdminTab === 'settings' ? 'btn-primary' : 'btn-secondary'} btn-sm`}
-          onClick={() => setActiveAdminTab('settings')}
-        >
-          <Sliders size={16} /> System & Treasury Rates
-        </button>
-
-        <button
           className={`btn ${activeAdminTab === 'tasks' ? 'btn-primary' : 'btn-secondary'} btn-sm`}
           onClick={() => setActiveAdminTab('tasks')}
         >
@@ -362,6 +420,20 @@ export default function AdminPanelView() {
               LIVE
             </span>
           )}
+        </button>
+
+        <button
+          className={`btn ${activeAdminTab === 'security' ? 'btn-primary' : 'btn-secondary'} btn-sm`}
+          onClick={() => setActiveAdminTab('security')}
+        >
+          <Key size={16} /> Admin Password & Security
+        </button>
+
+        <button
+          className={`btn ${activeAdminTab === 'settings' ? 'btn-primary' : 'btn-secondary'} btn-sm`}
+          onClick={() => setActiveAdminTab('settings')}
+        >
+          <Sliders size={16} /> System & Treasury Rates
         </button>
       </div>
 
@@ -914,6 +986,212 @@ export default function AdminPanelView() {
               <div style={{ color: '#f59e0b' }}>• ₹75–₹150: 2.0% rare mega reward</div>
               <div style={{ color: '#22d3ee', marginTop: '0.2rem', fontWeight: 600 }}>Expected Value: ~₹23.50 / card (Target: ₹24.00)</div>
             </div>
+          </div>
+
+          {/* Card 5: Admin Security & Master Passcode */}
+          <div className="glass-card" style={{ padding: '1.5rem', borderLeft: '4px solid #ef4444' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
+              <KeyRound size={20} color="#f87171" />
+              <h3 style={{ fontSize: '1.15rem', fontWeight: 700 }}>Admin Master Access Key</h3>
+            </div>
+            <p style={{ fontSize: '0.82rem', color: '#94a3b8', marginBottom: '1.25rem' }}>
+              Administrative master authentication key for control center governance.
+            </p>
+
+            <div style={{ padding: '0.9rem', background: 'rgba(255, 255, 255, 0.03)', borderRadius: 'var(--radius-md)', marginBottom: '1.25rem' }}>
+              <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#f87171', marginBottom: '0.25rem' }}>
+                Admin Master Key: 🟢 Protected & Active
+              </div>
+              <div style={{ fontSize: '0.76rem', color: '#cbd5e1' }}>
+                You can change the administrator password at any time to safeguard administrative access.
+              </div>
+            </div>
+
+            <button
+              type="button"
+              className="btn btn-danger btn-sm"
+              onClick={() => setActiveAdminTab('security')}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700 }}
+            >
+              <Key size={14} /> Open Admin Security & Password
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* TAB: ADMIN SECURITY & PASSWORD MANAGEMENT */}
+      {activeAdminTab === 'security' && (
+        <div style={{ maxWidth: 660, margin: '0 auto' }}>
+          <div className="glass-card" style={{ padding: '2rem', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', marginBottom: '1.5rem', paddingBottom: '1.25rem', borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
+              <div style={{ width: 48, height: 48, borderRadius: '14px', background: 'rgba(239, 68, 68, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f87171' }}>
+                <KeyRound size={26} />
+              </div>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#ffffff' }}>Admin Security & Password</h3>
+                  <span className="badge badge-emerald" style={{ fontSize: '0.68rem' }}>Active Protection</span>
+                </div>
+                <p style={{ fontSize: '0.82rem', color: '#94a3b8', marginTop: '0.2rem' }}>
+                  Change the master administrative security key used to authenticate into this portal.
+                </p>
+              </div>
+            </div>
+
+            {/* Success Banner */}
+            {passChangeStatus.success && (
+              <div style={{ background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.4)', borderRadius: '12px', padding: '1rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#34d399' }}>
+                <CheckCircle2 size={22} style={{ flexShrink: 0 }} />
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: '0.92rem' }}>Admin Password Updated Successfully!</div>
+                  <div style={{ fontSize: '0.78rem', color: '#a7f3d0' }}>
+                    Your new master security key is now active and saved. All subsequent administrative logins require this new password.
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Error Banner */}
+            {passChangeStatus.error && (
+              <div style={{ background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.4)', borderRadius: '12px', padding: '1rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#f87171' }}>
+                <AlertTriangle size={22} style={{ flexShrink: 0 }} />
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: '0.92rem' }}>Security Verification Error</div>
+                  <div style={{ fontSize: '0.78rem', color: '#fca5a5' }}>{passChangeStatus.error}</div>
+                </div>
+              </div>
+            )}
+
+            <form onSubmit={handleUpdateAdminPassword}>
+              {/* Current Password Field */}
+              <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+                <label className="form-label">
+                  <span style={{ fontWeight: 700, color: '#cbd5e1' }}>Current Admin Password *</span>
+                  <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Required for verification</span>
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <Key size={16} color="#94a3b8" style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)' }} />
+                  <input
+                    type={showAdminPassFields.current ? 'text' : 'password'}
+                    required
+                    className="input-field"
+                    style={{ paddingLeft: '2.6rem', paddingRight: '2.6rem' }}
+                    placeholder="Enter current admin password"
+                    value={adminPassForm.currentPassword}
+                    onChange={(e) => {
+                      setAdminPassForm({ ...adminPassForm, currentPassword: e.target.value });
+                      setPassChangeStatus({ error: '', success: false });
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowAdminPassFields({ ...showAdminPassFields, current: !showAdminPassFields.current })}
+                    style={{ position: 'absolute', right: '0.9rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
+                  >
+                    {showAdminPassFields.current ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </div>
+
+              {/* New Password Field */}
+              <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+                <label className="form-label">
+                  <span style={{ fontWeight: 700, color: '#cbd5e1' }}>New Admin Password *</span>
+                  <span style={{ fontSize: '0.75rem', color: '#38bdf8' }}>At least 4 characters</span>
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <Lock size={16} color="#94a3b8" style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)' }} />
+                  <input
+                    type={showAdminPassFields.new ? 'text' : 'password'}
+                    required
+                    className="input-field"
+                    style={{ paddingLeft: '2.6rem', paddingRight: '2.6rem' }}
+                    placeholder="Enter new admin password"
+                    value={adminPassForm.newPassword}
+                    onChange={(e) => {
+                      setAdminPassForm({ ...adminPassForm, newPassword: e.target.value });
+                      setPassChangeStatus({ error: '', success: false });
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowAdminPassFields({ ...showAdminPassFields, new: !showAdminPassFields.new })}
+                    style={{ position: 'absolute', right: '0.9rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
+                  >
+                    {showAdminPassFields.new ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Confirm New Password Field */}
+              <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                <label className="form-label">
+                  <span style={{ fontWeight: 700, color: '#cbd5e1' }}>Confirm New Admin Password *</span>
+                  {adminPassForm.newPassword && adminPassForm.confirmPassword && (
+                    <span style={{ fontSize: '0.75rem', color: adminPassForm.newPassword === adminPassForm.confirmPassword ? '#34d399' : '#f87171' }}>
+                      {adminPassForm.newPassword === adminPassForm.confirmPassword ? '✓ Passwords match' : '✗ Does not match'}
+                    </span>
+                  )}
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <Lock size={16} color="#94a3b8" style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)' }} />
+                  <input
+                    type={showAdminPassFields.confirm ? 'text' : 'password'}
+                    required
+                    className="input-field"
+                    style={{ paddingLeft: '2.6rem', paddingRight: '2.6rem' }}
+                    placeholder="Re-enter new admin password"
+                    value={adminPassForm.confirmPassword}
+                    onChange={(e) => {
+                      setAdminPassForm({ ...adminPassForm, confirmPassword: e.target.value });
+                      setPassChangeStatus({ error: '', success: false });
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowAdminPassFields({ ...showAdminPassFields, confirm: !showAdminPassFields.confirm })}
+                    style={{ position: 'absolute', right: '0.9rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
+                  >
+                    {showAdminPassFields.confirm ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Security Advisory Box */}
+              <div style={{ padding: '0.9rem 1.1rem', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '10px', marginBottom: '1.75rem', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.82rem', fontWeight: 700, color: '#e2e8f0', marginBottom: '0.3rem' }}>
+                  <ShieldAlert size={15} color="#f59e0b" />
+                  <span>Important Security Notice</span>
+                </div>
+                <p style={{ fontSize: '0.75rem', color: '#94a3b8', margin: 0, lineHeight: 1.5 }}>
+                  Make sure to store your new administrator key in a secure location. Anyone with this key can approve deposits, manage user accounts, and execute financial disbursements.
+                </p>
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                <button 
+                  type="submit" 
+                  className="btn btn-primary btn-lg" 
+                  style={{ flex: 1, minWidth: 200, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' }}
+                >
+                  <Save size={18} /> Save & Update Admin Password
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-lg"
+                  onClick={() => {
+                    switchRole('investor');
+                    showToast('Admin logged out. You can now test logging in with your new password.');
+                  }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}
+                  title="Lock admin session and return to app"
+                >
+                  <Lock size={16} /> Lock Admin Portal
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

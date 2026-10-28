@@ -3,7 +3,7 @@ import { ShieldAlert, X, KeyRound, Lock, Eye, EyeOff } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 export default function AdminLoginModal({ isOpen, onClose, onSuccess }) {
-  const { switchRole, showToast } = useApp();
+  const { switchRole, showToast, adminPassword } = useApp();
   const [passcode, setPasscode] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -12,8 +12,8 @@ export default function AdminLoginModal({ isOpen, onClose, onSuccess }) {
 
   const handleAdminLogin = (e) => {
     e.preventDefault();
-    // Default master PIN for administrative portal
-    if (passcode.trim() === 'admin123' || passcode.trim() === 'earnflow@2026') {
+    const activeKey = (adminPassword || 'admin123').trim();
+    if (passcode.trim() === activeKey) {
       setErrorMsg('');
       setPasscode('');
       switchRole('admin');

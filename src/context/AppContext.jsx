@@ -599,6 +599,7 @@ const INITIAL_STATE = {
   forceSunday: true, // 24/7 payouts active
   paymentSettings: INITIAL_PAYMENT_SETTINGS,
   adminAnnouncement: INITIAL_ADMIN_ANNOUNCEMENT,
+  adminPassword: 'admin123',
 };
 
 export function AppProvider({ children }) {
@@ -615,6 +616,7 @@ export function AppProvider({ children }) {
         return {
           ...INITIAL_STATE,
           ...parsed,
+          adminPassword: parsed.adminPassword || 'admin123',
           scheduledTasksByDate: sched,
           dailyTaskRoster: sched[todayStr] || parsed.dailyTaskRoster || INITIAL_DAILY_TASK_ROSTER,
           paymentSettings: {
@@ -1681,10 +1683,33 @@ export function AppProvider({ children }) {
     showToast('Admin Announcement published live!');
   };
 
+  const updateAdminPassword = (newPassword, currentPassword = null) => {
+    if (!newPassword || newPassword.trim().length < 4) {
+      showToast('New password must be at least 4 characters long.', 'error');
+      return { success: false, error: 'New password must be at least 4 characters long.' };
+    }
+    const cleanNewPass = newPassword.trim();
+    if (currentPassword !== null) {
+      const activeAdminPass = state.adminPassword || 'admin123';
+      if (currentPassword.trim() !== activeAdminPass) {
+        showToast('Current admin password does not match.', 'error');
+        return { success: false, error: 'Current admin password does not match.' };
+      }
+    }
+    setState((prev) => ({
+      ...prev,
+      adminPassword: cleanNewPass,
+    }));
+    showToast('🛡️ Admin master security key updated successfully!');
+    return { success: true };
+  };
+
   return (
     <AppContext.Provider
       value={{
         ...state,
+        adminPassword: state.adminPassword || 'admin123',
+        updateAdminPassword,
         dailyVideoTasks: state.dailyVideoTasks || INITIAL_VIDEO_TASKS,
         totalLockedPrincipal,
         totalDailyQuota,

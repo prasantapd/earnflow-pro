@@ -19,6 +19,7 @@ import HistoryView from './views/HistoryView';
 import FundEconomicsView from './views/FundEconomicsView';
 import AdminPanelView from './views/AdminPanelView';
 import MlmNetworkView from './views/MlmNetworkView';
+import AuthView from './views/AuthView';
 
 import { ShieldCheck, CheckCircle2, TrendingUp, AlertCircle } from 'lucide-react';
 import { formatINR } from './utils/finance';
@@ -34,7 +35,7 @@ function MainApp() {
   const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false);
   const [receiptTxn, setReceiptTxn] = useState(null);
 
-  const { toastMessage, withdrawPrincipal, payoutMethod, showToast, currentRole, switchRole } = useApp();
+  const { toastMessage, withdrawPrincipal, payoutMethod, showToast, currentRole, switchRole, user } = useApp();
 
   // Secret admin access triggers:
   // 1. URL parameter: ?portal=admin or ?admin=true or hash #admin
@@ -101,6 +102,9 @@ function MainApp() {
       <main className="app-container" style={{ flex: 1 }}>
         {currentRole === 'admin' ? (
           <AdminPanelView />
+        ) : !user ? (
+          /* Mandatory User Login & Registration Screen */
+          <AuthView onOpenAdminLogin={() => setIsAdminLoginOpen(true)} />
         ) : (
           <>
             {activeTab === 'dashboard' && (
@@ -153,11 +157,13 @@ function MainApp() {
       </main>
 
       {/* Mobile Android Bottom Navigation Bar */}
-      <MobileBottomNav 
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        onOpenAuth={() => setIsAuthOpen(true)}
-      />
+      {user && (
+        <MobileBottomNav 
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          onOpenAuth={() => setIsAuthOpen(true)}
+        />
+      )}
 
       {/* Platform Footer */}
       <footer style={{ borderTop: '1px solid var(--border-subtle)', background: 'rgba(8, 12, 20, 0.9)', padding: '2.5rem 0 2rem' }}>
@@ -167,7 +173,7 @@ function MainApp() {
               <div style={{ width: 32, height: 32, borderRadius: '8px', background: 'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff' }}>
                 <TrendingUp size={18} />
               </div>
-              <span style={{ fontWeight: 800, fontSize: '1.1rem', letterSpacing: '-0.02em' }}>EarnFlow Pro</span>
+              <span style={{ fontWeight: 800, fontSize: '1.1rem', letterSpacing: '-0.02em' }}>TaskCoin Pro</span>
             </div>
 
             <div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.85rem', color: '#94a3b8', flexWrap: 'wrap' }}>
@@ -182,7 +188,7 @@ function MainApp() {
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', paddingTop: '1.25rem', borderTop: '1px solid rgba(255, 255, 255, 0.05)', fontSize: '0.78rem', color: '#64748b' }}>
             <div>
-              © 2026 EarnFlow Pro. Task Rewards & Community Monetization Platform. All rights reserved.
+              © 2026 TaskCoin Pro. Task Rewards & Community Monetization Platform. All rights reserved.
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <ShieldCheck 

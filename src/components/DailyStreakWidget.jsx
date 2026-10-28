@@ -158,16 +158,6 @@ export default function DailyStreakWidget() {
               <strong style={{ color: '#34d399' }}>{formatINR(streak.totalStreakEarned || 0)}</strong>
             </div>
           </div>
-
-          <button 
-            type="button"
-            className="btn btn-secondary btn-sm"
-            onClick={() => setShowDemoTools(!showDemoTools)}
-            style={{ fontSize: '0.72rem', padding: '0.35rem 0.65rem' }}
-          >
-            <Zap size={13} color="#fbbf24" />
-            <span>{showDemoTools ? 'Hide Sandbox' : 'Demo Sandbox'}</span>
-          </button>
         </div>
       </div>
 
@@ -489,64 +479,6 @@ export default function DailyStreakWidget() {
           )}
         </div>
       </div>
-
-      {/* Demo Sandbox toolbar */}
-      {showDemoTools && (
-        <div 
-          style={{ 
-            marginTop: '1.25rem', 
-            paddingTop: '1rem', 
-            borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '0.75rem',
-            background: 'rgba(0, 0, 0, 0.25)',
-            padding: '0.85rem',
-            borderRadius: 'var(--radius-sm)'
-          }}
-        >
-          <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
-            🛠️ <strong>30-Day Sandbox Tools:</strong> Test streak progression, missed day reset, and Day 30 finish instant behavior.
-          </div>
-
-          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-            <button 
-              type="button" 
-              className="btn btn-secondary btn-sm" 
-              onClick={fastForwardNextDay}
-              style={{ fontSize: '0.72rem' }}
-              title="Fast forwards 24 hours so next day's bonus unlocks"
-            >
-              <FastForward size={13} color="#34d399" />
-              <span>Fast-Forward 24 Hours</span>
-            </button>
-
-            <button 
-              type="button" 
-              className="btn btn-secondary btn-sm" 
-              onClick={jumpToDay29}
-              style={{ fontSize: '0.72rem' }}
-              title="Jumps to Day 29 to test 30-Day cycle completion"
-            >
-              <Trophy size={13} color="#fbbf24" />
-              <span>Jump to Day 29</span>
-            </button>
-
-            <button 
-              type="button" 
-              className="btn btn-secondary btn-sm" 
-              onClick={resetDailyStreak}
-              style={{ fontSize: '0.72rem' }}
-              title="Simulates missing a day to verify reset to Day 1"
-            >
-              <RotateCcw size={13} color="#f87171" />
-              <span>Simulate Missed Day (Reset to Day 1)</span>
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -40,10 +40,13 @@ import {
   Megaphone,
   Copy,
   Check,
-  Save
+  Save,
+  Calendar,
+  Globe
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { formatINR, formatDate } from '../utils/finance';
+import { getLocalDateString, getUpcoming7Days, formatFullReadableDate, formatReadableDate } from '../utils/dateUtils';
 
 export default function AdminPanelView() {
   const { 
@@ -75,19 +78,32 @@ export default function AdminPanelView() {
     paymentSettings,
     updatePaymentSettings,
     adminAnnouncement,
-    updateAdminAnnouncement
+    updateAdminAnnouncement,
+    // 7-Day Date-Wise Task Scheduling
+    scheduledTasksByDate,
+    addTaskForDate,
+    updateTaskForDate,
+    deleteTaskForDate,
+    toggleTaskStatusForDate,
+    copyTasksToDate,
+    applyPresetToDate
   } = useApp();
 
   const [activeAdminTab, setActiveAdminTab] = useState('users'); // 'users', 'deposits', 'withdrawals', 'settings', 'tasks', 'payments', 'broadcast'
   const [userSearch, setUserSearch] = useState('');
   const [userStatusFilter, setUserStatusFilter] = useState('ALL');
 
+  // 7-Day Schedule Selector state
+  const upcoming7Days = getUpcoming7Days();
+  const [selectedScheduleDate, setSelectedScheduleDate] = useState(() => getLocalDateString(0));
+  const [copyModal, setCopyModal] = useState({ isOpen: false, targetDate: upcoming7Days[1]?.dateStr || '' });
+
   // Banking Gateway Form state
   const [bankingForm, setBankingForm] = useState(() => ({
-    upiId: paymentSettings?.upiId || 'earnflowpro@icici',
-    upiPayeeName: paymentSettings?.upiPayeeName || 'EarnFlow Pro Treasury',
+    upiId: paymentSettings?.upiId || 'taskcoin@icici',
+    upiPayeeName: paymentSettings?.upiPayeeName || 'TaskCoin Pro Treasury',
     bankName: paymentSettings?.bankName || 'HDFC Bank',
-    accountName: paymentSettings?.accountName || 'EarnFlow Yield Private Limited',
+    accountName: paymentSettings?.accountName || 'TaskCoin Technologies Private Limited',
     accountNumber: paymentSettings?.accountNumber || '50200098412849',
     ifscCode: paymentSettings?.ifscCode || 'HDFC0001234',
     branch: paymentSettings?.branch || 'BKC Corporate Financial Centre, Mumbai',
@@ -109,10 +125,13 @@ export default function AdminPanelView() {
   const [rejectModal, setRejectModal] = useState({ isOpen: false, type: '', id: '', reason: '' });
   const [taskModal, setTaskModal] = useState({
     isOpen: false,
+    targetDate: getLocalDateString(0),
     type: 'video',
     title: '',
+    category: '',
     platform: 'YouTube',
     videoUrl: '',
+    actionUrl: '',
     duration: 20,
     reward: 35,
     shareRequired: true,
@@ -899,221 +918,416 @@ export default function AdminPanelView() {
         </div>
       )}
 
-      {/* TAB 5: DYNAMIC DAILY TASK ROSTER & CAMPAIGN ORCHESTRATOR */}
-      {activeAdminTab === 'tasks' && (
-        <div>
-          {/* Action Header */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                <span className="badge badge-emerald">Daily Task Orchestrator</span>
-                <span className="badge badge-gold">Dynamic Combination Engine</span>
-              </div>
-              <h3 style={{ fontSize: '1.35rem', fontWeight: 800 }}>Daily Task Roster & Campaign Manager</h3>
-              <p style={{ fontSize: '0.82rem', color: '#94a3b8', maxWidth: '720px' }}>
-                Change what tasks users see each day (e.g. Video + Song + 3x3 Slide, Video + Games + Walk for 10 Mins). Timed skill games limit payout liability while increasing viral reach and retention.
-              </p>
-            </div>
-            <button
-              className="btn btn-primary"
-              style={{ fontWeight: 700 }}
-              onClick={() => setTaskModal({
-                isOpen: true,
-                type: 'video',
-                title: '',
-                platform: 'YouTube',
-                videoUrl: '',
-                duration: 20,
-                reward: 35,
-                shareRequired: true,
-                sharePlatform: 'Facebook & Friends',
-                description: '',
-              })}
-            >
-              <Plus size={16} /> Add Custom Task to Roster
-            </button>
-          </div>
+      {/* TAB 5: DYNAMIC 7-DAY DATE-WISE TASK ROSTER & CAMPAIGN ORCHESTRATOR */}
+      {activeAdminTab === 'tasks' && (() => {
+        const currentDayTasks = scheduledTasksByDate?.[selectedScheduleDate] || [];
+        const activeTasksForDay = currentDayTasks.filter((t) => t.status === 'ACTIVE');
+        const selectedDayMeta = upcoming7Days.find((d) => d.dateStr === selectedScheduleDate) || upcoming7Days[0];
+        const isSelectedDateToday = selectedScheduleDate === getLocalDateString(0);
 
-          {/* Quick Preset Combo Switcher */}
-          <div className="glass-card" style={{ padding: '1.25rem', marginBottom: '1.5rem', border: '1px solid rgba(99, 102, 241, 0.3)', background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(16, 185, 129, 0.05) 100%)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-              <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <Zap size={15} color="#fbbf24" /> 1-Click Daily Roster Presets (Switch Today's Mix Instantly)
+        return (
+          <div>
+            {/* Action Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem', flexWrap: 'wrap' }}>
+                  <span className="badge badge-emerald">7-Day Task Scheduler</span>
+                  <span className="badge badge-gold">Auto-Switch at 00:00 Midnight</span>
+                  <span className="badge badge-cyan">Admin Custom Task Engine</span>
+                </div>
+                <h3 style={{ fontSize: '1.35rem', fontWeight: 800 }}>Date-Wise Daily Task Roster (Up to 7 Coming Days)</h3>
+                <p style={{ fontSize: '0.82rem', color: '#94a3b8', maxWidth: '780px' }}>
+                  Prepare tasks date-wise for up to 7 upcoming days. Every day at <strong>00:00 hrs midnight</strong>, the active task center automatically switches to that date's schedule! Admin can add <strong>ANY task</strong> (Videos, Music, 3×3 Slide Puzzles, Memory Match, 10-Min Walks, Spin, or Custom Website/Social/Telegram Actions).
+                </p>
               </div>
-              <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
-                Admin can switch combinations anytime without coding
-              </span>
-            </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '0.75rem' }}>
-              {(taskRosterPresets || []).map((preset) => (
-                <div 
-                  key={preset.id}
-                  className="card-interactive"
-                  onClick={() => applyTaskRosterPreset(preset.id)}
-                  style={{
-                    padding: '0.85rem 1rem',
-                    borderRadius: 'var(--radius-md)',
-                    background: 'rgba(255, 255, 255, 0.04)',
-                    border: '1px solid var(--border-subtle)',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between'
-                  }}
+              <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap' }}>
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => setCopyModal({ isOpen: true, targetDate: upcoming7Days.find(d => d.dateStr !== selectedScheduleDate)?.dateStr || upcoming7Days[1]?.dateStr })}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem' }}
+                  title="Copy all tasks from this day to another upcoming day"
                 >
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
-                      <span className="badge badge-indigo" style={{ fontSize: '0.65rem' }}>{preset.badge}</span>
-                      <span style={{ fontSize: '0.68rem', color: '#34d399', fontWeight: 700 }}>Apply Combo →</span>
-                    </div>
-                    <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#f8fafc', marginBottom: '0.2rem' }}>
-                      {preset.name}
-                    </div>
-                    <div style={{ fontSize: '0.73rem', color: '#94a3b8', lineHeight: 1.3 }}>
-                      {preset.description}
+                  <Copy size={15} />
+                  <span>Copy Tasks to Another Date</span>
+                </button>
+
+                <button
+                  className="btn btn-primary"
+                  style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                  onClick={() => setTaskModal({
+                    isOpen: true,
+                    targetDate: selectedScheduleDate,
+                    type: 'custom',
+                    title: '',
+                    category: 'Special Task',
+                    platform: 'TaskCoin App',
+                    videoUrl: '',
+                    actionUrl: '',
+                    duration: 20,
+                    reward: 35,
+                    shareRequired: false,
+                    sharePlatform: 'Facebook & Friends',
+                    description: '',
+                  })}
+                >
+                  <Plus size={16} />
+                  <span>Add Task for {selectedDayMeta.tag}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* 7-DAY DATE TAB SELECTOR */}
+            <div style={{ marginBottom: '1.25rem' }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <Calendar size={13} color="#34d399" /> Select Date to Schedule Tasks (Next 7 Days):
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.5rem' }}>
+                {upcoming7Days.map((day) => {
+                  const isSelected = selectedScheduleDate === day.dateStr;
+                  const dayTasks = scheduledTasksByDate?.[day.dateStr] || [];
+                  const activeCount = dayTasks.filter((t) => t.status === 'ACTIVE').length;
+
+                  return (
+                    <button
+                      key={day.dateStr}
+                      type="button"
+                      onClick={() => setSelectedScheduleDate(day.dateStr)}
+                      style={{
+                        padding: '0.75rem 0.65rem',
+                        borderRadius: 'var(--radius-md)',
+                        border: isSelected ? '2px solid #10b981' : '1px solid rgba(255, 255, 255, 0.08)',
+                        background: isSelected 
+                          ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.22) 0%, rgba(6, 182, 212, 0.15) 100%)'
+                          : 'rgba(255, 255, 255, 0.03)',
+                        color: isSelected ? '#ffffff' : '#94a3b8',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        boxShadow: isSelected ? '0 0 16px rgba(16, 185, 129, 0.25)' : 'none',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
+                        <span style={{ fontSize: '0.72rem', fontWeight: 800, color: day.isToday ? '#34d399' : day.isTomorrow ? '#38bdf8' : '#fbbf24' }}>
+                          {day.tag}
+                        </span>
+                        {day.isToday && (
+                          <span className="badge badge-emerald" style={{ fontSize: '0.55rem', padding: '1px 5px' }}>
+                            LIVE NOW
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ fontWeight: 800, fontSize: '0.92rem', color: isSelected ? '#ffffff' : '#f1f5f9' }}>
+                        {day.shortLabel}
+                      </div>
+                      <div style={{ fontSize: '0.68rem', color: '#64748b' }}>
+                        {day.dayName}
+                      </div>
+                      <div style={{ fontSize: '0.68rem', color: isSelected ? '#34d399' : '#94a3b8', marginTop: '0.35rem', fontWeight: 600 }}>
+                        {activeCount} Active Task{activeCount !== 1 ? 's' : ''}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Selected Date Notice & Status Banner */}
+            <div 
+              className="glass-card" 
+              style={{ 
+                padding: '1rem 1.25rem', 
+                marginBottom: '1.25rem', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '1rem',
+                background: isSelectedDateToday 
+                  ? 'rgba(16, 185, 129, 0.08)' 
+                  : 'rgba(99, 102, 241, 0.08)',
+                border: isSelectedDateToday 
+                  ? '1px solid rgba(16, 185, 129, 0.35)' 
+                  : '1px solid rgba(99, 102, 241, 0.35)'
+              }}
+            >
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
+                  <span style={{ fontWeight: 800, color: '#f8fafc', fontSize: '1rem' }}>
+                    📅 {selectedDayMeta.fullLabel}
+                  </span>
+                  <span className={`badge ${isSelectedDateToday ? 'badge-emerald' : 'badge-indigo'}`} style={{ fontSize: '0.65rem' }}>
+                    {isSelectedDateToday ? 'Live on Users Screen Right Now' : 'Scheduled Ahead'}
+                  </span>
+                </div>
+                <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
+                  {isSelectedDateToday 
+                    ? 'Users are actively completing these tasks today. At 00:00 midnight, tomorrow\'s tasks will take over.'
+                    : `Tasks configured below will automatically unlock and go live when local midnight (00:00 hrs) hits on ${selectedDayMeta.shortLabel}.`}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => setCopyModal({ isOpen: true, targetDate: upcoming7Days.find(d => d.dateStr !== selectedScheduleDate)?.dateStr || upcoming7Days[1]?.dateStr })}
+                  style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem' }}
+                >
+                  <Copy size={13} /> Copy to Another Date
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  onClick={() => setTaskModal({
+                    isOpen: true,
+                    targetDate: selectedScheduleDate,
+                    type: 'custom',
+                    title: '',
+                    category: 'Special Task',
+                    platform: 'TaskCoin App',
+                    videoUrl: '',
+                    actionUrl: '',
+                    duration: 20,
+                    reward: 35,
+                    shareRequired: false,
+                    sharePlatform: 'Facebook & Friends',
+                    description: '',
+                  })}
+                  style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem', fontWeight: 700 }}
+                >
+                  <Plus size={13} /> Add New Task
+                </button>
+              </div>
+            </div>
+
+            {/* Quick Presets for Selected Date */}
+            <div className="glass-card" style={{ padding: '1rem 1.25rem', marginBottom: '1.5rem', border: '1px solid rgba(99, 102, 241, 0.25)', background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.06) 0%, rgba(16, 185, 129, 0.04) 100%)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <Zap size={14} color="#fbbf24" /> Apply 1-Click Roster Preset to {selectedDayMeta.tag} ({selectedDayMeta.shortLabel})
+                </div>
+                <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
+                  Quickly set today's or tomorrow's mix without coding
+                </span>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '0.65rem' }}>
+                {(taskRosterPresets || []).map((preset) => (
+                  <div 
+                    key={preset.id}
+                    className="card-interactive"
+                    onClick={() => applyPresetToDate(selectedScheduleDate, preset.id)}
+                    style={{
+                      padding: '0.75rem 0.85rem',
+                      borderRadius: 'var(--radius-md)',
+                      background: 'rgba(255, 255, 255, 0.04)',
+                      border: '1px solid var(--border-subtle)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between'
+                    }}
+                  >
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                        <span className="badge badge-indigo" style={{ fontSize: '0.62rem' }}>{preset.badge}</span>
+                        <span style={{ fontSize: '0.68rem', color: '#34d399', fontWeight: 700 }}>Apply to {selectedDayMeta.tag} →</span>
+                      </div>
+                      <div style={{ fontWeight: 700, fontSize: '0.82rem', color: '#f8fafc', marginBottom: '0.15rem' }}>
+                        {preset.name}
+                      </div>
+                      <div style={{ fontSize: '0.7rem', color: '#94a3b8', lineHeight: 1.3 }}>
+                        {preset.description}
+                      </div>
                     </div>
                   </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Stats Bar for Selected Date */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+              <div className="glass-card" style={{ padding: '1.15rem' }}>
+                <div style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>Active Tasks on {selectedDayMeta.shortLabel}</div>
+                <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#34d399', margin: '0.2rem 0' }}>
+                  {activeTasksForDay.length} Active
                 </div>
-              ))}
-            </div>
-          </div>
+                <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                  {currentDayTasks.length} total scheduled for this date
+                </div>
+              </div>
 
-          {/* Stats Bar */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
-            <div className="glass-card" style={{ padding: '1.15rem' }}>
-              <div style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>Active Tasks Today</div>
-              <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#34d399', margin: '0.2rem 0' }}>
-                {(dailyTaskRoster || []).filter((t) => t.status === 'ACTIVE').length} Active
+              <div className="glass-card" style={{ padding: '1.15rem' }}>
+                <div style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>Max Potential Payout</div>
+                <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#fbbf24', margin: '0.2rem 0' }}>
+                  {formatINR(activeTasksForDay.reduce((sum, t) => sum + (Number(t.reward) || 0), 0))}
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                  If 100% of all tasks are completed by user
+                </div>
               </div>
-              <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                {(dailyTaskRoster || []).length} total configured in platform
-              </div>
-            </div>
 
-            <div className="glass-card" style={{ padding: '1.15rem' }}>
-              <div style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>Max Potential Payout</div>
-              <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#fbbf24', margin: '0.2rem 0' }}>
-                {formatINR((dailyTaskRoster || []).filter((t) => t.status === 'ACTIVE').reduce((sum, t) => sum + (Number(t.reward) || 0), 0))}
-              </div>
-              <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                If 100% of all tasks are completed
-              </div>
-            </div>
-
-            <div className="glass-card" style={{ padding: '1.15rem' }}>
-              <div style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>Skill-Barrier Tasks</div>
-              <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#c084fc', margin: '0.2rem 0' }}>
-                {(dailyTaskRoster || []).filter((t) => t.status === 'ACTIVE' && (t.type === 'slide3' || t.type === 'memory' || t.type === 'walk')).length} Timed Tasks
-              </div>
-              <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                Reduces company payout liability by ~50%
+              <div className="glass-card" style={{ padding: '1.15rem' }}>
+                <div style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>Skill-Barrier & Timed Tasks</div>
+                <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#c084fc', margin: '0.2rem 0' }}>
+                  {activeTasksForDay.filter((t) => t.type === 'slide3' || t.type === 'memory' || t.type === 'walk').length} Timed Tasks
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                  Reduces liability while maximizing cognitive retention
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Dynamic Tasks Roster Table */}
-          <div className="glass-card" style={{ padding: '1.25rem', overflowX: 'auto' }}>
-            <div style={{ fontSize: '0.95rem', fontWeight: 800, marginBottom: '0.85rem', color: '#f8fafc' }}>
-              Platform Task Catalog & Active Roster Status
-            </div>
-
-            {(!dailyTaskRoster || dailyTaskRoster.length === 0) ? (
-              <div style={{ textAlign: 'center', padding: '2.5rem', color: '#94a3b8' }}>
-                <Video size={40} style={{ opacity: 0.3, marginBottom: '0.75rem' }} />
-                <p>No tasks configured in roster. Click <strong>"Add Custom Task to Roster"</strong> to publish your first task!</p>
+            {/* Tasks Table for Selected Date */}
+            <div className="glass-card" style={{ padding: '1.25rem', overflowX: 'auto' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
+                <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#f8fafc' }}>
+                  Tasks Roster for {selectedDayMeta.fullLabel}
+                </div>
+                <span className="badge badge-emerald" style={{ fontSize: '0.7rem' }}>
+                  {currentDayTasks.length} Task{currentDayTasks.length !== 1 ? 's' : ''} Configured
+                </span>
               </div>
-            ) : (
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid var(--border-subtle)', color: '#94a3b8', textAlign: 'left' }}>
-                    <th style={{ padding: '0.75rem' }}>Type</th>
-                    <th style={{ padding: '0.75rem' }}>Task Name & Description</th>
-                    <th style={{ padding: '0.75rem' }}>Category</th>
-                    <th style={{ padding: '0.75rem' }}>Duration / Timer Rule</th>
-                    <th style={{ padding: '0.75rem' }}>Reward</th>
-                    <th style={{ padding: '0.75rem' }}>Status</th>
-                    <th style={{ padding: '0.75rem', textAlign: 'center' }}>Admin Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {dailyTaskRoster.map((t) => (
-                    <tr key={t.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
-                      <td style={{ padding: '0.75rem' }}>
-                        <div style={{ width: 34, height: 34, borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: t.type === 'video' ? 'rgba(239, 68, 68, 0.2)' : t.type === 'walk' ? 'rgba(16, 185, 129, 0.2)' : t.type === 'slide3' ? 'rgba(99, 102, 241, 0.2)' : t.type === 'memory' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(245, 158, 11, 0.2)', color: t.type === 'video' ? '#f87171' : t.type === 'walk' ? '#34d399' : t.type === 'slide3' ? '#818cf8' : t.type === 'memory' ? '#60a5fa' : '#fbbf24' }}>
-                          {t.type === 'video' ? <Video size={17} /> : t.type === 'walk' ? <Footprints size={17} /> : t.type === 'slide3' ? <Grid size={17} /> : t.type === 'memory' ? <Brain size={17} /> : t.type === 'music' ? <Music size={17} /> : <Sparkles size={17} />}
-                        </div>
-                      </td>
-                      <td style={{ padding: '0.75rem' }}>
-                        <div style={{ fontWeight: 700, color: '#f8fafc', marginBottom: '0.15rem' }}>{t.title}</div>
-                        <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
-                          {t.description || 'Verified engagement task.'}
-                        </div>
-                        {t.videoUrl && (
-                          <a 
-                            href={t.videoUrl} 
-                            target="_blank" 
-                            rel="noreferrer" 
-                            style={{ fontSize: '0.72rem', color: '#60a5fa', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', textDecoration: 'none', marginTop: '0.2rem' }}
-                          >
-                            <ExternalLink size={10} /> {t.videoUrl}
-                          </a>
-                        )}
-                      </td>
-                      <td style={{ padding: '0.75rem' }}>
-                        <span className="badge badge-indigo" style={{ fontSize: '0.68rem' }}>
-                          {t.category || t.type}
-                        </span>
-                      </td>
-                      <td style={{ padding: '0.75rem' }}>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#fbbf24', fontWeight: 600 }}>
-                          <Clock size={12} /> {t.duration >= 60 ? `${Math.round(t.duration / 60)} min` : `${t.duration}s`}
-                        </span>
-                        {t.type === 'slide3' && <span style={{ fontSize: '0.68rem', color: '#f87171' }}>Strict 60s countdown</span>}
-                        {t.type === 'memory' && <span style={{ fontSize: '0.68rem', color: '#f87171' }}>Strict 60s countdown</span>}
-                        {t.type === 'walk' && <span style={{ fontSize: '0.68rem', color: '#34d399' }}>1,200 Steps Pedometer</span>}
-                        {t.shareRequired && <span style={{ fontSize: '0.68rem', color: '#60a5fa' }}>+ Mandatory FB Share</span>}
-                      </td>
-                      <td style={{ padding: '0.75rem', fontWeight: 800, color: '#34d399' }}>
-                        +{formatINR(t.reward)}
-                      </td>
-                      <td style={{ padding: '0.75rem' }}>
-                        <span className={`badge ${t.status === 'ACTIVE' ? 'badge-emerald' : 'badge-gold'}`} style={{ fontSize: '0.7rem' }}>
-                          {t.status === 'ACTIVE' ? '🟢 ACTIVE TODAY' : '⚪ PAUSED'}
-                        </span>
-                      </td>
-                      <td style={{ padding: '0.75rem', textAlign: 'center' }}>
-                        <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center' }}>
-                          <button
-                            className={`btn ${t.status === 'ACTIVE' ? 'btn-secondary' : 'btn-primary'} btn-sm`}
-                            style={{ fontSize: '0.72rem', padding: '0.25rem 0.6rem' }}
-                            onClick={() => toggleDailyTaskStatus(t.id)}
-                            title="Toggle whether users can see and complete this task today"
-                          >
-                            {t.status === 'ACTIVE' ? 'Pause Task' : 'Activate Task'}
-                          </button>
-                          <button
-                            className="btn btn-danger btn-sm"
-                            style={{ fontSize: '0.72rem', padding: '0.25rem 0.5rem' }}
-                            onClick={() => {
-                              if (window.confirm(`Delete task "${t.title}" permanently?`)) {
-                                deleteDailyTask(t.id);
-                              }
-                            }}
-                            title="Delete task from platform"
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        </div>
-                      </td>
+
+              {currentDayTasks.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '2.5rem', color: '#94a3b8' }}>
+                  <Calendar size={40} style={{ opacity: 0.3, marginBottom: '0.75rem' }} />
+                  <p>No tasks scheduled for <strong>{selectedDayMeta.fullLabel}</strong> yet.</p>
+                  <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginTop: '1rem' }}>
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-sm"
+                      onClick={() => setTaskModal({
+                        isOpen: true,
+                        targetDate: selectedScheduleDate,
+                        type: 'custom',
+                        title: '',
+                        category: 'Special Task',
+                        platform: 'TaskCoin App',
+                        videoUrl: '',
+                        actionUrl: '',
+                        duration: 20,
+                        reward: 35,
+                        shareRequired: false,
+                        sharePlatform: 'Facebook & Friends',
+                        description: '',
+                      })}
+                    >
+                      <Plus size={14} /> Add First Task
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => copyTasksToDate(getLocalDateString(0), selectedScheduleDate)}
+                    >
+                      <Copy size={14} /> Copy Today's Tasks to This Date
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid var(--border-subtle)', color: '#94a3b8', textAlign: 'left' }}>
+                      <th style={{ padding: '0.75rem' }}>Type</th>
+                      <th style={{ padding: '0.75rem' }}>Task Name & Description</th>
+                      <th style={{ padding: '0.75rem' }}>Category</th>
+                      <th style={{ padding: '0.75rem' }}>Duration / Timer Rule</th>
+                      <th style={{ padding: '0.75rem' }}>Reward</th>
+                      <th style={{ padding: '0.75rem' }}>Status</th>
+                      <th style={{ padding: '0.75rem', textAlign: 'center' }}>Admin Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
+                  </thead>
+                  <tbody>
+                    {currentDayTasks.map((t) => (
+                      <tr key={t.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                        <td style={{ padding: '0.75rem' }}>
+                          <div style={{ width: 34, height: 34, borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: t.type === 'video' ? 'rgba(239, 68, 68, 0.2)' : t.type === 'walk' ? 'rgba(16, 185, 129, 0.2)' : t.type === 'slide3' ? 'rgba(99, 102, 241, 0.2)' : t.type === 'memory' ? 'rgba(59, 130, 246, 0.2)' : t.type === 'music' ? 'rgba(168, 85, 247, 0.2)' : 'rgba(245, 158, 11, 0.2)', color: t.type === 'video' ? '#f87171' : t.type === 'walk' ? '#34d399' : t.type === 'slide3' ? '#818cf8' : t.type === 'memory' ? '#60a5fa' : t.type === 'music' ? '#c084fc' : '#fbbf24' }}>
+                            {t.type === 'video' ? <Video size={17} /> : t.type === 'walk' ? <Footprints size={17} /> : t.type === 'slide3' ? <Grid size={17} /> : t.type === 'memory' ? <Brain size={17} /> : t.type === 'music' ? <Music size={17} /> : <Sparkles size={17} />}
+                          </div>
+                        </td>
+                        <td style={{ padding: '0.75rem' }}>
+                          <div style={{ fontWeight: 700, color: '#f8fafc', marginBottom: '0.15rem' }}>{t.title}</div>
+                          <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                            {t.description || 'Verified engagement task.'}
+                          </div>
+                          {t.videoUrl && (
+                            <a 
+                              href={t.videoUrl} 
+                              target="_blank" 
+                              rel="noreferrer" 
+                              style={{ fontSize: '0.72rem', color: '#60a5fa', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', textDecoration: 'none', marginTop: '0.2rem' }}
+                            >
+                              <ExternalLink size={10} /> {t.videoUrl}
+                            </a>
+                          )}
+                          {t.actionUrl && (
+                            <a 
+                              href={t.actionUrl} 
+                              target="_blank" 
+                              rel="noreferrer" 
+                              style={{ fontSize: '0.72rem', color: '#34d399', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', textDecoration: 'none', marginTop: '0.2rem' }}
+                            >
+                              <Globe size={10} /> {t.actionUrl}
+                            </a>
+                          )}
+                        </td>
+                        <td style={{ padding: '0.75rem' }}>
+                          <span className="badge badge-indigo" style={{ fontSize: '0.68rem' }}>
+                            {t.category || t.type}
+                          </span>
+                        </td>
+                        <td style={{ padding: '0.75rem' }}>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#fbbf24', fontWeight: 600 }}>
+                            <Clock size={12} /> {t.duration >= 60 ? `${Math.round(t.duration / 60)} min` : `${t.duration}s`}
+                          </span>
+                          {t.type === 'slide3' && <span style={{ fontSize: '0.68rem', color: '#f87171', display: 'block' }}>Strict 60s countdown</span>}
+                          {t.type === 'memory' && <span style={{ fontSize: '0.68rem', color: '#f87171', display: 'block' }}>Strict 60s countdown</span>}
+                          {t.type === 'walk' && <span style={{ fontSize: '0.68rem', color: '#34d399', display: 'block' }}>1,200 Steps Pedometer</span>}
+                          {t.shareRequired && <span style={{ fontSize: '0.68rem', color: '#60a5fa', display: 'block' }}>+ Mandatory Share</span>}
+                        </td>
+                        <td style={{ padding: '0.75rem', fontWeight: 800, color: '#34d399' }}>
+                          +{formatINR(t.reward)}
+                        </td>
+                        <td style={{ padding: '0.75rem' }}>
+                          <span className={`badge ${t.status === 'ACTIVE' ? 'badge-emerald' : 'badge-gold'}`} style={{ fontSize: '0.7rem' }}>
+                            {t.status === 'ACTIVE' ? '🟢 ACTIVE' : '⚪ PAUSED'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '0.75rem', textAlign: 'center' }}>
+                          <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center' }}>
+                            <button
+                              className={`btn ${t.status === 'ACTIVE' ? 'btn-secondary' : 'btn-primary'} btn-sm`}
+                              style={{ fontSize: '0.72rem', padding: '0.25rem 0.6rem' }}
+                              onClick={() => toggleTaskStatusForDate(selectedScheduleDate, t.id)}
+                              title="Toggle whether users can see and complete this task"
+                            >
+                              {t.status === 'ACTIVE' ? 'Pause' : 'Activate'}
+                            </button>
+                            <button
+                              className="btn btn-danger btn-sm"
+                              style={{ fontSize: '0.72rem', padding: '0.25rem 0.5rem' }}
+                              onClick={() => {
+                                if (window.confirm(`Delete task "${t.title}" from ${selectedDayMeta.tag}?`)) {
+                                  deleteTaskForDate(selectedScheduleDate, t.id);
+                                }
+                              }}
+                              title="Delete task permanently"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* TAB 6: BANKING, UPI & QR DEPOSIT GATEWAY SETUP */}
       {activeAdminTab === 'payments' && (
@@ -1569,15 +1783,20 @@ export default function AdminPanelView() {
         </div>
       )}
 
-      {/* Modal: Add New Task to Daily Roster */}
+      {/* Modal: Add New Task to Date-Wise Schedule */}
       {taskModal.isOpen && (
         <div className="modal-overlay" onClick={() => setTaskModal({ ...taskModal, isOpen: false })}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 540 }}>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '0.35rem' }}>
-              Publish Task to Daily Roster
-            </h3>
+          <div className="modal-content glass-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 560, maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 800 }}>
+                Publish Task to Schedule
+              </h3>
+              <span className="badge badge-emerald" style={{ fontSize: '0.7rem' }}>
+                7-Day Scheduler
+              </span>
+            </div>
             <p style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '1.25rem' }}>
-              Create a new task. You can choose Video & Share, Focus Music, 3×3 Slide Puzzle, Memory Match, or 10-Minute Walk.
+              Create any task (custom link, Telegram, video, 3×3 slide puzzle, memory match, 10-min walk, or spin). It will be saved for the selected date and auto-activated at 00:00 midnight!
             </p>
 
             <form
@@ -1591,22 +1810,52 @@ export default function AdminPanelView() {
                   showToast('Please enter video URL for video task', 'error');
                   return;
                 }
-                addCustomDailyTask({
+                const targetDay = taskModal.targetDate || selectedScheduleDate;
+                addTaskForDate(targetDay, {
                   type: taskModal.type,
-                  title: taskModal.title,
-                  platform: taskModal.platform || (taskModal.type === 'video' ? 'YouTube' : 'EarnFlow App'),
-                  videoUrl: taskModal.videoUrl,
+                  title: taskModal.title.trim(),
+                  category: taskModal.category.trim() || (
+                    taskModal.type === 'video' ? 'Video & Share' :
+                    taskModal.type === 'walk' ? 'Fitness Tracker' :
+                    taskModal.type === 'slide3' ? 'Skill Puzzle' :
+                    taskModal.type === 'memory' ? 'Brain Game' :
+                    taskModal.type === 'music' ? 'Focus Audio' :
+                    taskModal.type === 'spin' ? 'Lucky Draw' :
+                    taskModal.type === 'scratch' ? 'Instant Scratch' :
+                    'Special Task'
+                  ),
+                  platform: taskModal.platform || (taskModal.type === 'video' ? 'YouTube' : 'TaskCoin App'),
+                  videoUrl: taskModal.videoUrl.trim(),
+                  actionUrl: taskModal.actionUrl.trim(),
                   duration: Number(taskModal.duration) || (taskModal.type === 'walk' ? 600 : taskModal.type === 'slide3' || taskModal.type === 'memory' ? 60 : 20),
                   reward: Number(taskModal.reward) || 35,
-                  shareRequired: taskModal.type === 'video' ? taskModal.shareRequired : false,
+                  shareRequired: taskModal.shareRequired === true,
                   sharePlatform: 'Facebook & Friends',
-                  description: taskModal.description,
+                  description: taskModal.description.trim(),
                 });
                 setTaskModal({ ...taskModal, isOpen: false });
               }}
             >
+              {/* Target Date Selector */}
               <div className="form-group" style={{ marginBottom: '1rem' }}>
-                <label className="form-label">Task Type / Category</label>
+                <label className="form-label">Target Schedule Date (When tasks become active at 00:00 hrs)</label>
+                <select
+                  className="input-field"
+                  value={taskModal.targetDate || selectedScheduleDate}
+                  onChange={(e) => setTaskModal({ ...taskModal, targetDate: e.target.value })}
+                  style={{ fontWeight: 700, color: '#34d399' }}
+                >
+                  {upcoming7Days.map((d) => (
+                    <option key={d.dateStr} value={d.dateStr}>
+                      {d.tag} — {d.dayName}, {d.shortLabel} {d.isToday ? '(Today - Active Now)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Task Type Selector */}
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label className="form-label">Task Type / Engine Category</label>
                 <select
                   className="input-field"
                   value={taskModal.type}
@@ -1614,31 +1863,43 @@ export default function AdminPanelView() {
                     const newType = e.target.value;
                     let defaultDuration = 20;
                     let defaultTitle = '';
+                    let defaultCat = '';
                     if (newType === 'walk') {
                       defaultDuration = 600;
                       defaultTitle = 'Walk for 10 Minutes Health Challenge';
+                      defaultCat = 'Fitness Tracker';
                     } else if (newType === 'slide3') {
                       defaultDuration = 60;
                       defaultTitle = '3×3 Slide Number Puzzle Challenge';
+                      defaultCat = 'Skill Puzzle';
                     } else if (newType === 'memory') {
                       defaultDuration = 60;
                       defaultTitle = 'Wealth Icon Memory Match Challenge';
+                      defaultCat = 'Brain Game';
                     } else if (newType === 'music') {
                       defaultDuration = 20;
                       defaultTitle = 'Focus Ambient Productivity Track';
+                      defaultCat = 'Focus Audio';
                     } else if (newType === 'video') {
                       defaultDuration = 20;
                       defaultTitle = 'Brand Launch: Tech & Wealth Review';
+                      defaultCat = 'Video & Share';
+                    } else if (newType === 'custom') {
+                      defaultDuration = 20;
+                      defaultTitle = 'Join Official Telegram Community & Earn';
+                      defaultCat = 'Community Task';
                     }
                     setTaskModal({
                       ...taskModal,
                       type: newType,
                       duration: defaultDuration,
+                      category: defaultCat || taskModal.category,
                       title: defaultTitle || taskModal.title,
                     });
                   }}
                 >
-                  <option value="video">📹 Video Watch & Facebook Share</option>
+                  <option value="custom">🌐 Custom Task / Any Action (Website, Telegram, App, Survey, Social)</option>
+                  <option value="video">📹 Video Watch & Social Share</option>
                   <option value="music">🎵 Focus Music Audio Listening</option>
                   <option value="slide3">🧩 3×3 Slide Number Puzzle (60s Countdown)</option>
                   <option value="memory">🧠 Wealth Memory Match (60s Countdown)</option>
@@ -1649,24 +1910,36 @@ export default function AdminPanelView() {
               </div>
 
               <div className="form-group" style={{ marginBottom: '1rem' }}>
-                <label className="form-label">Task Title / Campaign Name</label>
+                <label className="form-label">Task Title / Campaign Name *</label>
                 <input
                   type="text"
                   className="input-field"
-                  placeholder="e.g. 3x3 Slide Puzzle or 10-Min Walk Challenge"
+                  placeholder="e.g. Subscribe to Official Telegram or Solve 3x3 Slide Puzzle"
                   value={taskModal.title}
                   onChange={(e) => setTaskModal({ ...taskModal, title: e.target.value })}
                   required
                 />
               </div>
 
+              {/* Category / Tag */}
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label className="form-label">Category Badge (Visible to users)</label>
+                <input
+                  type="text"
+                  className="input-field"
+                  placeholder="e.g. Social Task, Website Review, Skill Game, Telegram, Crypto"
+                  value={taskModal.category}
+                  onChange={(e) => setTaskModal({ ...taskModal, category: e.target.value })}
+                />
+              </div>
+
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
                 <div>
-                  <label className="form-label">Reward Payout (₹)</label>
+                  <label className="form-label">Reward Payout (₹) *</label>
                   <input
                     type="number"
-                    min="5"
-                    max="500"
+                    min="1"
+                    max="1000"
                     step="1"
                     className="input-field"
                     value={taskModal.reward}
@@ -1699,54 +1972,147 @@ export default function AdminPanelView() {
                       value={taskModal.duration}
                       onChange={(e) => setTaskModal({ ...taskModal, duration: Number(e.target.value) })}
                     >
+                      <option value={10}>10 Seconds</option>
                       <option value={15}>15 Seconds</option>
                       <option value={20}>20 Seconds</option>
                       <option value={30}>30 Seconds</option>
+                      <option value={45}>45 Seconds</option>
                       <option value={60}>60 Seconds</option>
                     </select>
                   )}
                 </div>
               </div>
 
-              {taskModal.type === 'video' && (
-                <>
-                  <div className="form-group" style={{ marginBottom: '1rem' }}>
-                    <label className="form-label">Video URL (YouTube or Facebook link)</label>
-                    <input
-                      type="url"
-                      className="input-field"
-                      placeholder="https://www.youtube.com/watch?v=... or https://youtu.be/..."
-                      value={taskModal.videoUrl}
-                      onChange={(e) => setTaskModal({ ...taskModal, videoUrl: e.target.value })}
-                      required
-                    />
+              {/* Custom Action Link (if custom task) */}
+              {taskModal.type === 'custom' && (
+                <div className="form-group" style={{ marginBottom: '1rem' }}>
+                  <label className="form-label">Action Link / URL (Website, Telegram Channel, App download, or form)</label>
+                  <input
+                    type="url"
+                    className="input-field"
+                    placeholder="https://t.me/yourchannel or https://yourwebsite.com"
+                    value={taskModal.actionUrl}
+                    onChange={(e) => setTaskModal({ ...taskModal, actionUrl: e.target.value })}
+                  />
+                  <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: '0.25rem' }}>
+                    Users will see an "Open Link ↗" button to perform this action.
                   </div>
-
-                  <div style={{ padding: '0.85rem', background: 'rgba(24, 119, 242, 0.08)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(24, 119, 242, 0.3)', marginBottom: '1.25rem' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, color: '#60a5fa' }}>
-                      <input
-                        type="checkbox"
-                        checked={taskModal.shareRequired}
-                        onChange={(e) => setTaskModal({ ...taskModal, shareRequired: e.target.checked })}
-                        style={{ width: 16, height: 16 }}
-                      />
-                      <span>Mandatory Facebook & Social Share Required</span>
-                    </label>
-                    <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: '0.25rem', marginLeft: '1.5rem' }}>
-                      User will not receive payout until they complete both the watch timer and share to Facebook.
-                    </div>
-                  </div>
-                </>
+                </div>
               )}
+
+              {/* Video URL (if video task) */}
+              {taskModal.type === 'video' && (
+                <div className="form-group" style={{ marginBottom: '1rem' }}>
+                  <label className="form-label">Video URL (YouTube or Facebook link) *</label>
+                  <input
+                    type="url"
+                    className="input-field"
+                    placeholder="https://www.youtube.com/watch?v=... or https://youtu.be/..."
+                    value={taskModal.videoUrl}
+                    onChange={(e) => setTaskModal({ ...taskModal, videoUrl: e.target.value })}
+                    required
+                  />
+                </div>
+              )}
+
+              {/* Task Description */}
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label className="form-label">Task Instructions / Description for User</label>
+                <textarea
+                  className="input-field"
+                  rows={3}
+                  placeholder="Tell users what they need to do to complete this task and receive payment..."
+                  value={taskModal.description}
+                  onChange={(e) => setTaskModal({ ...taskModal, description: e.target.value })}
+                />
+              </div>
+
+              {/* Mandatory Social Share Toggle */}
+              <div style={{ padding: '0.85rem', background: 'rgba(24, 119, 242, 0.08)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(24, 119, 242, 0.3)', marginBottom: '1.25rem' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, color: '#60a5fa' }}>
+                  <input
+                    type="checkbox"
+                    checked={taskModal.shareRequired}
+                    onChange={(e) => setTaskModal({ ...taskModal, shareRequired: e.target.checked })}
+                    style={{ width: 16, height: 16 }}
+                  />
+                  <span>Require Social & Facebook Share to Claim Reward</span>
+                </label>
+                <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: '0.25rem', marginLeft: '1.5rem' }}>
+                  User will not be credited until they both complete the timer and click the share button.
+                </div>
+              </div>
 
               <div style={{ display: 'flex', gap: '0.75rem' }}>
                 <button type="submit" className="btn btn-primary btn-lg" style={{ flex: 1, fontWeight: 700 }}>
-                  <Plus size={16} /> Publish Task to Roster
+                  <Plus size={16} /> Save Task to {upcoming7Days.find(d => d.dateStr === (taskModal.targetDate || selectedScheduleDate))?.tag || 'Schedule'}
                 </button>
                 <button
                   type="button"
                   className="btn btn-secondary"
                   onClick={() => setTaskModal({ ...taskModal, isOpen: false })}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Copy Tasks Between Dates */}
+      {copyModal.isOpen && (
+        <div className="modal-overlay" onClick={() => setCopyModal({ ...copyModal, isOpen: false })}>
+          <div className="modal-content glass-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 480 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 800 }}>
+                Copy Daily Tasks
+              </h3>
+              <span className="badge badge-emerald">Duplicate Roster</span>
+            </div>
+            <p style={{ fontSize: '0.82rem', color: '#cbd5e1', marginBottom: '1.25rem' }}>
+              Copy all configured tasks from <strong>{upcoming7Days.find(d => d.dateStr === selectedScheduleDate)?.fullLabel}</strong> to another day in the 7-day schedule.
+            </p>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!copyModal.targetDate || copyModal.targetDate === selectedScheduleDate) {
+                  showToast('Please pick a different destination date.', 'error');
+                  return;
+                }
+                copyTasksToDate(selectedScheduleDate, copyModal.targetDate);
+                setCopyModal({ isOpen: false, targetDate: '' });
+                setSelectedScheduleDate(copyModal.targetDate); // Switch view to target date
+              }}
+            >
+              <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+                <label className="form-label">Destination Date (Where tasks should be duplicated):</label>
+                <select
+                  className="input-field"
+                  value={copyModal.targetDate}
+                  onChange={(e) => setCopyModal({ ...copyModal, targetDate: e.target.value })}
+                  style={{ fontWeight: 700, color: '#38bdf8' }}
+                  required
+                >
+                  {upcoming7Days
+                    .filter((d) => d.dateStr !== selectedScheduleDate)
+                    .map((d) => (
+                      <option key={d.dateStr} value={d.dateStr}>
+                        {d.tag} — {d.dayName}, {d.shortLabel}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <button type="submit" className="btn btn-primary" style={{ flex: 1, fontWeight: 700 }}>
+                  <Copy size={15} /> Confirm & Copy Roster
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setCopyModal({ isOpen: false, targetDate: '' })}
                 >
                   Cancel
                 </button>

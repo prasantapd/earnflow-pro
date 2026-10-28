@@ -38,6 +38,8 @@ import DailyStreakWidget from '../components/DailyStreakWidget';
 import SlidePuzzleModal from '../components/SlidePuzzleModal';
 import LudoArenaModal from '../components/LudoArenaModal';
 import CardGamesArenaModal from '../components/CardGamesArenaModal';
+import CustomTaskModal from '../components/CustomTaskModal';
+import { getLocalDateString, formatFullReadableDate, getTimeUntilMidnight } from '../utils/dateUtils';
 
 export default function TaskCenterView({ onOpenWithdraw }) {
   const { 
@@ -57,6 +59,16 @@ export default function TaskCenterView({ onOpenWithdraw }) {
   const [activeMemoryTask, setActiveMemoryTask] = useState(null);
   const [activeWalkTask, setActiveWalkTask] = useState(null);
   const [activeDailyPuzzleTask, setActiveDailyPuzzleTask] = useState(null);
+  const [activeCustomTask, setActiveCustomTask] = useState(null);
+
+  // Time remaining until 00:00 midnight auto-switch
+  const [timeUntilMidnight, setTimeUntilMidnight] = useState(getTimeUntilMidnight());
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeUntilMidnight(getTimeUntilMidnight());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Skill Gaming & PvP Arena Modals (Unlimited player matches)
   const [isPuzzleOpen, setIsPuzzleOpen] = useState(false);
@@ -177,8 +189,15 @@ export default function TaskCenterView({ onOpenWithdraw }) {
       case 'scratch':
         setActiveScratchTask(task);
         break;
+      case 'custom':
+        setActiveCustomTask(task);
+        break;
       default:
-        setActiveVideoTask(task);
+        if (task.videoUrl) {
+          setActiveVideoTask(task);
+        } else {
+          setActiveCustomTask(task);
+        }
         break;
     }
   };
@@ -197,13 +216,17 @@ export default function TaskCenterView({ onOpenWithdraw }) {
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1.5rem' }}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem', flexWrap: 'wrap' }}>
               <span className="badge badge-gold">Daily Reward Engine</span>
               <span className="badge badge-emerald">⚡ 24/7 Payouts</span>
+              <span className="badge badge-cyan">📅 {formatFullReadableDate(getLocalDateString(0))}</span>
+              <span className="badge badge-indigo" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                <Clock size={12} /> Auto-Switch at 00:00 hrs: {timeUntilMidnight.formatted}
+              </span>
             </div>
             <h2 style={{ fontSize: '1.9rem', fontWeight: 800 }}>Task Earning Center</h2>
             <p style={{ fontSize: '0.9rem', color: '#cbd5e1', maxWidth: '650px', marginTop: '0.3rem' }}>
-              Complete your daily tasks (videos, focus music, timed 3×3 puzzles, memory match, and 10-minute fitness walks) to claim verified cash rewards. Withdraw 24/7 anytime (Min. ₹100)!
+              Tasks are scheduled daily and automatically change at <strong>00:00 hrs midnight</strong>. Complete today's tasks to claim verified rewards. Withdraw anytime 24/7!
             </p>
           </div>
 
@@ -619,6 +642,14 @@ export default function TaskCenterView({ onOpenWithdraw }) {
         isOpen={isCardGamesOpen}
         onClose={() => setIsCardGamesOpen(false)}
       />
+
+      {/* Custom Task Execution Modal */}
+      {activeCustomTask && (
+        <CustomTaskModal
+          task={activeCustomTask}
+          onClose={() => setActiveCustomTask(null)}
+        />
+      )}
     </div>
   );
 }

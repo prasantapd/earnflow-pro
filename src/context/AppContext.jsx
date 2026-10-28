@@ -1,103 +1,464 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import confetti from 'canvas-confetti';
-import { calculateEarnings, getNextSundayStatus, extractYoutubeId, getMembershipTier } from '../utils/finance';
+import { calculateEarnings, getNextSundayStatus, extractYoutubeId, getMembershipTier, formatINR } from '../utils/finance';
+import { getLocalDateString, getUpcoming7Days } from '../utils/dateUtils';
 
 const AppContext = createContext();
 
-const STORAGE_KEY = 'earnflow_pro_state_v10';
+// Storage key updated to taskcoin_pro_state_v1 for clean production state without dummy data
+const STORAGE_KEY = 'taskcoin_pro_state_v1';
 
-export const INITIAL_DAILY_TASK_ROSTER = [
-  {
-    id: 'vid_101',
-    type: 'video',
-    title: 'Brand Launch: Global Alpha Tech Review',
-    category: 'Video & Share',
-    platform: 'YouTube',
-    videoUrl: 'https://www.youtube.com/watch?v=y9u2eQy5fmg',
-    youtubeId: 'y9u2eQy5fmg',
-    reward: 35.00,
-    duration: 20,
-    shareRequired: true,
-    sharePlatform: 'Facebook & Friends',
-    status: 'ACTIVE',
-    totalShares: 1420,
-    description: 'Watch video for 20s and share to your Facebook feed or friends to claim reward.',
-    createdAt: new Date(Date.now() - 3 * 86400000).toISOString(),
-  },
-  {
-    id: 'vid_102',
-    type: 'video',
-    title: 'Compound Wealth: 2026 Financial Roadmap',
-    category: 'Video & Share',
-    platform: 'YouTube',
-    videoUrl: 'https://www.youtube.com/watch?v=OQznqM_9k8I',
-    youtubeId: 'OQznqM_9k8I',
-    reward: 50.00,
-    duration: 25,
-    shareRequired: true,
-    sharePlatform: 'Facebook & Friends',
-    status: 'ACTIVE',
-    totalShares: 980,
-    description: 'Watch video for 25s and share to your Facebook feed or friends to claim reward.',
-    createdAt: new Date(Date.now() - 2 * 86400000).toISOString(),
-  },
-  {
-    id: 'music_1',
-    type: 'music',
-    title: 'Alpha Ambient Synthesizer Flow',
-    category: 'Focus Audio',
-    reward: 25.00,
-    duration: 20,
-    status: 'ACTIVE',
-    description: 'Listen to ambient productivity audio track for 20s to claim cash.',
-    createdAt: new Date(Date.now() - 2 * 86400000).toISOString(),
-  },
-  {
-    id: 'slide3_1',
-    type: 'slide3',
-    title: '3×3 Slide Number Puzzle Challenge',
-    category: 'Skill Puzzle',
-    reward: 40.00,
-    duration: 60,
-    status: 'ACTIVE',
-    description: 'Solve the 3×3 logic tile puzzle within 60s countdown. Pure cognitive skill.',
-    createdAt: new Date(Date.now() - 1 * 86400000).toISOString(),
-  },
-  {
-    id: 'memory_1',
-    type: 'memory',
-    title: 'Wealth Icon Memory Match Challenge',
-    category: 'Brain Game',
-    reward: 35.00,
-    duration: 60,
-    status: 'ACTIVE',
-    description: 'Flip and match 6 wealth icon pairs before 60s timer expires.',
-    createdAt: new Date(Date.now() - 1 * 86400000).toISOString(),
-  },
-  {
-    id: 'walk_1',
-    type: 'walk',
-    title: 'Walk for 10 Minutes Health Pedometer',
-    category: 'Fitness Tracker',
-    reward: 40.00,
-    duration: 600,
-    targetSteps: 1200,
-    status: 'ACTIVE',
-    description: 'Active pedometer health verification. Complete 10 minutes (1,200 steps) of walking.',
-    createdAt: new Date(Date.now() - 1 * 86400000).toISOString(),
-  },
-  {
-    id: 'spin_1',
-    type: 'spin',
-    title: 'Lucky Wealth Spin Wheel',
-    category: 'Lucky Draw',
-    reward: 20.00,
-    duration: 10,
-    status: 'ACTIVE',
-    description: 'Spin high-tech wheel for instant reward.',
-    createdAt: new Date(Date.now() - 1 * 86400000).toISOString(),
-  },
-];
+/* =========================================================================
+   7-DAY DATE-WISE INITIAL TASK SCHEDULE GENERATOR
+   Generates tailored task rosters for Today (offset 0) up to 7 upcoming days (+6).
+   Every day at 00:00 midnight, the platform auto-switches to the new day's tasks!
+   Admin can customize or schedule ANY task for any of the 7 days.
+   ========================================================================= */
+export function generateDefault7DayTaskRoster() {
+  const schedule = {};
+  const todayStr = getLocalDateString(0);
+
+  // Day 0 (Today): Standard Mix
+  schedule[todayStr] = [
+    {
+      id: 'vid_101',
+      type: 'video',
+      title: 'Brand Launch: TaskCoin Alpha Tech Review',
+      category: 'Video & Share',
+      platform: 'YouTube',
+      videoUrl: 'https://www.youtube.com/watch?v=y9u2eQy5fmg',
+      youtubeId: 'y9u2eQy5fmg',
+      reward: 35.00,
+      duration: 20,
+      shareRequired: true,
+      sharePlatform: 'Facebook & Friends',
+      status: 'ACTIVE',
+      totalShares: 1420,
+      description: 'Watch video for 20s and share to your Facebook feed or friends to claim reward.',
+      createdAt: new Date().toISOString(),
+      targetDate: todayStr,
+    },
+    {
+      id: 'music_1',
+      type: 'music',
+      title: 'Alpha Ambient Synthesizer Flow',
+      category: 'Focus Audio',
+      reward: 25.00,
+      duration: 20,
+      status: 'ACTIVE',
+      description: 'Listen to ambient productivity audio track for 20s to claim cash.',
+      createdAt: new Date().toISOString(),
+      targetDate: todayStr,
+    },
+    {
+      id: 'slide3_1',
+      type: 'slide3',
+      title: '3×3 Slide Number Puzzle Challenge',
+      category: 'Skill Puzzle',
+      reward: 40.00,
+      duration: 60,
+      status: 'ACTIVE',
+      description: 'Solve the 3×3 logic tile puzzle within 60s countdown. Pure cognitive skill.',
+      createdAt: new Date().toISOString(),
+      targetDate: todayStr,
+    },
+    {
+      id: 'walk_1',
+      type: 'walk',
+      title: 'Walk for 10 Minutes Health Pedometer',
+      category: 'Fitness Tracker',
+      reward: 40.00,
+      duration: 600,
+      targetSteps: 1200,
+      status: 'ACTIVE',
+      description: 'Active pedometer health verification. Complete 10 minutes (1,200 steps) of walking.',
+      createdAt: new Date().toISOString(),
+      targetDate: todayStr,
+    },
+    {
+      id: 'spin_1',
+      type: 'spin',
+      title: 'Lucky Wealth Spin Wheel',
+      category: 'Lucky Draw',
+      reward: 20.00,
+      duration: 10,
+      status: 'ACTIVE',
+      description: 'Spin high-tech wheel for instant reward.',
+      createdAt: new Date().toISOString(),
+      targetDate: todayStr,
+    },
+  ];
+
+  // Day 1 (Tomorrow): Compound Wealth & Memory Match Mix
+  const day1Str = getLocalDateString(1);
+  schedule[day1Str] = [
+    {
+      id: 'vid_102',
+      type: 'video',
+      title: 'Compound Wealth: 2026 Financial Roadmap',
+      category: 'Video & Share',
+      platform: 'YouTube',
+      videoUrl: 'https://www.youtube.com/watch?v=OQznqM_9k8I',
+      youtubeId: 'OQznqM_9k8I',
+      reward: 50.00,
+      duration: 25,
+      shareRequired: true,
+      sharePlatform: 'Facebook & Friends',
+      status: 'ACTIVE',
+      totalShares: 850,
+      description: 'Watch financial roadmap analysis for 25s and share to friends.',
+      createdAt: new Date().toISOString(),
+      targetDate: day1Str,
+    },
+    {
+      id: 'memory_1',
+      type: 'memory',
+      title: 'Wealth Icon Memory Match Challenge',
+      category: 'Brain Game',
+      reward: 35.00,
+      duration: 60,
+      status: 'ACTIVE',
+      description: 'Flip and match 6 wealth icon pairs before 60s timer expires.',
+      createdAt: new Date().toISOString(),
+      targetDate: day1Str,
+    },
+    {
+      id: 'slide3_2',
+      type: 'slide3',
+      title: '3×3 Speed Tile Logic Matrix',
+      category: 'Skill Puzzle',
+      reward: 40.00,
+      duration: 60,
+      status: 'ACTIVE',
+      description: 'Arrange tiles 1 to 8 before the 60s countdown hits zero.',
+      createdAt: new Date().toISOString(),
+      targetDate: day1Str,
+    },
+    {
+      id: 'music_2',
+      type: 'music',
+      title: 'Deep Focus Binaural Beats',
+      category: 'Focus Audio',
+      reward: 25.00,
+      duration: 20,
+      status: 'ACTIVE',
+      description: 'Stream 20 seconds of high-fidelity focus audio to claim reward.',
+      createdAt: new Date().toISOString(),
+      targetDate: day1Str,
+    },
+    {
+      id: 'spin_2',
+      type: 'spin',
+      title: 'Golden Wealth Spin Wheel',
+      category: 'Lucky Draw',
+      reward: 25.00,
+      duration: 10,
+      status: 'ACTIVE',
+      description: 'Instant wheel spin with guaranteed cash drop.',
+      createdAt: new Date().toISOString(),
+      targetDate: day1Str,
+    },
+  ];
+
+  // Day 2 (+2 Days): Digital Assets & Cardio Walk Mix
+  const day2Str = getLocalDateString(2);
+  schedule[day2Str] = [
+    {
+      id: 'vid_103',
+      type: 'video',
+      title: 'Decentralized Yield & Web3 Monetization',
+      category: 'Video & Share',
+      platform: 'YouTube',
+      videoUrl: 'https://www.youtube.com/watch?v=y9u2eQy5fmg',
+      youtubeId: 'y9u2eQy5fmg',
+      reward: 45.00,
+      duration: 20,
+      shareRequired: true,
+      sharePlatform: 'Facebook & Friends',
+      status: 'ACTIVE',
+      description: 'Watch 20s of decentralized yield review and share to social feed.',
+      createdAt: new Date().toISOString(),
+      targetDate: day2Str,
+    },
+    {
+      id: 'walk_2',
+      type: 'walk',
+      title: '10-Minute Morning Cardio Walk',
+      category: 'Fitness Tracker',
+      reward: 40.00,
+      duration: 600,
+      targetSteps: 1200,
+      status: 'ACTIVE',
+      description: '10-minute fitness verification. Hit 1,200 steps to unlock reward.',
+      createdAt: new Date().toISOString(),
+      targetDate: day2Str,
+    },
+    {
+      id: 'memory_2',
+      type: 'memory',
+      title: 'Gem Match Logic Challenge',
+      category: 'Brain Game',
+      reward: 35.00,
+      duration: 60,
+      status: 'ACTIVE',
+      description: 'Match all pairs within 60s to unlock instant payout.',
+      createdAt: new Date().toISOString(),
+      targetDate: day2Str,
+    },
+    {
+      id: 'spin_3',
+      type: 'spin',
+      title: 'Diamond Luck Wheel',
+      category: 'Lucky Draw',
+      reward: 20.00,
+      duration: 10,
+      status: 'ACTIVE',
+      description: 'Spin for instant task wallet rewards.',
+      createdAt: new Date().toISOString(),
+      targetDate: day2Str,
+    },
+  ];
+
+  // Day 3 (+3 Days): Portfolio Allocation & Lo-Fi Flow
+  const day3Str = getLocalDateString(3);
+  schedule[day3Str] = [
+    {
+      id: 'vid_104',
+      type: 'video',
+      title: 'Smart Portfolio Allocation Strategy',
+      category: 'Video & Share',
+      platform: 'YouTube',
+      videoUrl: 'https://www.youtube.com/watch?v=OQznqM_9k8I',
+      youtubeId: 'OQznqM_9k8I',
+      reward: 40.00,
+      duration: 20,
+      shareRequired: true,
+      sharePlatform: 'Facebook & Friends',
+      status: 'ACTIVE',
+      description: 'Watch 20s video and share to claim your reward.',
+      createdAt: new Date().toISOString(),
+      targetDate: day3Str,
+    },
+    {
+      id: 'slide3_3',
+      type: 'slide3',
+      title: 'Numerical Matrix 3×3 Challenge',
+      category: 'Skill Puzzle',
+      reward: 45.00,
+      duration: 60,
+      status: 'ACTIVE',
+      description: 'Complete the numeric slide puzzle within 60 seconds.',
+      createdAt: new Date().toISOString(),
+      targetDate: day3Str,
+    },
+    {
+      id: 'music_3',
+      type: 'music',
+      title: 'Ambient Chillwave Lo-Fi Flow',
+      category: 'Focus Audio',
+      reward: 25.00,
+      duration: 20,
+      status: 'ACTIVE',
+      description: 'Listen to lo-fi track for 20 seconds.',
+      createdAt: new Date().toISOString(),
+      targetDate: day3Str,
+    },
+    {
+      id: 'walk_3',
+      type: 'walk',
+      title: '10-Minute Evening Cardio Pedometer',
+      category: 'Fitness Tracker',
+      reward: 40.00,
+      duration: 600,
+      targetSteps: 1200,
+      status: 'ACTIVE',
+      description: '10-minute verified walk challenge.',
+      createdAt: new Date().toISOString(),
+      targetDate: day3Str,
+    },
+  ];
+
+  // Day 4 (+4 Days): Algorithmic Yield & Memory Match
+  const day4Str = getLocalDateString(4);
+  schedule[day4Str] = [
+    {
+      id: 'vid_105',
+      type: 'video',
+      title: 'Fintech Innovation & Automated Growth',
+      category: 'Video & Share',
+      platform: 'YouTube',
+      videoUrl: 'https://www.youtube.com/watch?v=y9u2eQy5fmg',
+      youtubeId: 'y9u2eQy5fmg',
+      reward: 50.00,
+      duration: 25,
+      shareRequired: true,
+      sharePlatform: 'Facebook & Friends',
+      status: 'ACTIVE',
+      description: 'Watch automated yield review and share with friends.',
+      createdAt: new Date().toISOString(),
+      targetDate: day4Str,
+    },
+    {
+      id: 'memory_3',
+      type: 'memory',
+      title: 'Cyber Pattern Memory Match',
+      category: 'Brain Game',
+      reward: 35.00,
+      duration: 60,
+      status: 'ACTIVE',
+      description: 'Match icons within 60s timer.',
+      createdAt: new Date().toISOString(),
+      targetDate: day4Str,
+    },
+    {
+      id: 'slide3_4',
+      type: 'slide3',
+      title: '3×3 Rapid Tile Arrangement',
+      category: 'Skill Puzzle',
+      reward: 40.00,
+      duration: 60,
+      status: 'ACTIVE',
+      description: 'Solve the 3x3 slide before time runs out.',
+      createdAt: new Date().toISOString(),
+      targetDate: day4Str,
+    },
+    {
+      id: 'spin_4',
+      type: 'spin',
+      title: 'Super Star Wheel Spin',
+      category: 'Lucky Draw',
+      reward: 20.00,
+      duration: 10,
+      status: 'ACTIVE',
+      description: 'Instant wheel spin bonus.',
+      createdAt: new Date().toISOString(),
+      targetDate: day4Str,
+    },
+  ];
+
+  // Day 5 (+5 Days): Emerging Tech & Health Pedometer
+  const day5Str = getLocalDateString(5);
+  schedule[day5Str] = [
+    {
+      id: 'vid_106',
+      type: 'video',
+      title: 'Global Market Trends & Emerging Tech',
+      category: 'Video & Share',
+      platform: 'YouTube',
+      videoUrl: 'https://www.youtube.com/watch?v=OQznqM_9k8I',
+      youtubeId: 'OQznqM_9k8I',
+      reward: 35.00,
+      duration: 20,
+      shareRequired: true,
+      sharePlatform: 'Facebook & Friends',
+      status: 'ACTIVE',
+      description: 'Watch tech trends video for 20s and share.',
+      createdAt: new Date().toISOString(),
+      targetDate: day5Str,
+    },
+    {
+      id: 'walk_4',
+      type: 'walk',
+      title: 'Active 1,200 Steps Health Tracker',
+      category: 'Fitness Tracker',
+      reward: 40.00,
+      duration: 600,
+      targetSteps: 1200,
+      status: 'ACTIVE',
+      description: 'Complete 10 minutes of active walking.',
+      createdAt: new Date().toISOString(),
+      targetDate: day5Str,
+    },
+    {
+      id: 'music_4',
+      type: 'music',
+      title: 'Alpha Wave Concentration Audio',
+      category: 'Focus Audio',
+      reward: 25.00,
+      duration: 20,
+      status: 'ACTIVE',
+      description: 'Listen to 20s focus soundscape.',
+      createdAt: new Date().toISOString(),
+      targetDate: day5Str,
+    },
+    {
+      id: 'spin_5',
+      type: 'spin',
+      title: 'Diamond Wealth Spin',
+      category: 'Lucky Draw',
+      reward: 25.00,
+      duration: 10,
+      status: 'ACTIVE',
+      description: 'Spin and win instant wallet rewards.',
+      createdAt: new Date().toISOString(),
+      targetDate: day5Str,
+    },
+  ];
+
+  // Day 6 (+6 Days): Weekly Recap & Brain Challenges
+  const day6Str = getLocalDateString(6);
+  schedule[day6Str] = [
+    {
+      id: 'vid_107',
+      type: 'video',
+      title: 'Weekly Financial Recap & Growth Blueprint',
+      category: 'Video & Share',
+      platform: 'YouTube',
+      videoUrl: 'https://www.youtube.com/watch?v=y9u2eQy5fmg',
+      youtubeId: 'y9u2eQy5fmg',
+      reward: 55.00,
+      duration: 30,
+      shareRequired: true,
+      sharePlatform: 'Facebook & Friends',
+      status: 'ACTIVE',
+      description: 'Watch recap and share to your social network.',
+      createdAt: new Date().toISOString(),
+      targetDate: day6Str,
+    },
+    {
+      id: 'slide3_5',
+      type: 'slide3',
+      title: 'Master Mind 3×3 Puzzle Challenge',
+      category: 'Skill Puzzle',
+      reward: 45.00,
+      duration: 60,
+      status: 'ACTIVE',
+      description: 'Solve the 3x3 slide within 60s.',
+      createdAt: new Date().toISOString(),
+      targetDate: day6Str,
+    },
+    {
+      id: 'memory_4',
+      type: 'memory',
+      title: 'Rapid Recall Brain Match',
+      category: 'Brain Game',
+      reward: 35.00,
+      duration: 60,
+      status: 'ACTIVE',
+      description: 'Match 6 pairs before time runs out.',
+      createdAt: new Date().toISOString(),
+      targetDate: day6Str,
+    },
+    {
+      id: 'walk_5',
+      type: 'walk',
+      title: 'Sunday 10-Minute Walk Pedometer',
+      category: 'Fitness Tracker',
+      reward: 40.00,
+      duration: 600,
+      targetSteps: 1200,
+      status: 'ACTIVE',
+      description: '10-minute fitness walk challenge.',
+      createdAt: new Date().toISOString(),
+      targetDate: day6Str,
+    },
+  ];
+
+  return schedule;
+}
+
+const DEFAULT_7DAY_SCHEDULE = generateDefault7DayTaskRoster();
+export const INITIAL_DAILY_TASK_ROSTER = DEFAULT_7DAY_SCHEDULE[getLocalDateString(0)] || [];
 
 export const TASK_ROSTER_PRESETS = [
   {
@@ -125,7 +486,7 @@ export const TASK_ROSTER_PRESETS = [
     id: 'combo_all',
     name: 'Combo D: Full Daily Engagement',
     badge: 'All Active',
-    description: 'All 7 tasks active (Videos, Music, 3×3 Slide, Memory Match, 10-Min Walk, Spin).',
+    description: 'All tasks active (Videos, Music, 3×3 Slide, Memory Match, 10-Min Walk, Spin).',
     activeIds: ['vid_101', 'vid_102', 'music_1', 'slide3_1', 'memory_1', 'walk_1', 'spin_1'],
   },
 ];
@@ -133,65 +494,21 @@ export const TASK_ROSTER_PRESETS = [
 export const INITIAL_VIDEO_TASKS = INITIAL_DAILY_TASK_ROSTER.filter((t) => t.type === 'video');
 
 /* =========================================================================
-   30-DAY PROGRESSIVE DAILY LOGIN STREAK REWARDS (Basic ₹2,000 Plan):
-   - Week 1 (Days 1–7):   1 + 2 + 3 + 4 + 5 + 6 + 7 = ₹28
-   - Week 2 (Days 8–14):  2 + 3 + 4 + 5 + 6 + 7 + 8 = ₹35
-   - Week 3 (Days 15–21): 3 + 4 + 5 + 6 + 7 + 8 + 9 = ₹42
-   - Week 4 (Days 22–30): 4 + 5 + 6 + 7 + 8 + 9 + 10 + 11 + 12 = ₹72 (30 Days completion)
-   - Cycle Rule: Completing Day 30 completes cycle and re-starts from Day 1.
-   - Missed Day Rule: Missing any day immediately resets streak back to Day 1!
-   - Scales with user's active membership plan tier multiplier (up to 4.0×).
+   30-DAY PROGRESSIVE DAILY LOGIN STREAK REWARDS
    ========================================================================= */
-
 export const STREAK_REWARDS = {
-  // Week 1: 1+2+3+4+5+6+7
   1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7,
-  // Week 2: 2+3+4+5+6+7+8
   8: 2, 9: 3, 10: 4, 11: 5, 12: 6, 13: 7, 14: 8,
-  // Week 3: 3+4+5+6+7+8+9
   15: 3, 16: 4, 17: 5, 18: 6, 19: 7, 20: 8, 21: 9,
-  // Week 4 (to 30 Days): 4+5+6+7+8+9+10 + 11+12
   22: 4, 23: 5, 24: 6, 25: 7, 26: 8, 27: 9, 28: 10,
   29: 11, 30: 12,
 };
 
 export const STREAK_WEEKS = [
-  {
-    weekNum: 1,
-    title: 'Week 1',
-    range: 'Days 1–7',
-    formula: '₹1 → ₹7',
-    startDay: 1,
-    endDay: 7,
-    baseSum: 28,
-  },
-  {
-    weekNum: 2,
-    title: 'Week 2',
-    range: 'Days 8–14',
-    formula: '₹2 → ₹8',
-    startDay: 8,
-    endDay: 14,
-    baseSum: 35,
-  },
-  {
-    weekNum: 3,
-    title: 'Week 3',
-    range: 'Days 15–21',
-    formula: '₹3 → ₹9',
-    startDay: 15,
-    endDay: 21,
-    baseSum: 42,
-  },
-  {
-    weekNum: 4,
-    title: 'Week 4 (30-Day Finale)',
-    range: 'Days 22–30',
-    formula: '₹4 → ₹12',
-    startDay: 22,
-    endDay: 30,
-    baseSum: 72,
-  },
+  { weekNum: 1, title: 'Week 1', range: 'Days 1–7', formula: '₹1 → ₹7', startDay: 1, endDay: 7, baseSum: 28 },
+  { weekNum: 2, title: 'Week 2', range: 'Days 8–14', formula: '₹2 → ₹8', startDay: 8, endDay: 14, baseSum: 35 },
+  { weekNum: 3, title: 'Week 3', range: 'Days 15–21', formula: '₹3 → ₹9', startDay: 15, endDay: 21, baseSum: 42 },
+  { weekNum: 4, title: 'Week 4 (30-Day Finale)', range: 'Days 22–30', formula: '₹4 → ₹12', startDay: 22, endDay: 30, baseSum: 72 },
 ];
 
 export const STREAK_SCHEDULE = Array.from({ length: 30 }, (_, i) => {
@@ -209,14 +526,14 @@ export const STREAK_SCHEDULE = Array.from({ length: 30 }, (_, i) => {
 });
 
 export const INITIAL_PAYMENT_SETTINGS = {
-  upiId: 'earnflowpro@icici',
-  upiPayeeName: 'EarnFlow Pro Treasury',
+  upiId: 'taskcoin@icici',
+  upiPayeeName: 'TaskCoin Pro Treasury',
   bankName: 'HDFC Bank',
-  accountName: 'EarnFlow Yield Private Limited',
+  accountName: 'TaskCoin Technologies Private Limited',
   accountNumber: '50200098412849',
   ifscCode: 'HDFC0001234',
   branch: 'BKC Corporate Financial Centre, Mumbai',
-  qrCodeUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=upi://pay?pa=earnflowpro@icici%26pn=EarnFlow%20Pro%20Treasury%26cu=INR',
+  qrCodeUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=upi://pay?pa=taskcoin@icici%26pn=TaskCoin%20Pro%20Treasury%26cu=INR',
   instructions: '1. Pay the exact membership plan amount via Google Pay, PhonePe, Paytm, BHIM, or Net Banking.\n2. Note down the 12-digit UTR or UPI Reference Number from your payment receipt.\n3. Paste the 12-digit UTR in the deposit form below and click Submit.\n4. Admin treasury verifies your UTR within 5–15 minutes and your plan activates automatically!',
   minDeposit: 2000,
   isUpiEnabled: true,
@@ -226,267 +543,57 @@ export const INITIAL_PAYMENT_SETTINGS = {
 
 export const INITIAL_ADMIN_ANNOUNCEMENT = {
   active: true,
-  title: '📢 Fast Approvals & Live 30-Day Progressive Bonus Active!',
-  message: 'Welcome to EarnFlow Pro! Complete daily tasks (Video + Facebook share, Music, and Slide Puzzles) to earn guaranteed rewards. Deposit requests with valid 12-digit UTRs are verified within 5–15 minutes.',
-  type: 'info', // 'info', 'warning', 'success', 'critical'
+  title: '📢 TaskCoin Pro Live & 24/7 Instant Payouts Active!',
+  message: 'Welcome to TaskCoin Pro! Complete verified daily engagement tasks to earn guaranteed rewards. Deposit requests with valid 12-digit UTRs are verified within 5–15 minutes.',
+  type: 'info',
   updatedAt: new Date().toISOString(),
   broadcastBy: 'Admin Treasury Desk',
 };
 
-const INITIAL_USERS = [
-  {
-    id: 'USR-101',
-    name: 'Aarav Sharma',
-    email: 'aarav.sharma@example.com',
-    phone: '+91 98765 43210',
-    password: 'password123',
-    status: 'ACTIVE', // ACTIVE, DEACTIVATED, SUSPENDED
-    suspensionReason: '',
-    joinedDate: new Date(Date.now() - 35 * 86400000).toISOString(),
-    totalDeposited: 15000,
-    walletBalance: 1850.50,
-  },
-  {
-    id: 'USR-102',
-    name: 'Rohan Mehta',
-    email: 'rohan.mehta@invest.io',
-    phone: '+91 91234 56789',
-    password: 'password123',
-    status: 'ACTIVE',
-    suspensionReason: '',
-    joinedDate: new Date(Date.now() - 14 * 86400000).toISOString(),
-    totalDeposited: 7500,
-    walletBalance: 640.00,
-  },
-  {
-    id: 'USR-103',
-    name: 'Priya Patel',
-    email: 'priya.patel@growth.com',
-    phone: '+91 98111 22334',
-    password: 'password123',
-    status: 'SUSPENDED',
-    suspensionReason: 'Multiple unauthorized device login attempts detected',
-    joinedDate: new Date(Date.now() - 25 * 86400000).toISOString(),
-    totalDeposited: 5000,
-    walletBalance: 210.00,
-  },
-  {
-    id: 'USR-104',
-    name: 'Vikram Singh',
-    email: 'vikram.singh@wealth.in',
-    phone: '+91 99001 88776',
-    password: 'password123',
-    status: 'DEACTIVATED',
-    suspensionReason: 'Account paused upon user request',
-    joinedDate: new Date(Date.now() - 45 * 86400000).toISOString(),
-    totalDeposited: 0,
-    walletBalance: 0.00,
-  }
-];
-
-const INITIAL_DEPOSIT_REQUESTS = [
-  {
-    id: 'DEP-8021',
-    userId: 'USR-101',
-    userName: 'Aarav Sharma',
-    amount: 10000,
-    planMonths: 3,
-    planDays: 90,
-    planMonthlyRate: 0.060,
-    planTitle: 'Quarterly Alpha Growth',
-    utr: 'UTR892189283120',
-    submittedAt: new Date(Date.now() - 40 * 60000).toISOString(),
-    status: 'PENDING', // PENDING, APPROVED, REJECTED
-    rejectionReason: '',
-  },
-  {
-    id: 'DEP-7910',
-    userId: 'USR-102',
-    userName: 'Rohan Mehta',
-    amount: 5000,
-    planMonths: 1,
-    planDays: 30,
-    planMonthlyRate: 0.055,
-    planTitle: '30 Days Starter Sprint',
-    utr: 'UTR772109283111',
-    submittedAt: new Date(Date.now() - 120 * 60000).toISOString(),
-    status: 'PENDING',
-    rejectionReason: '',
-  }
-];
-
-const INITIAL_WITHDRAWAL_REQUESTS = [
-  {
-    id: 'WDR-9201',
-    userId: 'USR-101',
-    userName: 'Aarav Sharma',
-    amount: 850.00,
-    type: 'TASK_REWARD',
-    payoutDetails: {
-      type: 'upi_id',
-      value: 'aarav.sharma@okhdfcbank',
-      holder: 'Aarav Sharma',
-    },
-    submittedAt: new Date(Date.now() - 25 * 60000).toISOString(),
-    status: 'PENDING', // PENDING, APPROVED, REJECTED
-    rejectionReason: '',
-    disbursedUtr: '',
-  },
-  {
-    id: 'WDR-9190',
-    userId: 'USR-102',
-    userName: 'Rohan Mehta',
-    amount: 500.00,
-    type: 'TASK_REWARD',
-    payoutDetails: {
-      type: 'bank',
-      value: 'SBI Bank (A/C: ••••4582, IFSC: SBIN0001827)',
-      holder: 'Rohan Mehta',
-    },
-    submittedAt: new Date(Date.now() - 95 * 60000).toISOString(),
-    status: 'PENDING',
-    rejectionReason: '',
-    disbursedUtr: '',
-  }
-];
-
+// CLEAN PRODUCTION INITIAL STATE: ZERO DUMMY USERS, ZERO DUMMY PLANS, ZERO DUMMY TRANSACTIONS!
 const INITIAL_STATE = {
   currentRole: 'investor', // 'investor' or 'admin'
-  user: {
-    id: 'USR-101',
-    name: 'Aarav Sharma',
-    email: 'aarav.sharma@example.com',
-    phone: '+91 98765 43210',
-    joinedDate: new Date(Date.now() - 35 * 86400000).toISOString(),
-    status: 'ACTIVE',
-    suspensionReason: '',
-    isVerified: true,
-  },
-  allUsers: INITIAL_USERS,
-  depositRequests: INITIAL_DEPOSIT_REQUESTS,
-  withdrawalRequests: INITIAL_WITHDRAWAL_REQUESTS,
-  payoutMethod: {
-    type: 'upi_id',
-    upiId: 'aarav.sharma@okhdfcbank',
-    holderName: 'Aarav Sharma',
-    savedAt: new Date(Date.now() - 10 * 86400000).toISOString(),
-  },
-  rewardWallet: 1850.50,
-  totalWithdrawn: 3400.00,
-  plans: [
-    {
-      id: 'PLN-9421',
-      title: 'Wealth Growth Alpha',
-      amount: 10000,
-      months: 3,
-      days: 90,
-      startDate: new Date(Date.now() - 35 * 86400000).toISOString(),
-      maturityDate: new Date(Date.now() + 55 * 86400000).toISOString(),
-      totalExpectedGain: 1910,
-      estimatedTotalIncome: 1910,
-      dailyQuota: 21.22,
-      earnedSoFar: 742.70,
-      status: 'active',
-    },
-    {
-      id: 'PLN-3819',
-      title: 'High Yield Sprint',
-      amount: 5000,
-      months: 1,
-      days: 30,
-      startDate: new Date(Date.now() - 32 * 86400000).toISOString(),
-      maturityDate: new Date(Date.now() - 2 * 86400000).toISOString(),
-      totalExpectedGain: 275,
-      estimatedTotalIncome: 275,
-      dailyQuota: 9.16,
-      earnedSoFar: 275.00,
-      status: 'matured',
-    }
-  ],
-  tasksCompletedToday: {
-    vid_101: true,
-    vid_102: false,
-    music_1: false,
-    slide3_1: false,
-    memory_1: false,
-    walk_1: false,
-    spin_1: false,
-    scratch_1: false,
-  },
-  dailyVideoTasks: INITIAL_VIDEO_TASKS,
+  user: null,              // User must register or log in!
+  allUsers: [],            // Empty production list
+  depositRequests: [],     // Real deposit submissions only
+  withdrawalRequests: [],  // Real withdrawal requests only
+  payoutMethod: null,      // User adds their own UPI/bank
+  rewardWallet: 0.00,      // Real user starts at 0.00
+  totalWithdrawn: 0.00,    // Real user starts at 0.00
+  plans: [],               // Real user starts with no plans until subscribed
+  tasksCompletedToday: {}, // Real-time daily task completion map
+  lastActiveDate: getLocalDateString(0),
+  scheduledTasksByDate: DEFAULT_7DAY_SCHEDULE,
   dailyTaskRoster: INITIAL_DAILY_TASK_ROSTER,
-  transactions: [
-    {
-      id: 'TXN-908124',
-      type: 'TASK_REWARD',
-      title: 'YouTube Video Watch Reward',
-      amount: 35.00,
-      timestamp: new Date(Date.now() - 2 * 3600000).toISOString(),
-      status: 'COMPLETED',
-      meta: 'Video: How Global Yield Funds Work',
-    },
-    {
-      id: 'TXN-876120',
-      type: 'WITHDRAWAL',
-      title: 'Sunday Reward Payout',
-      amount: 1200.00,
-      timestamp: new Date(Date.now() - 7 * 86400000).toISOString(),
-      status: 'COMPLETED',
-      meta: 'Transferred to UPI: aarav.sharma@okhdfcbank',
-      payoutType: 'upi_id',
-    },
-    {
-      id: 'TXN-761921',
-      type: 'DEPOSIT',
-      title: 'Plan Subscription Deposit',
-      amount: 10000.00,
-      timestamp: new Date(Date.now() - 35 * 86400000).toISOString(),
-      status: 'COMPLETED',
-      meta: '90 Days Lock-in Plan (PLN-9421)',
-    },
-    {
-      id: 'TXN-712890',
-      type: 'DEPOSIT',
-      title: 'Plan Subscription Deposit',
-      amount: 5000.00,
-      timestamp: new Date(Date.now() - 32 * 86400000).toISOString(),
-      status: 'COMPLETED',
-      meta: '30 Days Lock-in Plan (PLN-3819)',
-    }
-  ],
+  dailyVideoTasks: INITIAL_VIDEO_TASKS,
+  transactions: [],
   mlmNetwork: {
-    referralCode: 'AARAV101',
-    preferredLeg: 'AUTO', // 'LEFT', 'RIGHT', 'AUTO'
-    leftVolume: 14000,
-    rightVolume: 8000,
-    leftCarry: 2000,
-    rightCarry: 1000,
-    totalPairsMatched: 6,
-    lifetimeMlmEarned: 900.00,
-    dailyCappedToday: 150.00,
+    referralCode: 'TASKCOIN',
+    preferredLeg: 'AUTO',
+    leftVolume: 0,
+    rightVolume: 0,
+    leftCarry: 0,
+    rightCarry: 0,
+    totalPairsMatched: 0,
+    lifetimeMlmEarned: 0.00,
+    dailyCappedToday: 0.00,
     dailyCapLimit: 3000.00,
-    binaryPairBonusRate: 0.05, // 5% on 3,000 matched pair volume = ₹150/pair
-    leftMembers: [
-      { id: 'USR-201', name: 'Kabir Verma', amount: 5000, joinedAt: new Date(Date.now() - 15 * 86400000).toISOString(), leg: 'LEFT', status: 'ACTIVE' },
-      { id: 'USR-202', name: 'Sunita Rao', amount: 9000, joinedAt: new Date(Date.now() - 10 * 86400000).toISOString(), leg: 'LEFT', status: 'ACTIVE' },
-    ],
-    rightMembers: [
-      { id: 'USR-203', name: 'Manish Gupta', amount: 5000, joinedAt: new Date(Date.now() - 8 * 86400000).toISOString(), leg: 'RIGHT', status: 'ACTIVE' },
-      { id: 'USR-204', name: 'Tanvi Shah', amount: 3000, joinedAt: new Date(Date.now() - 3 * 86400000).toISOString(), leg: 'RIGHT', status: 'ACTIVE' },
-    ],
+    binaryPairBonusRate: 0.05,
+    leftMembers: [],
+    rightMembers: [],
   },
   loginStreak: {
-    currentDay: 3, // Week 1 (Day 1: ₹1, Day 2: ₹2, Day 3: ₹3 ...)
-    lastClaimedDate: new Date(Date.now() - 25 * 3600000).toISOString(),
+    currentDay: 1,
+    lastClaimedDate: null,
     claimedToday: false,
-    totalStreakEarned: 3.00,
-    history: Array.from({ length: 30 }, (_, i) => i < 2),
+    totalStreakEarned: 0.00,
+    history: Array(30).fill(false),
   },
   gamingStats: {
-    totalGamingRakeCollected: 845.00, // 10% platform house rake from matches
-    totalMatchesPlayed: 169,
-    userMatchesPlayed: 8,
-    userMatchesWon: 5,
+    totalGamingRakeCollected: 0.00,
+    totalMatchesPlayed: 0,
+    userMatchesPlayed: 0,
+    userMatchesWon: 0,
   },
   lastWithdrawalTime: null,
   forceSunday: true, // 24/7 payouts active
@@ -500,9 +607,16 @@ export function AppProvider({ children }) {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
+        const todayStr = getLocalDateString(0);
+        const sched = {
+          ...DEFAULT_7DAY_SCHEDULE,
+          ...(parsed.scheduledTasksByDate || {}),
+        };
         return {
           ...INITIAL_STATE,
           ...parsed,
+          scheduledTasksByDate: sched,
+          dailyTaskRoster: sched[todayStr] || parsed.dailyTaskRoster || INITIAL_DAILY_TASK_ROSTER,
           paymentSettings: {
             ...INITIAL_PAYMENT_SETTINGS,
             ...(parsed.paymentSettings || {}),
@@ -514,7 +628,7 @@ export function AppProvider({ children }) {
         };
       }
     } catch (e) {
-      console.warn('Failed to parse saved state, using default:', e);
+      console.warn('Failed to parse saved state, using clean default:', e);
     }
     return INITIAL_STATE;
   });
@@ -533,6 +647,41 @@ export function AppProvider({ children }) {
       console.error('Failed to save to localStorage:', e);
     }
   }, [state]);
+
+  /* =========================================================================
+     AUTOMATIC 00:00 MIDNIGHT WATCHER
+     Automatically checks local time every 10 seconds.
+     When the date advances (00:00:00 hrs):
+     - Resets `tasksCompletedToday` to empty
+     - Switches `dailyTaskRoster` to the tasks scheduled for the new date
+     - Updates `lastActiveDate`
+     ========================================================================= */
+  useEffect(() => {
+    const checkMidnight = () => {
+      const todayStr = getLocalDateString(0);
+      setState((prev) => {
+        if (prev.lastActiveDate && prev.lastActiveDate !== todayStr) {
+          const newSchedule = prev.scheduledTasksByDate || DEFAULT_7DAY_SCHEDULE;
+          const newTodayTasks = newSchedule[todayStr] || newSchedule[getLocalDateString(0)] || [];
+          
+          return {
+            ...prev,
+            lastActiveDate: todayStr,
+            tasksCompletedToday: {},
+            dailyTaskRoster: newTodayTasks,
+            loginStreak: {
+              ...(prev.loginStreak || {}),
+              claimedToday: false, // Unlock new day's streak bonus!
+            },
+          };
+        }
+        return prev;
+      });
+    };
+
+    const interval = setInterval(checkMidnight, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   const showToast = (message, type = 'success') => {
     setToastMessage({ message, type, id: Date.now() });
@@ -553,18 +702,36 @@ export function AppProvider({ children }) {
   // Role Switcher
   const switchRole = (role) => {
     setState((prev) => ({ ...prev, currentRole: role }));
-    showToast(`Switched view to ${role === 'admin' ? '🛡️ Administrator Control Center' : '👤 Investor Dashboard'}`);
+    showToast(`Switched view to ${role === 'admin' ? '🛡️ Administrator Control Center' : '👤 User Dashboard'}`);
   };
 
-  // Register / Update User Profile
+  /* =========================================================================
+     AUTHENTICATION METHODS (REGISTRATION, LOGIN, LOGOUT)
+     - No dummy users; accounts stored in local state & persisted
+     ========================================================================= */
   const registerUser = (userData) => {
-    const newId = `USR-${Math.floor(100 + Math.random() * 900)}`;
+    const emailLower = (userData.email || '').trim().toLowerCase();
+    const phoneTrim = (userData.phone || '').trim();
+
+    // Check if account already exists
+    const existing = (state.allUsers || []).find(
+      (u) => (u.email && u.email.toLowerCase() === emailLower) || (u.phone && u.phone === phoneTrim)
+    );
+    if (existing) {
+      showToast('An account already exists with this Email or Mobile Number. Please Log In.', 'error');
+      return false;
+    }
+
+    const newId = `USR-${Math.floor(1000 + Math.random() * 9000)}`;
+    const refCode = userData.name.replace(/[^a-zA-Z]/g, '').toUpperCase().slice(0, 4) + Math.floor(100 + Math.random() * 900);
+    
     const newUser = {
       id: newId,
-      name: userData.name,
-      email: userData.email,
-      phone: userData.phone,
-      password: userData.password || 'password123',
+      name: userData.name.trim(),
+      email: emailLower,
+      phone: phoneTrim,
+      password: userData.password,
+      referralCode: userData.referralCode || refCode,
       joinedDate: new Date().toISOString(),
       status: 'ACTIVE',
       suspensionReason: '',
@@ -576,10 +743,56 @@ export function AppProvider({ children }) {
     setState((prev) => ({
       ...prev,
       user: newUser,
-      allUsers: [newUser, ...prev.allUsers],
+      allUsers: [newUser, ...(prev.allUsers || [])],
     }));
-    showToast(`Welcome, ${userData.name}! Account registered successfully.`);
+
+    showToast(`Welcome to TaskCoin Pro, ${userData.name}! Account registered successfully.`);
     triggerCelebration();
+    return true;
+  };
+
+  const loginUser = ({ identifier, password }) => {
+    const idClean = (identifier || '').trim().toLowerCase();
+    const matched = (state.allUsers || []).find(
+      (u) => (u.email && u.email.toLowerCase() === idClean) || (u.phone && u.phone.trim() === (identifier || '').trim())
+    );
+
+    if (!matched) {
+      showToast('No account found with this Mobile/Email. Please Register first.', 'error');
+      return false;
+    }
+
+    if (matched.password !== password) {
+      showToast('Incorrect password. Please verify and re-enter.', 'error');
+      return false;
+    }
+
+    if (matched.status === 'SUSPENDED') {
+      showToast(`Account suspended: ${matched.suspensionReason || 'Please contact platform support.'}`, 'error');
+      return false;
+    }
+
+    if (matched.status === 'DEACTIVATED') {
+      showToast('Account is currently deactivated. Please contact support.', 'error');
+      return false;
+    }
+
+    setState((prev) => ({
+      ...prev,
+      user: matched,
+    }));
+
+    showToast(`Welcome back, ${matched.name}! Logged in successfully.`);
+    return true;
+  };
+
+  const logoutUser = () => {
+    setState((prev) => ({
+      ...prev,
+      user: null,
+      currentRole: 'investor',
+    }));
+    showToast('Logged out successfully.');
   };
 
   // Update Payout Method
@@ -599,7 +812,6 @@ export function AppProvider({ children }) {
     const numAmount = Number(amount);
     const existingActivePlan = (state.plans || []).find((p) => p.status === 'active');
 
-    // Rule: User can hold only 1 active plan, can upgrade, but cannot downgrade!
     if (existingActivePlan) {
       if (numAmount <= existingActivePlan.amount) {
         showToast(`Downgrade not permitted. You currently hold the ₹${existingActivePlan.amount.toLocaleString()} tier. You can only upgrade to a higher tier plan.`, 'error');
@@ -613,8 +825,8 @@ export function AppProvider({ children }) {
 
     const newDepositRequest = {
       id: depositRef,
-      userId: state.user?.id || 'USR-101',
-      userName: state.user?.name || 'Aarav Sharma',
+      userId: state.user?.id || 'USR-GUEST',
+      userName: state.user?.name || 'Member',
       amount: numAmount,
       planMonths: lockinPeriod.months,
       planDays: lockinPeriod.days || lockinPeriod.months * 30,
@@ -662,7 +874,6 @@ export function AppProvider({ children }) {
     };
 
     setState((prev) => {
-      // Mark any previous active plan as 'superseded_upgrade' to strictly guarantee ONLY 1 active plan
       const updatedPlans = (prev.plans || []).map((p) =>
         p.status === 'active' ? { ...p, status: 'superseded_upgrade' } : p
       );
@@ -700,99 +911,89 @@ export function AppProvider({ children }) {
     const newTxn = {
       id: `TXN-${Math.floor(100000 + Math.random() * 900000)}`,
       type: 'TASK_REWARD',
-      title: taskTitle,
+      title: taskTitle || 'Task Reward Claimed',
       amount: numReward,
       timestamp: new Date().toISOString(),
       status: 'COMPLETED',
-      meta: meta || 'Daily task completed successfully',
+      meta: meta || `Completed task ID: ${taskId}`,
     };
 
-    setState((prev) => ({
-      ...prev,
-      rewardWallet: +(prev.rewardWallet + numReward).toFixed(2),
-      tasksCompletedToday: {
-        ...prev.tasksCompletedToday,
-        [taskId]: true,
-      },
-      dailyVideoTasks: (prev.dailyVideoTasks || []).map((t) =>
-        t.id === taskId ? { ...t, totalShares: (t.totalShares || 0) + 1 } : t
-      ),
-      transactions: [newTxn, ...prev.transactions],
-    }));
+    setState((prev) => {
+      const updatedPlans = (prev.plans || []).map((p) => {
+        if (p.status === 'active') {
+          return {
+            ...p,
+            earnedSoFar: +(p.earnedSoFar + numReward).toFixed(2),
+          };
+        }
+        return p;
+      });
 
-    showToast(`+₹${numReward.toFixed(2)} credited to your Reward Wallet!`);
+      return {
+        ...prev,
+        rewardWallet: +(prev.rewardWallet + numReward).toFixed(2),
+        tasksCompletedToday: {
+          ...prev.tasksCompletedToday,
+          [taskId]: true,
+        },
+        transactions: [newTxn, ...prev.transactions],
+        plans: updatedPlans,
+      };
+    });
+
+    showToast(`+${formatINR(numReward)} credited to your Task Wallet!`);
     triggerCelebration();
   };
 
-  // Withdraw accumulated rewards (24/7 Instant Payout Engine with ₹100 min & 24h cooldown)
-  const withdrawRewards = (amountToWithdraw, methodDetails) => {
+  // 24/7 Anytime Withdrawal Engine
+  const withdrawRewards = (amount, customPayoutDetails = null) => {
     if (state.user?.status === 'SUSPENDED') {
-      showToast('Account suspended: Withdrawals are blocked. Contact admin.', 'error');
+      showToast('Account suspended: Cannot submit withdrawal requests. Contact support.', 'error');
       return false;
     }
     if (state.user?.status === 'DEACTIVATED') {
-      showToast('Account deactivated: Please reactivate your account first.', 'error');
+      showToast('Account deactivated: Reactivate account to withdraw.', 'error');
       return false;
     }
 
-    const amount = Number(amountToWithdraw);
-    if (amount <= 0 || amount > state.rewardWallet) {
-      showToast('Invalid withdrawal amount', 'error');
-      return false;
-    }
-
-    // Solvency Protection Rule: Min ₹100 withdrawal to avoid payment gateway fee erosion
     if (amount < 100) {
-      showToast('Minimum withdrawal amount is ₹100 to prevent payment gateway fee loss.', 'error');
+      showToast('Minimum withdrawal amount is ₹100.', 'error');
       return false;
     }
 
-    // Rate Limiting Rule: 1 withdrawal per 24 hours per user
-    if (state.lastWithdrawalTime && !state.forceSunday) {
-      const elapsedHours = (Date.now() - new Date(state.lastWithdrawalTime).getTime()) / (1000 * 3600);
-      if (elapsedHours < 24) {
-        const hoursRemaining = Math.max(1, Math.ceil(24 - elapsedHours));
-        showToast(`24-Hour Limit: 1 withdrawal allowed per 24 hours. Next withdrawal unlocks in ${hoursRemaining}h (or toggle Test Mode to bypass).`, 'error');
-        return false;
-      }
+    if (amount > state.rewardWallet) {
+      showToast(`Insufficient balance. You requested ${formatINR(amount)} but only have ${formatINR(state.rewardWallet)} in wallet.`, 'error');
+      return false;
     }
 
-    const currentMethod = methodDetails || state.payoutMethod;
-    let payoutDesc = '';
-    if (currentMethod?.type === 'upi_id') {
-      payoutDesc = `UPI: ${currentMethod.upiId}`;
-    } else if (currentMethod?.type === 'upi_phone') {
-      payoutDesc = `UPI Phone: ${currentMethod.upiPhone}`;
-    } else if (currentMethod?.type === 'bank') {
-      payoutDesc = `Bank: ${currentMethod.bankName} (A/C: ••••${currentMethod.accountNumber.slice(-4)})`;
+    const effectivePayout = customPayoutDetails || state.payoutMethod;
+    if (!effectivePayout) {
+      showToast('Please configure your UPI ID or Bank Account first.', 'error');
+      return false;
     }
 
     const newWithdrawalRequest = {
       id: `WDR-${Math.floor(1000 + Math.random() * 9000)}`,
-      userId: state.user?.id || 'USR-101',
-      userName: state.user?.name || 'Aarav Sharma',
+      userId: state.user?.id || 'USR-GUEST',
+      userName: state.user?.name || 'Member',
       amount: amount,
       type: 'TASK_REWARD',
-      payoutDetails: {
-        type: currentMethod.type,
-        value: payoutDesc,
-        holder: currentMethod.holderName || state.user?.name,
-      },
+      payoutDetails: effectivePayout,
       submittedAt: new Date().toISOString(),
-      status: 'APPROVED', // Instant settlement mode
+      status: 'PENDING',
       rejectionReason: '',
-      disbursedUtr: `IMPS${Date.now().toString().slice(-9)}`,
+      disbursedUtr: '',
     };
 
     const newTxn = {
       id: `TXN-${Math.floor(100000 + Math.random() * 900000)}`,
       type: 'WITHDRAWAL',
-      title: '24/7 Instant Reward Payout',
+      title: 'Task Reward Withdrawal Request',
       amount: amount,
       timestamp: new Date().toISOString(),
-      status: 'COMPLETED',
-      meta: `Instant IMPS transfer to ${payoutDesc}`,
-      payoutMethod: currentMethod,
+      status: 'PENDING',
+      meta: `Payout submitted to: ${effectivePayout.type === 'upi_id' ? effectivePayout.upiId : effectivePayout.type === 'upi_phone' ? effectivePayout.upiPhone : effectivePayout.bankName}`,
+      payoutMethod: effectivePayout,
     };
 
     setState((prev) => ({
@@ -804,29 +1005,15 @@ export function AppProvider({ children }) {
       transactions: [newTxn, ...prev.transactions],
     }));
 
-    showToast(`₹${amount.toLocaleString()} disbursed instantly via IMPS 24/7!`);
+    showToast(`Withdrawal of ₹${amount.toLocaleString()} submitted! Verification within 5–15 mins.`);
     triggerCelebration();
     return newTxn;
   };
 
-  /* =========================================================================
-     30-DAY PROGRESSIVE DAILY LOGIN STREAK SYSTEM (Basic ₹2,000 Plan):
-     - Week 1 (Days 1–7):   ₹1 + ₹2 + ₹3 + ₹4 + ₹5 + ₹6 + ₹7
-     - Week 2 (Days 8–14):  ₹2 + ₹3 + ₹4 + ₹5 + ₹6 + ₹7 + ₹8
-     - Week 3 (Days 15–21): ₹3 + ₹4 + ₹5 + ₹6 + ₹7 + ₹8 + ₹9
-     - Week 4 (Days 22–30): ₹4 + ₹5 + ₹6 + ₹7 + ₹8 + ₹9 + ₹10 + ₹11 + ₹12 (30 Days)
-     - Completion Rule: Day 30 claims grand finish, then restarts from Day 1
-     - Missed Day Rule: Missing any single day resets streak back to Day 1
-     - Membership Multiplier: Scales with active plan tier (up to 4.0×)
-     ========================================================================= */
-
+  // 30-Day Daily Login Bonus
   const claimDailyLoginBonus = () => {
-    if (state.user?.status === 'SUSPENDED') {
-      showToast('Account suspended: Cannot claim streak bonus. Contact support.', 'error');
-      return false;
-    }
-    if (state.user?.status === 'DEACTIVATED') {
-      showToast('Account deactivated: Please reactivate your account first.', 'error');
+    if (state.user?.status === 'SUSPENDED' || state.user?.status === 'DEACTIVATED') {
+      showToast('Account inactive: Cannot claim streak bonus.', 'error');
       return false;
     }
 
@@ -839,7 +1026,7 @@ export function AppProvider({ children }) {
     };
 
     if (streak.claimedToday) {
-      showToast("Today's bonus has already been claimed! Next reward unlocks tomorrow.", 'warning');
+      showToast("Today's bonus has already been claimed! Next reward unlocks tomorrow at 00:00 hrs.", 'warning');
       return false;
     }
 
@@ -850,7 +1037,6 @@ export function AppProvider({ children }) {
     const newHistory = [...(streak.history || Array(30).fill(false))];
     newHistory[currentDay - 1] = true;
 
-    // Next day advances: if Day 30 was claimed, user completed full 30-day streak! Loops back to Day 1
     const isCompletedMonth = currentDay >= 30;
     const nextDay = isCompletedMonth ? 1 : currentDay + 1;
 
@@ -861,7 +1047,7 @@ export function AppProvider({ children }) {
       amount: reward,
       timestamp: new Date().toISOString(),
       status: 'COMPLETED',
-      meta: `Attendance bonus: ₹${reward.toFixed(2)} (${userMembershipTier.tierBadge} ${userMembershipTier.loginMultiplier}× Multiplier) credited! ${isCompletedMonth ? '🎉 Completed full 30-day streak cycle! Restarting Day 1 tomorrow.' : `Next reward: Day ${nextDay} (₹${Math.round((STREAK_REWARDS[nextDay] || 1) * userMembershipTier.loginMultiplier)})`}`,
+      meta: `Attendance bonus: ₹${reward.toFixed(2)} (${userMembershipTier.tierBadge}) credited!`,
     };
 
     setState((prev) => ({
@@ -877,43 +1063,9 @@ export function AppProvider({ children }) {
       },
     }));
 
-    if (isCompletedMonth) {
-      showToast(`🎉 Day 30 Grand Finish Claimed! +₹${reward.toFixed(2)} added! 30-day cycle complete, restarts Day 1.`);
-    } else {
-      showToast(`🎉 Day ${currentDay} Bonus Claimed! +₹${reward.toFixed(2)} added to your Task Wallet.`);
-    }
+    showToast(`🎉 Day ${currentDay} Bonus Claimed! +₹${reward.toFixed(2)} added to your Task Wallet.`);
     triggerCelebration();
     return true;
-  };
-
-  const resetDailyStreak = () => {
-    setState((prev) => ({
-      ...prev,
-      loginStreak: {
-        currentDay: 1,
-        lastClaimedDate: null,
-        claimedToday: false,
-        totalStreakEarned: prev.loginStreak?.totalStreakEarned || 0,
-        history: Array(30).fill(false),
-      },
-    }));
-    showToast('Streak broken! Simulated missed day — reset to Day 1.', 'warning');
-  };
-
-  const fastForwardNextDay = () => {
-    setState((prev) => {
-      const cur = prev.loginStreak || {};
-      return {
-        ...prev,
-        loginStreak: {
-          ...cur,
-          claimedToday: false,
-          lastClaimedDate: new Date(Date.now() - 25 * 3600000).toISOString(),
-        },
-        lastWithdrawalTime: null, // also resets withdrawal cooldown for testing!
-      };
-    });
-    showToast('Fast-forwarded 24 hours! Daily login bonus and withdrawal cooldown unlocked.');
   };
 
   // Withdraw principal for matured plan
@@ -923,8 +1075,8 @@ export function AppProvider({ children }) {
 
     const newWithdrawalRequest = {
       id: `WDR-${Math.floor(1000 + Math.random() * 9000)}`,
-      userId: state.user?.id || 'USR-101',
-      userName: state.user?.name || 'Aarav Sharma',
+      userId: state.user?.id || 'USR-GUEST',
+      userName: state.user?.name || 'Member',
       amount: plan.amount,
       type: 'PRINCIPAL_WITHDRAWAL',
       planId: planId,
@@ -952,107 +1104,66 @@ export function AppProvider({ children }) {
 
     setState((prev) => ({
       ...prev,
-      plans: prev.plans.map((p) =>
-        p.id === planId ? { ...p, status: 'principal_withdrawn' } : p
-      ),
+      plans: prev.plans.filter((p) => p.id !== planId),
       totalWithdrawn: +(prev.totalWithdrawn + plan.amount).toFixed(2),
       withdrawalRequests: [newWithdrawalRequest, ...prev.withdrawalRequests],
       transactions: [newTxn, ...prev.transactions],
     }));
 
-    showToast(`Full principal ₹${plan.amount.toLocaleString()} refunded to your account!`);
+    showToast(`Principal refund of ${formatINR(plan.amount)} disbursed!`);
     triggerCelebration();
     return true;
   };
 
-  /* =========================================================================
-     SKILL GAMING & PVP MULTIPLAYER ENGINE:
-     - Strict Wallet Separation: Entry fees deducted strictly from Task Wallet
-     - Membership/Deposit Principal is 100% locked & safe (cannot be gambled)
-     - 10% Platform House Rake: Deducted from gross pool before winner payout
-     - Solo Puzzle Games: Solved within countdown wins prize
-     - Multiplayer PvP: 1st Rank takes net pool (90% after 10% platform commission)
-     ========================================================================= */
-
-  const playSoloSkillGame = ({ gameId, gameTitle, entryFee, rewardAmount, won }) => {
-    if (state.user?.status === 'SUSPENDED') {
-      showToast('Account suspended: Cannot play games. Contact support.', 'error');
+  // Skill Gaming & PvP Solo Games
+  const playSoloSkillGame = ({ gameType, gameTitle, won, score, rewardAmount }) => {
+    if (state.user?.status === 'SUSPENDED' || state.user?.status === 'DEACTIVATED') {
+      showToast('Account suspended/inactive. Cannot play skill games.', 'error');
       return false;
     }
 
-    const fee = Number(entryFee) || 0;
-    const reward = Number(rewardAmount) || 0;
-
-    // Deduct entry fee when starting match
-    if (fee > 0) {
-      if (state.rewardWallet < fee) {
-        showToast(`Insufficient Task Wallet! Entry fee is ₹${fee}. You cannot use locked membership capital.`, 'error');
-        return false;
-      }
-
-      const feeTxn = {
-        id: `TXN-${Math.floor(100000 + Math.random() * 900000)}`,
-        type: 'GAME_ENTRY',
-        title: `${gameTitle} Entry Fee`,
-        amount: -fee,
-        timestamp: new Date().toISOString(),
-        status: 'COMPLETED',
-        meta: `Skill game entry fee deducted from Task Wallet (100% safe)`,
-      };
-
-      setState((prev) => ({
-        ...prev,
-        rewardWallet: +(prev.rewardWallet - fee).toFixed(2),
-        transactions: [feeTxn, ...prev.transactions],
-        gamingStats: {
-          ...prev.gamingStats,
-          totalMatchesPlayed: (prev.gamingStats?.totalMatchesPlayed || 0) + 1,
-          userMatchesPlayed: (prev.gamingStats?.userMatchesPlayed || 0) + 1,
-        },
-      }));
-
-      return true;
-    }
-
-    // Handle game win settlement
-    if (won && reward > 0) {
-      const winTxn = {
+    if (won && rewardAmount > 0) {
+      const reward = Number(rewardAmount);
+      const gameTxn = {
         id: `TXN-${Math.floor(100000 + Math.random() * 900000)}`,
         type: 'TASK_REWARD',
-        title: `🏆 ${gameTitle} Win Prize`,
+        title: `${gameTitle} — Skill Victory!`,
         amount: reward,
         timestamp: new Date().toISOString(),
         status: 'COMPLETED',
-        meta: `Solved puzzle within countdown time limit! Reward credited.`,
+        meta: `Score: ${score || 'Solved'} • Pure Cognitive Skill Challenge`,
       };
 
       setState((prev) => ({
         ...prev,
         rewardWallet: +(prev.rewardWallet + reward).toFixed(2),
-        transactions: [winTxn, ...prev.transactions],
+        transactions: [gameTxn, ...prev.transactions],
         gamingStats: {
           ...prev.gamingStats,
+          totalMatchesPlayed: (prev.gamingStats?.totalMatchesPlayed || 0) + 1,
+          userMatchesPlayed: (prev.gamingStats?.userMatchesPlayed || 0) + 1,
           userMatchesWon: (prev.gamingStats?.userMatchesWon || 0) + 1,
         },
       }));
 
       triggerCelebration();
+      showToast(`🎉 Puzzle solved! +${formatINR(reward)} credited to your wallet!`);
       return true;
     }
-
-    return true;
+    return false;
   };
 
-  const playMultiplayerPvPMatch = ({ gameTitle, playersCount, entryFee, userRank }) => {
-    if (state.user?.status === 'SUSPENDED') {
-      showToast('Account suspended: Cannot join PvP arenas. Contact support.', 'error');
+  // Skill Gaming PvP Match
+  const playMultiplayerPvPMatch = ({ gameType, gameTitle, entryFee, playersCount, userRank, matchSummary }) => {
+    if (state.user?.status === 'SUSPENDED' || state.user?.status === 'DEACTIVATED') {
+      showToast('Account suspended/inactive. Cannot enter PvP arena.', 'error');
       return false;
     }
 
     const fee = Number(entryFee) || 5;
     const players = Number(playersCount) || 2;
     const grossPot = fee * players;
-    const platformCommission = +(grossPot * 0.10).toFixed(2); // 10% platform house rake
+    const platformCommission = +(grossPot * 0.10).toFixed(2);
     const netPool = +(grossPot - platformCommission).toFixed(2);
 
     let winAmount = 0;
@@ -1099,14 +1210,7 @@ export function AppProvider({ children }) {
     return true;
   };
 
-  /* =========================================================================
-     MLM 2:1 BINARY REFERRAL ENGINE:
-     - 2:1 or 1:2 Pair Matching on Deposit Business Volume
-     - Solvency Protection: 5% on matched pair volume (₹150 / ₹3000 pair)
-     - Daily capping of ₹3,000 / day to protect admin against unlimited liabilities
-     - Lifetime bonus crediting directly to wallet
-     ========================================================================= */
-
+  // MLM 2:1 Binary Methods
   const setPreferredLeg = (leg) => {
     setState((prev) => ({
       ...prev,
@@ -1120,11 +1224,11 @@ export function AppProvider({ children }) {
 
   const addDownlineMember = ({ name, leg, amount }) => {
     const depositAmt = Number(amount) || 2000;
-    const memberName = name?.trim() || `Downline-${Math.floor(100 + Math.random() * 900)}`;
+    const memberName = name?.trim() || `Member-${Math.floor(100 + Math.random() * 900)}`;
 
     setState((prev) => {
       const mlm = prev.mlmNetwork || {
-        referralCode: 'AARAV101',
+        referralCode: 'TASKCOIN',
         preferredLeg: 'AUTO',
         leftVolume: 0,
         rightVolume: 0,
@@ -1138,7 +1242,6 @@ export function AppProvider({ children }) {
         rightMembers: []
       };
 
-      // Determine placement leg: if AUTO, place in the weaker carry leg to maximize pair matches!
       let targetLeg = leg;
       if (!targetLeg || targetLeg === 'AUTO') {
         targetLeg = (mlm.leftCarry <= mlm.rightCarry) ? 'LEFT' : 'RIGHT';
@@ -1161,11 +1264,9 @@ export function AppProvider({ children }) {
       const newLeftMembers = targetLeg === 'LEFT' ? [newMember, ...(mlm.leftMembers || [])] : (mlm.leftMembers || []);
       const newRightMembers = targetLeg === 'RIGHT' ? [newMember, ...(mlm.rightMembers || [])] : (mlm.rightMembers || []);
 
-      // 2:1 or 1:2 Pair Matching Algorithm:
-      // Standard binary unit = ₹1,000. 1 Pair requires 2000 on Left & 1000 on Right OR 1000 on Left & 2000 on Right (₹3,000 paired volume).
       let pairsMatchedNow = 0;
       let bonusEarnedNow = 0;
-      const PAIR_BONUS = 150; // ₹150 per matched pair (5% on ₹3,000 paired volume)
+      const PAIR_BONUS = 150;
 
       while (true) {
         if (newLeftCarry >= 2000 && newRightCarry >= 1000) {
@@ -1183,7 +1284,6 @@ export function AppProvider({ children }) {
         }
       }
 
-      // Solvency Protection: Daily Cap check
       const availableCap = Math.max(0, mlm.dailyCapLimit - mlm.dailyCappedToday);
       const payableBonus = Math.min(bonusEarnedNow, availableCap);
 
@@ -1220,16 +1320,13 @@ export function AppProvider({ children }) {
       };
     });
 
-    showToast(`New downline added to ${leg || 'weaker'} leg with ₹${depositAmt.toLocaleString()}!`);
+    showToast(`New member added to ${leg || 'weaker'} leg with ₹${depositAmt.toLocaleString()}!`);
     triggerCelebration();
   };
 
   /* =========================================================================
-     ADMIN CONTROL METHODS:
-     - User activation, deactivation, suspension, deletion, password reset
-     - Deposit and withdrawal approvals
+     ADMIN USER & REQUEST CONTROLS
      ========================================================================= */
-
   const activateUser = (userId) => {
     setState((prev) => {
       const updatedUsers = prev.allUsers.map((u) =>
@@ -1249,78 +1346,70 @@ export function AppProvider({ children }) {
       const updatedCurUser = prev.user?.id === userId ? { ...prev.user, status: 'DEACTIVATED', suspensionReason: 'Deactivated by Administrator' } : prev.user;
       return { ...prev, allUsers: updatedUsers, user: updatedCurUser };
     });
-    showToast(`User ${userId} has been DEACTIVATED.`, 'warning');
+    showToast(`User ${userId} DEACTIVATED.`);
   };
 
   const suspendUser = (userId, reason) => {
-    const suspReason = reason || 'Policy violation / Security audit';
+    const r = reason || 'Suspended by Administrator';
     setState((prev) => {
       const updatedUsers = prev.allUsers.map((u) =>
-        u.id === userId ? { ...u, status: 'SUSPENDED', suspensionReason: suspReason } : u
+        u.id === userId ? { ...u, status: 'SUSPENDED', suspensionReason: r } : u
       );
-      const updatedCurUser = prev.user?.id === userId ? { ...prev.user, status: 'SUSPENDED', suspensionReason: suspReason } : prev.user;
+      const updatedCurUser = prev.user?.id === userId ? { ...prev.user, status: 'SUSPENDED', suspensionReason: r } : prev.user;
       return { ...prev, allUsers: updatedUsers, user: updatedCurUser };
     });
-    showToast(`User ${userId} SUSPENDED: ${suspReason}`, 'error');
+    showToast(`User ${userId} has been SUSPENDED.`);
   };
 
   const deleteUser = (userId) => {
-    setState((prev) => ({
-      ...prev,
-      allUsers: prev.allUsers.filter((u) => u.id !== userId),
-    }));
-    showToast(`User ${userId} permanently DELETED from database.`, 'error');
+    setState((prev) => {
+      const updatedUsers = prev.allUsers.filter((u) => u.id !== userId);
+      const updatedCurUser = prev.user?.id === userId ? null : prev.user;
+      return { ...prev, allUsers: updatedUsers, user: updatedCurUser };
+    });
+    showToast(`User ${userId} deleted permanently.`, 'warning');
   };
 
   const resetUserPassword = (userId, newPassword) => {
-    setState((prev) => ({
-      ...prev,
-      allUsers: prev.allUsers.map((u) =>
+    setState((prev) => {
+      const updatedUsers = prev.allUsers.map((u) =>
         u.id === userId ? { ...u, password: newPassword } : u
-      ),
-    }));
-    showToast(`Password for ${userId} reset to: "${newPassword}"`);
+      );
+      return { ...prev, allUsers: updatedUsers };
+    });
+    showToast(`Password for user ${userId} reset successfully!`);
   };
 
   const approveDeposit = (depositId) => {
     setState((prev) => {
-      const dep = prev.depositRequests.find((d) => d.id === depositId);
-      if (!dep) return prev;
+      const req = prev.depositRequests.find((d) => d.id === depositId);
+      if (!req) return prev;
 
-      const calc = calculateEarnings(dep.amount, dep.planMonths);
+      const calc = calculateEarnings(req.amount, req.planMonths, 1.0);
       const startDate = new Date();
+      const totalDays = req.planDays || req.planMonths * 30;
       const maturityDate = new Date();
-      maturityDate.setDate(startDate.getDate() + dep.planMonths * 30);
+      maturityDate.setDate(startDate.getDate() + totalDays);
 
       const approvedPlan = {
         id: `PLN-${Math.floor(1000 + Math.random() * 9000)}`,
-        title: dep.planTitle,
-        amount: dep.amount,
-        months: dep.planMonths,
+        title: req.planTitle,
+        amount: req.amount,
+        months: req.planMonths,
+        days: totalDays,
         startDate: startDate.toISOString(),
         maturityDate: maturityDate.toISOString(),
         totalExpectedGain: calc.estimatedTotalIncome,
         estimatedTotalIncome: calc.estimatedTotalIncome,
         dailyQuota: calc.estimatedDailyIncome,
-        estimatedDailyQuota: calc.estimatedDailyIncome,
         earnedSoFar: 0,
         status: 'active',
-        depositRef: dep.id,
+        isUpgrade: req.isUpgrade,
+        depositRef: req.id,
       };
 
-      const newTxn = {
-        id: `TXN-${Math.floor(100000 + Math.random() * 900000)}`,
-        type: 'DEPOSIT',
-        title: 'Membership Tier Deposit Verified & Approved',
-        amount: dep.amount,
-        timestamp: new Date().toISOString(),
-        status: 'COMPLETED',
-        meta: `Approved by Admin • Ref: ${dep.id} (UTR: ${dep.utr})`,
-      };
-
-      // Only 1 active plan permitted: mark any other active plan as superseded
       const updatedPlans = (prev.plans || []).map((p) =>
-        p.status === 'active' ? { ...p, status: 'superseded_upgrade' } : p
+        req.isUpgrade && p.status === 'active' ? { ...p, status: 'superseded_upgrade' } : p
       );
 
       return {
@@ -1329,22 +1418,21 @@ export function AppProvider({ children }) {
         depositRequests: prev.depositRequests.map((d) =>
           d.id === depositId ? { ...d, status: 'APPROVED' } : d
         ),
-        transactions: [newTxn, ...prev.transactions],
       };
     });
-    showToast(`Deposit ${depositId} APPROVED! Plan activated.`);
+    showToast(`Deposit ${depositId} APPROVED! Membership plan activated.`);
     triggerCelebration();
   };
 
   const rejectDeposit = (depositId, reason) => {
-    const rejReason = reason || 'Payment UTR verification failed';
+    const rejReason = reason || 'Invalid UTR / Payment not received in bank account';
     setState((prev) => ({
       ...prev,
       depositRequests: prev.depositRequests.map((d) =>
         d.id === depositId ? { ...d, status: 'REJECTED', rejectionReason: rejReason } : d
       ),
     }));
-    showToast(`Deposit ${depositId} REJECTED: ${rejReason}`, 'error');
+    showToast(`Deposit ${depositId} REJECTED.`, 'error');
   };
 
   const approveWithdrawal = (withdrawalId, customUtr) => {
@@ -1365,7 +1453,6 @@ export function AppProvider({ children }) {
       const req = prev.withdrawalRequests.find((w) => w.id === withdrawalId);
       if (!req) return prev;
 
-      // Revert funds back to user's wallet
       const refundAmount = req.amount;
       return {
         ...prev,
@@ -1379,82 +1466,71 @@ export function AppProvider({ children }) {
     showToast(`Withdrawal ${withdrawalId} REJECTED. Funds reverted to user wallet.`, 'error');
   };
 
-  // Toggle force Sunday for demoing/testing
   const toggleForceSunday = () => {
     setState((prev) => {
       const next = !prev.forceSunday;
-      showToast(next ? '⚡ Sunday Mode Activated! Withdrawals are now open.' : 'Sunday Mode disabled. Real-time countdown restored.');
+      showToast(next ? '⚡ Sunday Mode Activated! Withdrawals open.' : 'Sunday Mode disabled.');
       return { ...prev, forceSunday: next };
     });
   };
 
-  // Reset demo state if needed
-  const resetDemoState = () => {
-    setState(INITIAL_STATE);
-    showToast('Platform reset to fresh state.');
-  };
-
-  // Admin Task Orchestrator: Apply preset combo (e.g. Video + Song + 3x3, Video + 2 Games + Walk)
-  const applyTaskRosterPreset = (presetId) => {
-    const preset = TASK_ROSTER_PRESETS.find((p) => p.id === presetId);
-    if (!preset) return;
-
-    setState((prev) => {
-      const roster = prev.dailyTaskRoster || INITIAL_DAILY_TASK_ROSTER;
-      const updated = roster.map((t) => ({
-        ...t,
-        status: preset.activeIds.includes(t.id) ? 'ACTIVE' : 'PAUSED',
-      }));
-      showToast(`✓ Applied Daily Task Combo: "${preset.name}"!`);
-      return {
-        ...prev,
-        dailyTaskRoster: updated,
-      };
-    });
-  };
-
-  // Admin Task Management: Add new custom task of ANY type
-  const addCustomDailyTask = (taskData) => {
+  /* =========================================================================
+     DATE-WISE TASK SCHEDULING & ORCHESTRATION METHODS (7 COMING DAYS)
+     ========================================================================= */
+  const addTaskForDate = (dateStr, taskData) => {
     const type = taskData.type || 'video';
-    const newId = `task_${type}_${Date.now().toString().slice(-4)}`;
+    const newId = `task_${type}_${Date.now().toString().slice(-5)}`;
     const newTask = {
       id: newId,
       type: type,
-      title: taskData.title || 'Daily Engagement Task',
-      category: taskData.category || (type === 'video' ? 'Video & Share' : type === 'walk' ? 'Fitness Tracker' : type === 'slide3' ? 'Skill Puzzle' : type === 'memory' ? 'Brain Game' : type === 'music' ? 'Focus Audio' : 'Special Task'),
-      platform: taskData.platform || (type === 'video' ? 'YouTube' : 'EarnFlow App'),
-      videoUrl: taskData.videoUrl || (type === 'video' ? 'https://www.youtube.com/watch?v=y9u2eQy5fmg' : ''),
-      youtubeId: type === 'video' ? extractYoutubeId(taskData.videoUrl || 'y9u2eQy5fmg') : '',
+      title: taskData.title || 'Engagement Task',
+      category: taskData.category || (
+        type === 'video' ? 'Video & Share' :
+        type === 'walk' ? 'Fitness Tracker' :
+        type === 'slide3' ? 'Skill Puzzle' :
+        type === 'memory' ? 'Brain Game' :
+        type === 'music' ? 'Focus Audio' :
+        type === 'spin' ? 'Lucky Draw' :
+        'Special Task'
+      ),
+      platform: taskData.platform || (type === 'video' ? 'YouTube' : 'TaskCoin App'),
+      videoUrl: taskData.videoUrl || '',
+      youtubeId: type === 'video' ? extractYoutubeId(taskData.videoUrl || '') : '',
+      actionUrl: taskData.actionUrl || '',
       reward: Number(taskData.reward) || 35.00,
       duration: Number(taskData.duration) || (type === 'walk' ? 600 : type === 'slide3' || type === 'memory' ? 60 : 20),
-      shareRequired: taskData.shareRequired !== false,
+      shareRequired: taskData.shareRequired === true,
       sharePlatform: taskData.sharePlatform || 'Facebook & Friends',
       status: 'ACTIVE',
       totalShares: 0,
-      description: taskData.description || (
-        type === 'walk' ? 'Walk for 10 minutes (1,200 steps) to verify health activity.' :
-        type === 'slide3' ? 'Arrange numbers 1-8 in 3x3 grid within 60s.' :
-        type === 'memory' ? 'Pair 6 wealth icons within 60s countdown.' :
-        type === 'music' ? 'Listen to ambient audio for 20s.' :
-        'Watch video and share to your social network.'
-      ),
+      description: taskData.description || 'Verified engagement task.',
       createdAt: new Date().toISOString(),
+      targetDate: dateStr,
     };
 
-    setState((prev) => ({
-      ...prev,
-      dailyTaskRoster: [newTask, ...(prev.dailyTaskRoster || INITIAL_DAILY_TASK_ROSTER)],
-    }));
+    setState((prev) => {
+      const existingSched = prev.scheduledTasksByDate || DEFAULT_7DAY_SCHEDULE;
+      const dateTasks = existingSched[dateStr] || [];
+      const updatedDateTasks = [newTask, ...dateTasks];
+      const updatedSched = { ...existingSched, [dateStr]: updatedDateTasks };
 
-    showToast(`✓ New task "${newTask.title}" published!`);
+      const isToday = dateStr === getLocalDateString(0);
+      return {
+        ...prev,
+        scheduledTasksByDate: updatedSched,
+        dailyTaskRoster: isToday ? updatedDateTasks : prev.dailyTaskRoster,
+      };
+    });
+
+    showToast(`✓ Task "${newTask.title}" added to schedule for ${dateStr}!`);
     return newTask;
   };
 
-  // Admin Task Management: Update existing task
-  const updateDailyTask = (taskId, updatedData) => {
-    setState((prev) => ({
-      ...prev,
-      dailyTaskRoster: (prev.dailyTaskRoster || INITIAL_DAILY_TASK_ROSTER).map((t) =>
+  const updateTaskForDate = (dateStr, taskId, updatedData) => {
+    setState((prev) => {
+      const existingSched = prev.scheduledTasksByDate || DEFAULT_7DAY_SCHEDULE;
+      const dateTasks = existingSched[dateStr] || [];
+      const updatedDateTasks = dateTasks.map((t) =>
         t.id === taskId
           ? {
               ...t,
@@ -1462,54 +1538,126 @@ export function AppProvider({ children }) {
               youtubeId: updatedData.videoUrl ? extractYoutubeId(updatedData.videoUrl) : t.youtubeId,
             }
           : t
-      ),
-    }));
+      );
+      const updatedSched = { ...existingSched, [dateStr]: updatedDateTasks };
+      const isToday = dateStr === getLocalDateString(0);
+
+      return {
+        ...prev,
+        scheduledTasksByDate: updatedSched,
+        dailyTaskRoster: isToday ? updatedDateTasks : prev.dailyTaskRoster,
+      };
+    });
     showToast('Task updated successfully.');
   };
 
-  // Admin Task Management: Delete task
-  const deleteDailyTask = (taskId) => {
-    setState((prev) => ({
-      ...prev,
-      dailyTaskRoster: (prev.dailyTaskRoster || INITIAL_DAILY_TASK_ROSTER).filter((t) => t.id !== taskId),
-    }));
-    showToast('Task removed from platform.', 'warning');
+  const deleteTaskForDate = (dateStr, taskId) => {
+    setState((prev) => {
+      const existingSched = prev.scheduledTasksByDate || DEFAULT_7DAY_SCHEDULE;
+      const dateTasks = existingSched[dateStr] || [];
+      const updatedDateTasks = dateTasks.filter((t) => t.id !== taskId);
+      const updatedSched = { ...existingSched, [dateStr]: updatedDateTasks };
+      const isToday = dateStr === getLocalDateString(0);
+
+      return {
+        ...prev,
+        scheduledTasksByDate: updatedSched,
+        dailyTaskRoster: isToday ? updatedDateTasks : prev.dailyTaskRoster,
+      };
+    });
+    showToast('Task removed from schedule.', 'warning');
   };
 
-  // Admin Task Management: Toggle task active/paused status
-  const toggleDailyTaskStatus = (taskId) => {
-    setState((prev) => ({
-      ...prev,
-      dailyTaskRoster: (prev.dailyTaskRoster || INITIAL_DAILY_TASK_ROSTER).map((t) => {
+  const toggleTaskStatusForDate = (dateStr, taskId) => {
+    setState((prev) => {
+      const existingSched = prev.scheduledTasksByDate || DEFAULT_7DAY_SCHEDULE;
+      const dateTasks = existingSched[dateStr] || [];
+      let newStatus = 'ACTIVE';
+      const updatedDateTasks = dateTasks.map((t) => {
         if (t.id === taskId) {
-          const nextStatus = t.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE';
-          showToast(`Task is now ${nextStatus === 'ACTIVE' ? 'ACTIVE (Visible to users)' : 'PAUSED (Hidden from users)'}`);
-          return { ...t, status: nextStatus };
+          newStatus = t.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE';
+          return { ...t, status: newStatus };
         }
         return t;
-      }),
-    }));
+      });
+      const updatedSched = { ...existingSched, [dateStr]: updatedDateTasks };
+      const isToday = dateStr === getLocalDateString(0);
+
+      showToast(`Task is now ${newStatus === 'ACTIVE' ? 'ACTIVE (Visible)' : 'PAUSED (Hidden)'} for ${dateStr}`);
+      return {
+        ...prev,
+        scheduledTasksByDate: updatedSched,
+        dailyTaskRoster: isToday ? updatedDateTasks : prev.dailyTaskRoster,
+      };
+    });
   };
 
-  // Legacy aliases for backward compatibility
+  const copyTasksToDate = (srcDateStr, destDateStr) => {
+    setState((prev) => {
+      const existingSched = prev.scheduledTasksByDate || DEFAULT_7DAY_SCHEDULE;
+      const srcTasks = existingSched[srcDateStr] || prev.dailyTaskRoster || [];
+      const clonedTasks = srcTasks.map((t) => ({
+        ...t,
+        id: `task_${t.type}_${Date.now().toString().slice(-4)}_${Math.floor(10 + Math.random() * 90)}`,
+        createdAt: new Date().toISOString(),
+        targetDate: destDateStr,
+      }));
+      const updatedSched = { ...existingSched, [destDateStr]: clonedTasks };
+      const isToday = destDateStr === getLocalDateString(0);
+
+      showToast(`Copied ${clonedTasks.length} tasks to ${destDateStr}!`);
+      return {
+        ...prev,
+        scheduledTasksByDate: updatedSched,
+        dailyTaskRoster: isToday ? clonedTasks : prev.dailyTaskRoster,
+      };
+    });
+  };
+
+  const applyPresetToDate = (dateStr, presetId) => {
+    const preset = TASK_ROSTER_PRESETS.find((p) => p.id === presetId);
+    if (!preset) return;
+
+    setState((prev) => {
+      const existingSched = prev.scheduledTasksByDate || DEFAULT_7DAY_SCHEDULE;
+      const dateTasks = existingSched[dateStr] || prev.dailyTaskRoster || [];
+      const updated = dateTasks.map((t) => ({
+        ...t,
+        status: preset.activeIds.includes(t.id) ? 'ACTIVE' : 'PAUSED',
+      }));
+      const updatedSched = { ...existingSched, [dateStr]: updated };
+      const isToday = dateStr === getLocalDateString(0);
+
+      showToast(`Applied "${preset.name}" preset to ${dateStr}!`);
+      return {
+        ...prev,
+        scheduledTasksByDate: updatedSched,
+        dailyTaskRoster: isToday ? updated : prev.dailyTaskRoster,
+      };
+    });
+  };
+
+  // Backward compatibility aliases
+  const addCustomDailyTask = (taskData) => addTaskForDate(getLocalDateString(0), taskData);
+  const updateDailyTask = (taskId, data) => updateTaskForDate(getLocalDateString(0), taskId, data);
+  const deleteDailyTask = (taskId) => deleteTaskForDate(getLocalDateString(0), taskId);
+  const toggleDailyTaskStatus = (taskId) => toggleTaskStatusForDate(getLocalDateString(0), taskId);
+  const applyTaskRosterPreset = (presetId) => applyPresetToDate(getLocalDateString(0), presetId);
   const addVideoTask = (taskData) => addCustomDailyTask({ ...taskData, type: 'video' });
   const updateVideoTask = updateDailyTask;
   const deleteVideoTask = deleteDailyTask;
-  const toggleVideoTaskStatusLegacy = toggleDailyTaskStatus;
 
   const sundayStatus = getNextSundayStatus();
-  // 24/7 Anytime Payouts are active per investor policy (Min ₹100 • 1/day)
   const isWithdrawalAllowed = true;
 
-  const totalLockedPrincipal = state.plans
+  const totalLockedPrincipal = (state.plans || [])
     .filter((p) => p.status === 'active' || p.status === 'matured')
     .reduce((sum, p) => sum + p.amount, 0);
 
-  const totalDailyQuota = state.plans
+  const totalDailyQuota = (state.plans || [])
     .filter((p) => p.status === 'active')
     .reduce((sum, p) => sum + p.dailyQuota, 0);
 
-  // Update Payment & Banking Gateway Settings
   const updatePaymentSettings = (newSettings) => {
     setState((prev) => ({
       ...prev,
@@ -1521,7 +1669,6 @@ export function AppProvider({ children }) {
     showToast('Payment & Banking Gateway Details updated successfully!');
   };
 
-  // Update Admin Broadcast Announcement
   const updateAdminAnnouncement = (newAnnouncement) => {
     setState((prev) => ({
       ...prev,
@@ -1545,19 +1692,18 @@ export function AppProvider({ children }) {
         sundayStatus,
         switchRole,
         registerUser,
+        loginUser,
+        logoutUser,
         savePayoutMethod,
         subscribePlan,
         completeTask,
         withdrawRewards,
         withdrawPrincipal,
         toggleForceSunday,
-        resetDemoState,
         showToast,
         toastMessage,
         // Daily Login Streak methods
         claimDailyLoginBonus,
-        resetDailyStreak,
-        fastForwardNextDay,
         // MLM 2:1 Binary functions
         setPreferredLeg,
         addDownlineMember,
@@ -1571,7 +1717,15 @@ export function AppProvider({ children }) {
         rejectDeposit,
         approveWithdrawal,
         rejectWithdrawal,
-        // Admin Dynamic Task Orchestrator & Presets
+        // Date-Wise Task Scheduling for Up to 7 Coming Days
+        scheduledTasksByDate: state.scheduledTasksByDate || DEFAULT_7DAY_SCHEDULE,
+        addTaskForDate,
+        updateTaskForDate,
+        deleteTaskForDate,
+        toggleTaskStatusForDate,
+        copyTasksToDate,
+        applyPresetToDate,
+        // Today's Roster & Presets
         dailyTaskRoster: state.dailyTaskRoster || INITIAL_DAILY_TASK_ROSTER,
         taskRosterPresets: TASK_ROSTER_PRESETS,
         applyTaskRosterPreset,

@@ -14,7 +14,8 @@ import {
   ShieldAlert,
   ShieldCheck,
   Smartphone,
-  GitBranch
+  GitBranch,
+  LogOut
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { formatINR } from '../utils/finance';
@@ -29,7 +30,8 @@ export default function Navbar({ activeTab, setActiveTab, onOpenAuth, onOpenPayo
     forceSunday, 
     toggleForceSunday,
     currentRole,
-    switchRole
+    switchRole,
+    logoutUser
   } = useApp();
 
   const [secretClicks, setSecretClicks] = React.useState(0);
@@ -57,7 +59,7 @@ export default function Navbar({ activeTab, setActiveTab, onOpenAuth, onOpenPayo
               <span><strong>Account Suspended:</strong> {user.suspensionReason || 'Please contact platform support.'}</span>
             </div>
             <span style={{ fontSize: '0.75rem', color: '#fca5a5', background: 'rgba(239, 68, 68, 0.25)', padding: '0.25rem 0.65rem', borderRadius: '4px', fontWeight: 600 }}>
-              Support: helpdesk@earnflow.pro
+              Support: support@taskcoin.in
             </span>
           </div>
         )}
@@ -77,17 +79,17 @@ export default function Navbar({ activeTab, setActiveTab, onOpenAuth, onOpenPayo
             </div>
             <div className="brand-text">
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <h1 className="gradient-text-emerald">EarnFlow</h1>
+                <h1 className="gradient-text-emerald">TaskCoin</h1>
                 <span 
                   className="badge badge-emerald" 
                   style={{ fontSize: '0.65rem', cursor: 'pointer', userSelect: 'none' }}
                   onClick={handleSecretTrigger}
-                  title="EarnFlow Pro Verified Network"
+                  title="TaskCoin Pro Verified Network"
                 >
                   PRO
                 </span>
               </div>
-              <span className="brand-tag">Community Monetization & Task Engine</span>
+              <span className="brand-tag">Daily Task Rewards & Community Platform</span>
             </div>
           </div>
 
@@ -181,15 +183,45 @@ export default function Navbar({ activeTab, setActiveTab, onOpenAuth, onOpenPayo
               </button>
             )}
 
-            {/* User Profile Button */}
-            <button 
-              onClick={onOpenAuth}
-              className="btn btn-secondary btn-sm"
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
-              <UserCheck size={14} color="#34d399" />
-              <span>{user?.name?.split(' ')[0] || 'Profile'}</span>
-            </button>
+            {/* User Profile & Logout Controls */}
+            {user ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <button 
+                  onClick={onOpenAuth}
+                  className="btn btn-secondary btn-sm"
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                  title={`Logged in as ${user.name} (${user.email || user.phone})`}
+                >
+                  <UserCheck size={14} color="#34d399" />
+                  <span>{user.name.split(' ')[0]}</span>
+                </button>
+                <button
+                  onClick={logoutUser}
+                  className="btn btn-secondary btn-sm"
+                  style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '0.35rem',
+                    color: '#f87171',
+                    borderColor: 'rgba(239, 68, 68, 0.3)',
+                    background: 'rgba(239, 68, 68, 0.08)'
+                  }}
+                  title="Log out of TaskCoin Pro"
+                >
+                  <LogOut size={13} />
+                  <span>Logout</span>
+                </button>
+              </div>
+            ) : (
+              <button 
+                onClick={onOpenAuth}
+                className="btn btn-primary btn-sm"
+                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700 }}
+              >
+                <UserCheck size={14} />
+                <span>Log In / Register</span>
+              </button>
+            )}
           </div>
         </div>
 

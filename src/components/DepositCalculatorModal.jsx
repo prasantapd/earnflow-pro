@@ -692,15 +692,6 @@ export default function DepositCalculatorModal({ isOpen, onClose }) {
                     3. Enter 12-Digit UTR / UPI Reference No. *
                   </span>
                 </label>
-                <button
-                  type="button"
-                  onClick={handleFillDemoUtr}
-                  className="btn btn-secondary btn-sm"
-                  style={{ fontSize: '0.68rem', padding: '0.2rem 0.5rem' }}
-                  title="Generate a demo UTR for instant sandbox testing"
-                >
-                  ⚡ Demo UTR
-                </button>
               </div>
 
               <div style={{ position: 'relative' }}>

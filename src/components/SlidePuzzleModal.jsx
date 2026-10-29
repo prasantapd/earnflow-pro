@@ -148,34 +148,6 @@ export default function SlidePuzzleModal({
     setIsPlaying(true);
   };
 
-  // Auto-solve demo trigger for rapid testing
-  const handleAutoSolve = () => {
-    const totalTiles = gridSize * gridSize;
-    let solved = Array.from({ length: totalTiles - 1 }, (_, i) => i + 1);
-    solved.push(null);
-    setTiles(solved);
-    setEmptyIndex(totalTiles - 1);
-    setIsWon(true);
-    setIsPlaying(false);
-
-    if (isDaily) {
-      completeTask({
-        taskId: taskId,
-        taskTitle: task?.title || '3×3 Slide Number Puzzle Challenge',
-        rewardAmount: rewardAmount,
-        meta: `Solved 3×3 daily slide puzzle in ${moves + 1} moves within countdown!`,
-      });
-    } else {
-      playSoloSkillGame({
-        gameId: `puzzle_${gridSize}x${gridSize}`,
-        gameTitle: `${gridSize}×${gridSize} Slide Number Puzzle Arena`,
-        entryFee: 0,
-        rewardAmount: rewardAmount,
-        won: true,
-      });
-    }
-  };
-
   // Handle tile slide
   const handleTileClick = (index) => {
     if (!isPlaying || isWon || isGameOver) return;
@@ -548,15 +520,6 @@ export default function SlidePuzzleModal({
                     }}
                   >
                     Surrender
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-secondary btn-sm"
-                    onClick={handleAutoSolve}
-                    title="Demo quick test solve"
-                    style={{ fontSize: '0.75rem' }}
-                  >
-                    ⚡ Demo Auto-Solve
                   </button>
                 </>
               )}

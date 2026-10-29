@@ -73,7 +73,6 @@ export default function DailyStreakWidget({ onOpenDeposit }) {
   
   const [selectedWeek, setSelectedWeek] = useState(currentWeekNum);
   const [viewMode, setViewMode] = useState('weekly'); // 'weekly' or 'full30'
-  const [showDemoTools, setShowDemoTools] = useState(false);
 
   // Active items based on view mode
   const displayedSchedule = viewMode === 'full30' 
@@ -86,21 +85,6 @@ export default function DailyStreakWidget({ onOpenDeposit }) {
   // Calculate overall 30-day completion progress
   const completedCount = (streak.history || []).filter(Boolean).length;
   const progressPercent = Math.min(100, Math.round((completedCount / 30) * 100));
-
-  // Quick jump helper for testing
-  const jumpToDay29 = () => {
-    setState(prev => ({
-      ...prev,
-      loginStreak: {
-        ...prev.loginStreak,
-        currentDay: 29,
-        claimedToday: false,
-        history: Array.from({ length: 30 }, (_, i) => i < 28)
-      }
-    }));
-    setSelectedWeek(4);
-    showToast('Sandbox: Fast-forwarded to Day 29 (1 day before 30-Day Grand Finish)!', 'info');
-  };
 
   return (
     <div 

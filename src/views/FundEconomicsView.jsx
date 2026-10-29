@@ -17,11 +17,11 @@ import {
 import { formatINR } from '../utils/finance';
 
 export default function FundEconomicsView() {
-  const [demoPoolCapital, setDemoPoolCapital] = useState(1000000); // 10 Lakhs
+  const [simulatedPoolCapital, setSimulatedPoolCapital] = useState(1000000); // 10 Lakhs
 
-  const monthlyGrossRevenue = Math.round(demoPoolCapital * 0.10); 
-  const userTaskRewardAllocation = Math.round(demoPoolCapital * 0.07); 
-  const platformOperatingReserve = Math.round(demoPoolCapital * 0.03); 
+  const monthlyGrossRevenue = Math.round(simulatedPoolCapital * 0.10); 
+  const userTaskRewardAllocation = Math.round(simulatedPoolCapital * 0.07); 
+  const platformOperatingReserve = Math.round(simulatedPoolCapital * 0.03); 
 
   return (
     <div>
@@ -146,15 +146,15 @@ export default function FundEconomicsView() {
         <div style={{ marginBottom: '1.5rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontWeight: 700 }}>
             <span>Simulated Platform Capital Pool:</span>
-            <span style={{ color: '#34d399', fontSize: '1.2rem' }}>{formatINR(demoPoolCapital)}</span>
+            <span style={{ color: '#34d399', fontSize: '1.2rem' }}>{formatINR(simulatedPoolCapital)}</span>
           </div>
           <input
             type="range"
             min="100000"
             max="10000000"
             step="50000"
-            value={demoPoolCapital}
-            onChange={(e) => setDemoPoolCapital(Number(e.target.value))}
+            value={simulatedPoolCapital}
+            onChange={(e) => setSimulatedPoolCapital(Number(e.target.value))}
             style={{ width: '100%', height: '8px', cursor: 'pointer', accentColor: '#10b981' }}
           />
         </div>

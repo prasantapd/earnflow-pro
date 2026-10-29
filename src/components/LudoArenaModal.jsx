@@ -22,10 +22,10 @@ import { useApp } from '../context/AppContext';
 import { formatINR } from '../utils/finance';
 
 const OPPONENT_POOL = [
-  { name: 'Rohan_M99', tier: '🥉 Starter Sprint' },
+  { name: 'Apex_Pilot', tier: '🥉 Starter Sprint' },
   { name: 'Priya_Pro', tier: '💎 Diamond VIP' },
   { name: 'Kabir_Trader', tier: '🚀 Growth Alpha' },
-  { name: 'Ananya_K', tier: '⚡ Alpha VIP' },
+  { name: 'Gold_Eagle', tier: '⚡ Alpha VIP' },
   { name: 'Siddharth_99', tier: '🥉 Starter Sprint' },
   { name: 'Vikram_Apex', tier: '💎 Diamond VIP' },
   { name: 'Neha_Delhi', tier: '🚀 Growth Alpha' }

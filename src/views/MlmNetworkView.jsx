@@ -35,7 +35,7 @@ export default function MlmNetworkView() {
   const [simAmount, setSimAmount] = useState('2000');
 
   const mlm = mlmNetwork || {
-    referralCode: 'AARAV101',
+    referralCode: user?.referralCode || 'TASKCOIN',
     preferredLeg: 'AUTO',
     leftVolume: 0,
     rightVolume: 0,
@@ -433,7 +433,7 @@ export default function MlmNetworkView() {
             }}
           >
             <div style={{ fontSize: '0.75rem', opacity: 0.9, textTransform: 'uppercase' }}>Root Sponsor</div>
-            <div style={{ fontWeight: 800, fontSize: '1.05rem' }}>{user?.name || 'Aarav Sharma'}</div>
+            <div style={{ fontWeight: 800, fontSize: '1.05rem' }}>{user?.name || user?.phone || 'Investor Account'}</div>
             <div style={{ fontSize: '0.72rem', opacity: 0.9, fontFamily: 'monospace' }}>{mlm.referralCode}</div>
           </div>
 

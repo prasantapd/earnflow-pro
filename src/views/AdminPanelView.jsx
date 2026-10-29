@@ -1213,7 +1213,7 @@ export default function AdminPanelView() {
                 className={`btn ${forceSunday ? 'btn-danger' : 'btn-primary'} btn-sm`}
                 onClick={toggleForceSunday}
               >
-                {forceSunday ? 'Turn Off Demo Sunday Mode' : '⚡ Activate Demo Sunday Mode'}
+                {forceSunday ? 'Turn Off Sunday Override' : '⚡ Activate Sunday Override'}
               </button>
             </div>
           </div>

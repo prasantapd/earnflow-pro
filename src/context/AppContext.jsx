@@ -601,16 +601,7 @@ const INITIAL_STATE = {
   adminAnnouncement: INITIAL_ADMIN_ANNOUNCEMENT,
   adminPassword: 'admin123',
   streakRewards: STREAK_REWARDS,
-  passwordResetRequests: [
-    {
-      id: 'REQ-100482',
-      userId: 'usr_rohan',
-      userName: 'Rohan Sharma',
-      userPhone: '+91 98765 43210',
-      requestedAt: new Date(Date.now() - 3600000).toISOString(),
-      status: 'PENDING',
-    }
-  ],
+  passwordResetRequests: [],
 };
 
 export function AppProvider({ children }) {

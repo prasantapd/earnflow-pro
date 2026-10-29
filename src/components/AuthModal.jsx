@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, User, Mail, Phone, Lock, CheckCircle2, ShieldCheck, Sparkles } from 'lucide-react';
+import { X, User, Mail, Phone, Lock, CheckCircle2, ShieldCheck } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 export default function AuthModal({ isOpen, onClose }) {
@@ -21,12 +21,6 @@ export default function AuthModal({ isOpen, onClose }) {
       return;
     }
     registerUser(formData);
-    onClose();
-  };
-
-  const loadSampleUser = (sample) => {
-    setFormData(sample);
-    registerUser(sample);
     onClose();
   };
 
@@ -208,51 +202,6 @@ export default function AuthModal({ isOpen, onClose }) {
             )}
           </div>
         </form>
-
-        {/* Quick Demo Pre-sets */}
-        <div style={{ marginTop: '1.75rem', paddingTop: '1.25rem', borderTop: '1px solid var(--border-subtle)' }}>
-          <div style={{ fontSize: '0.78rem', color: '#94a3b8', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-            <Sparkles size={14} color="#f59e0b" /> Quick Demo Profiles:
-          </div>
-          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-            <button
-              type="button"
-              className="btn btn-secondary btn-sm"
-              onClick={() => loadSampleUser({
-                name: 'Aarav Sharma',
-                email: 'aarav.sharma@wealth.in',
-                phone: '+91 98765 43210',
-                password: '••••••••'
-              })}
-            >
-              Aarav Sharma
-            </button>
-            <button
-              type="button"
-              className="btn btn-secondary btn-sm"
-              onClick={() => loadSampleUser({
-                name: 'Rohan Mehta',
-                email: 'rohan.mehta@invest.io',
-                phone: '+91 91234 56789',
-                password: '••••••••'
-              })}
-            >
-              Rohan Mehta
-            </button>
-            <button
-              type="button"
-              className="btn btn-secondary btn-sm"
-              onClick={() => loadSampleUser({
-                name: 'Ananya Roy',
-                email: 'ananya.roy@growth.net',
-                phone: '+91 99887 76655',
-                password: '••••••••'
-              })}
-            >
-              Ananya Roy
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   );

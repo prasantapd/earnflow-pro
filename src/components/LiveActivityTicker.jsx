@@ -49,7 +49,7 @@ const INITIAL_ACTIVITIES = [
   },
   {
     id: 'act_4',
-    user: 'Aarav_99',
+    user: 'User_9821',
     action: 'claimed',
     amount: 12.00,
     target: 'Day 30 Login Grand Finish',
@@ -60,7 +60,7 @@ const INITIAL_ACTIVITIES = [
   },
   {
     id: 'act_5',
-    user: 'Rohan_M',
+    user: 'Investor_44',
     action: 'won',
     amount: 45.00,
     target: 'in 29 Cards Game Arena',

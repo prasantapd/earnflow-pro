@@ -76,15 +76,6 @@ export default function WalkTaskModal({ isOpen, onClose, task }) {
   const estimatedCalories = Math.round(steps * 0.04);
   const estimatedKm = (steps * 0.00075).toFixed(2);
 
-  // Fast forward simulation for demo / quick test
-  const handleFastSimulate = () => {
-    setElapsedSec(targetDurationSec);
-    setSteps(targetSteps);
-    setIsActive(false);
-    setIsCompleted(true);
-    if (timerRef.current) clearInterval(timerRef.current);
-  };
-
   const handleClaim = () => {
     const ok = completeTask({
       taskId: task?.id || 'walk_1',
@@ -237,14 +228,6 @@ export default function WalkTaskModal({ isOpen, onClose, task }) {
                 onClick={() => setIsActive(!isActive)}
               >
                 {isActive ? <><Pause size={18} /> Pause Walk</> : <><Play size={18} /> {elapsedSec > 0 ? 'Resume Walk' : 'Start 10-Min Walk'}</>}
-              </button>
-              <button 
-                className="btn btn-secondary btn-sm"
-                onClick={handleFastSimulate}
-                title="Simulate completing the 10-minute walk for demo testing"
-                style={{ fontSize: '0.75rem', padding: '0 0.85rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
-              >
-                <Zap size={14} color="#fbbf24" /> Demo Auto-Finish
               </button>
             </div>
             <div style={{ fontSize: '0.75rem', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}>

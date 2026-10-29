@@ -113,12 +113,6 @@ export default function DepositCalculatorModal({ isOpen, onClose }) {
     setTimeout(() => setCopiedField(null), 2500);
   };
 
-  const handleFillDemoUtr = () => {
-    const demoUtr = `UTR${Date.now().toString().slice(-8)}${Math.floor(1000 + Math.random() * 9000)}`;
-    setUserUtr(demoUtr);
-    showToast('Demo 12-digit UTR generated!', 'info');
-  };
-
   const handleFinalSubmit = (e) => {
     e.preventDefault();
     const amount = Number(customAmount);

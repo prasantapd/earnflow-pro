@@ -807,6 +807,7 @@ export function AppProvider({ children }) {
     setState((prev) => ({
       ...prev,
       user: matched,
+      payoutMethod: matched.payoutMethod || prev.payoutMethod || null,
       loginStreak: missedDay ? {
         ...(prev.loginStreak || {}),
         currentDay: 1,
@@ -833,12 +834,17 @@ export function AppProvider({ children }) {
 
   // Update Payout Method
   const savePayoutMethod = (methodData) => {
+    const updated = {
+      ...methodData,
+      savedAt: new Date().toISOString(),
+    };
     setState((prev) => ({
       ...prev,
-      payoutMethod: {
-        ...methodData,
-        savedAt: new Date().toISOString(),
-      },
+      payoutMethod: updated,
+      user: prev.user ? { ...prev.user, payoutMethod: updated } : prev.user,
+      allUsers: (prev.allUsers || []).map((u) =>
+        u.id === prev.user?.id ? { ...u, payoutMethod: updated } : u
+      ),
     }));
     showToast('Payout method updated successfully! Ready for withdrawals.');
   };
@@ -1023,9 +1029,20 @@ export function AppProvider({ children }) {
       id: `WDR-${Math.floor(1000 + Math.random() * 9000)}`,
       userId: state.user?.id || 'USR-GUEST',
       userName: state.user?.name || 'Member',
+      userPhone: state.user?.phone || '',
+      userEmail: state.user?.email || '',
       amount: amount,
       type: 'TASK_REWARD',
-      payoutDetails: effectivePayout,
+      payoutDetails: {
+        ...effectivePayout,
+        holderName: effectivePayout.holderName || state.user?.name || 'Member',
+        holder: effectivePayout.holderName || state.user?.name || 'Member',
+        value: effectivePayout.type === 'upi_id'
+          ? (effectivePayout.upiId || '')
+          : effectivePayout.type === 'upi_phone'
+            ? `${effectivePayout.upiPhone || ''} (${effectivePayout.upiApp || 'UPI Mobile'})`
+            : `${effectivePayout.bankName || 'Bank'} - A/C: ${effectivePayout.accountNumber || ''} (IFSC: ${effectivePayout.ifsc || ''})`,
+      },
       submittedAt: new Date().toISOString(),
       status: 'PENDING',
       rejectionReason: '',
@@ -1144,13 +1161,22 @@ export function AppProvider({ children }) {
       id: `WDR-${Math.floor(1000 + Math.random() * 9000)}`,
       userId: state.user?.id || 'USR-GUEST',
       userName: state.user?.name || 'Member',
+      userPhone: state.user?.phone || '',
+      userEmail: state.user?.email || '',
       amount: plan.amount,
       type: 'PRINCIPAL_WITHDRAWAL',
       planId: planId,
       payoutDetails: {
-        type: state.payoutMethod?.type || 'upi_id',
-        value: state.payoutMethod?.upiId || 'Bank/UPI',
-        holder: state.user?.name,
+        ...(state.payoutMethod || {}),
+        holderName: state.payoutMethod?.holderName || state.user?.name || 'Member',
+        holder: state.payoutMethod?.holderName || state.user?.name || 'Member',
+        value: state.payoutMethod?.type === 'upi_id'
+          ? (state.payoutMethod.upiId || '')
+          : state.payoutMethod?.type === 'upi_phone'
+            ? `${state.payoutMethod.upiPhone || ''} (${state.payoutMethod.upiApp || 'UPI Mobile'})`
+            : state.payoutMethod?.type === 'bank'
+              ? `${state.payoutMethod.bankName || 'Bank'} - A/C: ${state.payoutMethod.accountNumber || ''} (IFSC: ${state.payoutMethod.ifsc || ''})`
+              : (state.payoutMethod?.upiId || 'Bank/UPI'),
       },
       submittedAt: new Date().toISOString(),
       status: 'APPROVED',

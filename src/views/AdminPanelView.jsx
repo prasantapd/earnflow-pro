@@ -51,7 +51,9 @@ import {
   MessageSquare,
   PhoneCall,
   Coins,
-  RotateCcw
+  RotateCcw,
+  Smartphone,
+  Wallet
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { formatINR, formatDate } from '../utils/finance';
@@ -243,6 +245,13 @@ export default function AdminPanelView() {
   const [suspensionModal, setSuspensionModal] = useState({ isOpen: false, user: null, reason: '' });
   const [passwordResetModal, setPasswordResetModal] = useState({ isOpen: false, user: null, newPassword: '' });
   const [rejectModal, setRejectModal] = useState({ isOpen: false, type: '', id: '', reason: '' });
+  const [approveWithdrawalModal, setApproveWithdrawalModal] = useState({
+    isOpen: false,
+    req: null,
+    utr: '',
+    copiedField: null,
+  });
+  const [tableCopiedId, setTableCopiedId] = useState(null);
   const [taskModal, setTaskModal] = useState({
     isOpen: false,
     targetDate: getLocalDateString(0),
@@ -318,6 +327,156 @@ export default function AdminPanelView() {
       rejectWithdrawal(rejectModal.id, rejectModal.reason);
     }
     setRejectModal({ isOpen: false, type: '', id: '', reason: '' });
+  };
+
+  // 1-Click Clipboard Copy Handler with Field-Specific Feedback
+  const handleCopyText = (text, fieldKey, isTable = false) => {
+    if (!text) return;
+    try {
+      navigator.clipboard.writeText(text);
+      if (isTable) {
+        setTableCopiedId(fieldKey);
+        setTimeout(() => setTableCopiedId(null), 2000);
+      } else {
+        setApproveWithdrawalModal((prev) => ({ ...prev, copiedField: fieldKey }));
+        setTimeout(() => {
+          setApproveWithdrawalModal((prev) => ({ ...prev, copiedField: null }));
+        }, 2000);
+      }
+      showToast(`Copied: ${text}`);
+    } catch {
+      showToast(`Please manually copy: ${text}`);
+    }
+  };
+
+  // Robust Unified Payout Detail Resolution for Admin Convenience
+  const resolvePayoutDetails = (req) => {
+    if (!req) return { type: 'unknown', badge: 'Unset', primaryAddress: 'Not Configured', copyText: '', holderName: 'Member' };
+    let details = req.payoutDetails || req.payoutMethod || req.destination;
+    if (typeof details === 'string') {
+      const cleanStr = details.trim();
+      if (cleanStr.includes('@')) {
+        details = { type: 'upi_id', upiId: cleanStr };
+      } else if (/^\d{10}$/.test(cleanStr)) {
+        details = { type: 'upi_phone', upiPhone: cleanStr };
+      } else {
+        details = { value: cleanStr };
+      }
+    }
+    if (!details || (typeof details === 'object' && !details.type && !details.upiId && !details.accountNumber && !details.value && !details.destination)) {
+      const matchedUser = (allUsers || []).find((u) => u.id === req.userId || (u.phone && req.userPhone && u.phone === req.userPhone));
+      if (matchedUser?.payoutMethod) {
+        details = matchedUser.payoutMethod;
+      }
+    }
+    if (!details) {
+      return {
+        type: 'unknown',
+        badge: 'Not Set',
+        title: 'No Payout Method Set',
+        primaryAddress: 'No payout destination provided',
+        secondaryAddress: null,
+        holderName: req.userName || 'Member',
+        copyText: '',
+        upiDeepLink: null,
+      };
+    }
+
+    // UPI Virtual Payment Address (VPA)
+    if (details.type === 'upi_id' || details.upiId || (details.value && details.value.includes('@') && !details.value.includes('A/C'))) {
+      const upiId = (details.upiId || details.value || '').trim();
+      const holder = (details.holderName || details.holder || req.userName || 'Member').trim();
+      const encUpi = encodeURIComponent(upiId);
+      const encHolder = encodeURIComponent(holder);
+      const encAmount = encodeURIComponent(req.amount || 0);
+      const encNote = encodeURIComponent(`TaskCoin Payout ${req.id}`);
+      return {
+        type: 'upi_id',
+        badge: '⚡ UPI VPA',
+        title: 'UPI Virtual Payment Address (VPA)',
+        primaryAddress: upiId,
+        secondaryAddress: null,
+        upiId: upiId,
+        holderName: holder,
+        copyText: upiId,
+        upiDeepLink: `upi://pay?pa=${encUpi}&pn=${encHolder}&am=${encAmount}&cu=INR&tn=${encNote}`,
+      };
+    }
+
+    // Mobile UPI (PhonePe / GPay / Paytm)
+    if (details.type === 'upi_phone' || details.upiPhone) {
+      const phone = (details.upiPhone || req.userPhone || '').trim();
+      const app = details.upiApp || 'Google Pay / PhonePe';
+      const holder = (details.holderName || details.holder || req.userName || 'Member').trim();
+      const encPhone = encodeURIComponent(phone);
+      const encHolder = encodeURIComponent(holder);
+      const encAmount = encodeURIComponent(req.amount || 0);
+      const encNote = encodeURIComponent(`TaskCoin Payout ${req.id}`);
+      return {
+        type: 'upi_phone',
+        badge: '📱 UPI Mobile',
+        title: `Mobile UPI (${app})`,
+        primaryAddress: `+91 ${phone}`,
+        secondaryAddress: `Preferred: ${app}`,
+        upiPhone: phone,
+        upiApp: app,
+        holderName: holder,
+        copyText: phone,
+        upiDeepLink: `upi://pay?pa=${encPhone}@upi&pn=${encHolder}&am=${encAmount}&cu=INR&tn=${encNote}`,
+      };
+    }
+
+    // Direct IMPS / NEFT Bank Transfer
+    if (details.type === 'bank' || details.accountNumber || (details.value && details.value.includes('A/C'))) {
+      const bank = details.bankName || 'Bank Transfer';
+      const accNo = (details.accountNumber || '').trim();
+      const ifsc = (details.ifsc || '').trim().toUpperCase();
+      const holder = (details.holderName || details.holder || req.userName || 'Member').trim();
+      return {
+        type: 'bank',
+        badge: '🏦 Bank IMPS',
+        title: `Bank Transfer (${bank})`,
+        primaryAddress: `${bank} ••••${accNo.slice(-4)}`,
+        secondaryAddress: `A/C: ${accNo} | IFSC: ${ifsc}`,
+        bankName: bank,
+        accountNumber: accNo,
+        ifsc: ifsc,
+        holderName: holder,
+        copyText: `A/C: ${accNo}, IFSC: ${ifsc}, Bank: ${bank}, Beneficiary: ${holder}`,
+        upiDeepLink: null,
+      };
+    }
+
+    // Custom / Legacy Fallback
+    const val = details.value || (typeof details === 'string' ? details : JSON.stringify(details));
+    return {
+      type: 'custom',
+      badge: '💳 Custom',
+      title: 'Custom Payout Preference',
+      primaryAddress: val,
+      secondaryAddress: null,
+      holderName: details.holder || req.userName || 'Member',
+      copyText: val,
+      upiDeepLink: null,
+    };
+  };
+
+  const handleOpenApproveWithdrawal = (req) => {
+    const autoUtr = `IMPS${Date.now().toString().slice(-9)}`;
+    setApproveWithdrawalModal({
+      isOpen: true,
+      req: req,
+      utr: autoUtr,
+      copiedField: null,
+    });
+  };
+
+  const handleConfirmApproveWithdrawal = (e) => {
+    e.preventDefault();
+    if (!approveWithdrawalModal.req) return;
+    const finalUtr = approveWithdrawalModal.utr.trim() || `IMPS${Date.now().toString().slice(-9)}`;
+    approveWithdrawal(approveWithdrawalModal.req.id, finalUtr);
+    setApproveWithdrawalModal({ isOpen: false, req: null, utr: '', copiedField: null });
   };
 
   return (
@@ -857,90 +1016,140 @@ export default function AdminPanelView() {
                   </tr>
                 </thead>
                 <tbody>
-                  {withdrawalRequests.map((req) => (
-                    <tr key={req.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.04)' }}>
-                      <td style={{ padding: '0.85rem 0.75rem', fontFamily: 'monospace', color: '#22d3ee', fontWeight: 600 }}>
-                        {req.id}
-                      </td>
+                  {withdrawalRequests.map((req) => {
+                    const payout = resolvePayoutDetails(req);
+                    return (
+                      <tr key={req.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.04)' }}>
+                        <td style={{ padding: '0.85rem 0.75rem', fontFamily: 'monospace', color: '#22d3ee', fontWeight: 600 }}>
+                          {req.id}
+                        </td>
 
-                      <td style={{ padding: '0.85rem 0.75rem' }}>
-                        <div style={{ fontWeight: 700, color: '#f8fafc' }}>{req.userName}</div>
-                        <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>{req.userId}</div>
-                      </td>
+                        <td style={{ padding: '0.85rem 0.75rem' }}>
+                          <div style={{ fontWeight: 700, color: '#f8fafc' }}>{req.userName}</div>
+                          <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>{req.userId}</div>
+                          {req.userPhone && (
+                            <div style={{ fontSize: '0.72rem', color: '#34d399', marginTop: '0.15rem' }}>
+                              📞 {req.userPhone}
+                            </div>
+                          )}
+                        </td>
 
-                      <td style={{ padding: '0.85rem 0.75rem' }}>
-                        <span className={`badge ${req.type === 'PRINCIPAL_WITHDRAWAL' ? 'badge-cyan' : 'badge-emerald'}`} style={{ fontSize: '0.62rem' }}>
-                          {req.type === 'PRINCIPAL_WITHDRAWAL' ? 'Principal Refund' : 'Sunday Rewards'}
-                        </span>
-                      </td>
-
-                      <td style={{ padding: '0.85rem 0.75rem', fontWeight: 800, color: '#f43f5e', fontSize: '1rem' }}>
-                        {formatINR(req.amount)}
-                      </td>
-
-                      <td style={{ padding: '0.85rem 0.75rem' }}>
-                        <div style={{ fontWeight: 600, color: '#cbd5e1' }}>{req.payoutDetails?.value}</div>
-                        <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Holder: {req.payoutDetails?.holder}</div>
-                      </td>
-
-                      <td style={{ padding: '0.85rem 0.75rem' }}>
-                        {req.status === 'PENDING' && (
-                          <span className="badge badge-gold" style={{ fontSize: '0.65rem' }}>
-                            Pending Disbursal
+                        <td style={{ padding: '0.85rem 0.75rem' }}>
+                          <span className={`badge ${req.type === 'PRINCIPAL_WITHDRAWAL' ? 'badge-cyan' : 'badge-emerald'}`} style={{ fontSize: '0.62rem' }}>
+                            {req.type === 'PRINCIPAL_WITHDRAWAL' ? 'Principal Refund' : 'Sunday Rewards'}
                           </span>
-                        )}
-                        {req.status === 'APPROVED' && (
-                          <div>
-                            <span className="badge badge-emerald" style={{ fontSize: '0.65rem' }}>
-                              Disbursed
-                            </span>
-                            {req.disbursedUtr && (
-                              <div style={{ fontSize: '0.68rem', color: '#34d399', fontFamily: 'monospace', marginTop: '0.2rem' }}>
-                                {req.disbursedUtr}
-                              </div>
-                            )}
-                          </div>
-                        )}
-                        {req.status === 'REJECTED' && (
-                          <div>
-                            <span className="badge" style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.4)', fontSize: '0.65rem' }}>
-                              Rejected & Refunded
-                            </span>
-                            {req.rejectionReason && (
-                              <div style={{ fontSize: '0.68rem', color: '#fca5a5', marginTop: '0.2rem' }}>
-                                {req.rejectionReason}
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </td>
+                        </td>
 
-                      <td style={{ padding: '0.85rem 0.75rem', textAlign: 'center' }}>
-                        {req.status === 'PENDING' ? (
-                          <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center' }}>
-                            <button
-                              type="button"
-                              className="btn btn-primary btn-sm"
-                              style={{ fontSize: '0.72rem', padding: '0.25rem 0.65rem' }}
-                              onClick={() => approveWithdrawal(req.id)}
-                            >
-                              <Send size={12} /> Disburse
-                            </button>
-                            <button
-                              type="button"
-                              className="btn btn-danger btn-sm"
-                              style={{ fontSize: '0.72rem', padding: '0.25rem 0.55rem' }}
-                              onClick={() => setRejectModal({ isOpen: true, type: 'withdrawal', id: req.id, reason: 'Invalid UPI / Bank details' })}
-                            >
-                              <XCircle size={12} /> Reject
-                            </button>
+                        <td style={{ padding: '0.85rem 0.75rem', fontWeight: 800, color: '#f43f5e', fontSize: '1rem' }}>
+                          {formatINR(req.amount)}
+                        </td>
+
+                        <td style={{ padding: '0.85rem 0.75rem', minWidth: '220px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.25rem' }}>
+                            <span className={`badge ${payout.type === 'bank' ? 'badge-indigo' : payout.type === 'upi_phone' ? 'badge-gold' : 'badge-cyan'}`} style={{ fontSize: '0.62rem' }}>
+                              {payout.badge}
+                            </span>
+                            <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
+                              {payout.holderName || req.userName}
+                            </span>
                           </div>
-                        ) : (
-                          <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Completed</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                          <div style={{ fontWeight: 700, color: '#f8fafc', fontFamily: payout.type === 'custom' ? 'inherit' : 'monospace', fontSize: '0.85rem', wordBreak: 'break-all' }}>
+                            {payout.primaryAddress}
+                          </div>
+                          {payout.secondaryAddress && (
+                            <div style={{ fontSize: '0.72rem', color: '#38bdf8', fontFamily: 'monospace', marginTop: '0.15rem' }}>
+                              {payout.secondaryAddress}
+                            </div>
+                          )}
+                          <div style={{ marginTop: '0.4rem', display: 'flex', gap: '0.35rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                            {payout.copyText && (
+                              <button
+                                type="button"
+                                className="btn btn-secondary btn-sm"
+                                style={{ padding: '0.15rem 0.5rem', fontSize: '0.68rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
+                                onClick={() => handleCopyText(payout.copyText, `tbl_${req.id}`, true)}
+                                title="Copy Payment Detail"
+                              >
+                                {tableCopiedId === `tbl_${req.id}` ? (
+                                  <><Check size={11} color="#34d399" /> Copied</>
+                                ) : (
+                                  <><Copy size={11} /> Copy Details</>
+                                )}
+                              </button>
+                            )}
+                            {payout.upiDeepLink && (
+                              <a
+                                href={payout.upiDeepLink}
+                                className="btn btn-secondary btn-sm"
+                                style={{ padding: '0.15rem 0.5rem', fontSize: '0.68rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: '#38bdf8' }}
+                                title="Open UPI App prefilled"
+                              >
+                                <ExternalLink size={11} /> Pay UPI
+                              </a>
+                            )}
+                          </div>
+                        </td>
+
+                        <td style={{ padding: '0.85rem 0.75rem' }}>
+                          {(req.status || 'PENDING').toUpperCase() === 'PENDING' && (
+                            <span className="badge badge-gold" style={{ fontSize: '0.65rem' }}>
+                              Pending Disbursal
+                            </span>
+                          )}
+                          {(req.status || '').toUpperCase() === 'APPROVED' && (
+                            <div>
+                              <span className="badge badge-emerald" style={{ fontSize: '0.65rem' }}>
+                                Disbursed
+                              </span>
+                              {req.disbursedUtr && (
+                                <div style={{ fontSize: '0.68rem', color: '#34d399', fontFamily: 'monospace', marginTop: '0.2rem' }}>
+                                  {req.disbursedUtr}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          {(req.status || '').toUpperCase() === 'REJECTED' && (
+                            <div>
+                              <span className="badge" style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.4)', fontSize: '0.65rem' }}>
+                                Rejected & Refunded
+                              </span>
+                              {req.rejectionReason && (
+                                <div style={{ fontSize: '0.68rem', color: '#fca5a5', marginTop: '0.2rem' }}>
+                                  {req.rejectionReason}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </td>
+
+                        <td style={{ padding: '0.85rem 0.75rem', textAlign: 'center' }}>
+                          {(req.status || 'PENDING').toUpperCase() === 'PENDING' ? (
+                            <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center' }}>
+                              <button
+                                type="button"
+                                className="btn btn-primary btn-sm"
+                                style={{ fontSize: '0.74rem', padding: '0.3rem 0.75rem', fontWeight: 700 }}
+                                onClick={() => handleOpenApproveWithdrawal(req)}
+                                title="Review payment preference and disburse"
+                              >
+                                <Send size={12} /> Pay & Disburse
+                              </button>
+                              <button
+                                type="button"
+                                className="btn btn-danger btn-sm"
+                                style={{ fontSize: '0.72rem', padding: '0.25rem 0.55rem' }}
+                                onClick={() => setRejectModal({ isOpen: true, type: 'withdrawal', id: req.id, reason: 'Invalid UPI / Bank details' })}
+                              >
+                                <XCircle size={12} /> Reject
+                              </button>
+                            </div>
+                          ) : (
+                            <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Completed</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             )}
@@ -2428,6 +2637,433 @@ export default function AdminPanelView() {
           </div>
         </div>
       )}
+
+      {/* Withdrawal Approval & Payout Disbursal Modal with User Payment Preference */}
+      {approveWithdrawalModal.isOpen && approveWithdrawalModal.req && (() => {
+        const req = approveWithdrawalModal.req;
+        const payout = resolvePayoutDetails(req);
+        const matchedUser = (allUsers || []).find((u) => u.id === req.userId || (u.phone && req.userPhone && u.phone === req.userPhone));
+        const userPhone = req.userPhone || matchedUser?.phone || '';
+
+        return (
+          <div 
+            className="modal-overlay" 
+            onClick={() => setApproveWithdrawalModal({ isOpen: false, req: null, utr: '', copiedField: null })}
+          >
+            <div 
+              className="modal-content glass-card" 
+              onClick={(e) => e.stopPropagation()} 
+              style={{ maxWidth: 620, maxHeight: '92vh', overflowY: 'auto' }}
+            >
+              {/* Header */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', paddingBottom: '0.85rem', borderBottom: '1px solid var(--border-subtle)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <div style={{ width: 44, height: 44, borderRadius: '12px', background: 'rgba(16, 185, 129, 0.2)', border: '1px solid rgba(16, 185, 129, 0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#34d399' }}>
+                    <ArrowDownCircle size={26} />
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0, color: '#f8fafc' }}>
+                      Review Payout & Disburse Funds
+                    </h3>
+                    <p style={{ fontSize: '0.78rem', color: '#94a3b8', margin: '0.2rem 0 0' }}>
+                      Request <span style={{ fontFamily: 'monospace', color: '#22d3ee', fontWeight: 700 }}>{req.id}</span> • Submitted: {formatDate(req.submittedAt) || 'Today'}
+                    </p>
+                  </div>
+                </div>
+                <button 
+                  type="button" 
+                  className="modal-close" 
+                  onClick={() => setApproveWithdrawalModal({ isOpen: false, req: null, utr: '', copiedField: null })}
+                >
+                  <XCircle size={20} />
+                </button>
+              </div>
+
+              {/* Amount Highlight & User Summary Banner */}
+              <div 
+                style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', 
+                  gap: '1rem', 
+                  marginBottom: '1.25rem',
+                  padding: '1rem',
+                  background: 'rgba(15, 23, 42, 0.65)',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid rgba(255, 255, 255, 0.08)'
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700 }}>
+                    Member / Investor
+                  </div>
+                  <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#f8fafc', marginTop: '0.2rem' }}>
+                    {req.userName}
+                  </div>
+                  <div style={{ fontSize: '0.78rem', color: '#94a3b8', fontFamily: 'monospace' }}>
+                    ID: {req.userId}
+                  </div>
+                  {userPhone && (
+                    <div style={{ fontSize: '0.78rem', color: '#34d399', display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.25rem' }}>
+                      <Phone size={13} />
+                      <span>{userPhone}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyText(userPhone, 'user_phone')}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#38bdf8', padding: '0 0.2rem' }}
+                        title="Copy Phone"
+                      >
+                        {approveWithdrawalModal.copiedField === 'user_phone' ? <Check size={12} color="#34d399" /> : <Copy size={12} />}
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'flex-end' }}>
+                  <div style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700 }}>
+                    Net Disbursal Amount
+                  </div>
+                  <div style={{ fontSize: '1.85rem', fontWeight: 900, color: '#34d399', lineHeight: 1.1, margin: '0.25rem 0' }}>
+                    {formatINR(req.amount)}
+                  </div>
+                  <span className={`badge ${req.type === 'PRINCIPAL_WITHDRAWAL' ? 'badge-cyan' : 'badge-emerald'}`} style={{ fontSize: '0.65rem' }}>
+                    {req.type === 'PRINCIPAL_WITHDRAWAL' ? 'Principal Refund' : 'Sunday Task Rewards'}
+                  </span>
+                </div>
+              </div>
+
+              {/* CORE SECTION: USER PAYMENT PREFERENCE SPOTLIGHT */}
+              <div 
+                style={{ 
+                  padding: '1.25rem', 
+                  borderRadius: 'var(--radius-lg)', 
+                  background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.12) 0%, rgba(59, 130, 246, 0.08) 100%)',
+                  border: '1.5px solid rgba(6, 182, 212, 0.45)',
+                  marginBottom: '1.5rem',
+                  boxShadow: '0 8px 32px rgba(6, 182, 212, 0.12)'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', borderBottom: '1px solid rgba(6, 182, 212, 0.2)', paddingBottom: '0.65rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <div style={{ width: 28, height: 28, borderRadius: '8px', background: 'rgba(6, 182, 212, 0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#22d3ee' }}>
+                      <Zap size={16} />
+                    </div>
+                    <span style={{ fontWeight: 800, fontSize: '0.98rem', color: '#f8fafc' }}>
+                      User Selected Payment Preference
+                    </span>
+                  </div>
+                  <span className="badge badge-cyan" style={{ fontSize: '0.72rem', fontWeight: 700 }}>
+                    {payout.badge}
+                  </span>
+                </div>
+
+                {/* Case 1: UPI ID (VPA) */}
+                {payout.type === 'upi_id' && (
+                  <div>
+                    <div style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700, marginBottom: '0.4rem' }}>
+                      UPI Virtual Payment Address (VPA)
+                    </div>
+                    <div 
+                      style={{ 
+                        padding: '0.85rem 1.1rem', 
+                        background: 'rgba(15, 23, 42, 0.85)', 
+                        borderRadius: 'var(--radius-md)', 
+                        border: '1px solid rgba(34, 211, 238, 0.35)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        flexWrap: 'wrap',
+                        gap: '0.75rem'
+                      }}
+                    >
+                      <div style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: '1.25rem', color: '#38bdf8', letterSpacing: '0.03em', wordBreak: 'break-all' }}>
+                        {payout.upiId}
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                        <button
+                          type="button"
+                          className="btn btn-primary btn-sm"
+                          style={{ padding: '0.4rem 0.85rem', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700 }}
+                          onClick={() => handleCopyText(payout.upiId, 'modal_upiId')}
+                        >
+                          {approveWithdrawalModal.copiedField === 'modal_upiId' ? (
+                            <><Check size={14} color="#34d399" /> Copied UPI ID!</>
+                          ) : (
+                            <><Copy size={14} /> Copy UPI ID</>
+                          )}
+                        </button>
+
+                        {payout.upiDeepLink && (
+                          <a
+                            href={payout.upiDeepLink}
+                            className="btn btn-secondary btn-sm"
+                            style={{ padding: '0.4rem 0.85rem', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: '#22d3ee', fontWeight: 700, borderColor: 'rgba(34, 211, 238, 0.4)' }}
+                            title="Directly trigger payment in your UPI app"
+                          >
+                            <ExternalLink size={14} /> Open UPI App
+                          </a>
+                        )}
+                      </div>
+                    </div>
+
+                    <div style={{ marginTop: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.82rem', color: '#cbd5e1' }}>
+                      <span style={{ color: '#94a3b8' }}>Beneficiary / Registered Name:</span>
+                      <strong style={{ color: '#ffffff' }}>{payout.holderName || req.userName}</strong>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyText(payout.holderName || req.userName, 'modal_holder')}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#38bdf8', padding: '0 0.2rem' }}
+                        title="Copy Name"
+                      >
+                        {approveWithdrawalModal.copiedField === 'modal_holder' ? <Check size={13} color="#34d399" /> : <Copy size={13} />}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Case 2: UPI Mobile Phone */}
+                {payout.type === 'upi_phone' && (
+                  <div>
+                    <div style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700, marginBottom: '0.4rem' }}>
+                      Registered Mobile UPI Number ({payout.upiApp || 'UPI'})
+                    </div>
+                    <div 
+                      style={{ 
+                        padding: '0.85rem 1.1rem', 
+                        background: 'rgba(15, 23, 42, 0.85)', 
+                        borderRadius: 'var(--radius-md)', 
+                        border: '1px solid rgba(34, 211, 238, 0.35)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        flexWrap: 'wrap',
+                        gap: '0.75rem'
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: '1.25rem', color: '#fbbf24', letterSpacing: '0.04em' }}>
+                          +91 {payout.upiPhone}
+                        </div>
+                        <div style={{ fontSize: '0.74rem', color: '#94a3b8', marginTop: '0.15rem' }}>
+                          Preferred App: <strong style={{ color: '#38bdf8' }}>{payout.upiApp || 'Google Pay / PhonePe'}</strong>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                        <button
+                          type="button"
+                          className="btn btn-primary btn-sm"
+                          style={{ padding: '0.4rem 0.85rem', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700 }}
+                          onClick={() => handleCopyText(payout.upiPhone, 'modal_upiPhone')}
+                        >
+                          {approveWithdrawalModal.copiedField === 'modal_upiPhone' ? (
+                            <><Check size={14} color="#34d399" /> Copied Mobile!</>
+                          ) : (
+                            <><Copy size={14} /> Copy Mobile No.</>
+                          )}
+                        </button>
+
+                        {payout.upiDeepLink && (
+                          <a
+                            href={payout.upiDeepLink}
+                            className="btn btn-secondary btn-sm"
+                            style={{ padding: '0.4rem 0.85rem', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: '#22d3ee', fontWeight: 700, borderColor: 'rgba(34, 211, 238, 0.4)' }}
+                          >
+                            <ExternalLink size={14} /> Open UPI App
+                          </a>
+                        )}
+                      </div>
+                    </div>
+
+                    <div style={{ marginTop: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.82rem', color: '#cbd5e1' }}>
+                      <span style={{ color: '#94a3b8' }}>Account Holder / Name:</span>
+                      <strong style={{ color: '#ffffff' }}>{payout.holderName || req.userName}</strong>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyText(payout.holderName || req.userName, 'modal_holder')}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#38bdf8', padding: '0 0.2rem' }}
+                        title="Copy Name"
+                      >
+                        {approveWithdrawalModal.copiedField === 'modal_holder' ? <Check size={13} color="#34d399" /> : <Copy size={13} />}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Case 3: Bank Transfer (IMPS / NEFT) */}
+                {payout.type === 'bank' && (
+                  <div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
+                      {/* Bank & Holder */}
+                      <div style={{ padding: '0.75rem 0.9rem', background: 'rgba(15, 23, 42, 0.75)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
+                        <div style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700 }}>
+                          Bank Name
+                        </div>
+                        <div style={{ fontWeight: 800, color: '#f8fafc', fontSize: '1rem', marginTop: '0.2rem' }}>
+                          {payout.bankName || 'Direct Bank IMPS'}
+                        </div>
+                        <div style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700, marginTop: '0.65rem' }}>
+                          Account Holder Name
+                        </div>
+                        <div style={{ fontWeight: 700, color: '#34d399', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.2rem' }}>
+                          {payout.holderName || req.userName}
+                          <button
+                            type="button"
+                            onClick={() => handleCopyText(payout.holderName || req.userName, 'modal_bank_holder')}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#38bdf8' }}
+                            title="Copy Name"
+                          >
+                            {approveWithdrawalModal.copiedField === 'modal_bank_holder' ? <Check size={13} color="#34d399" /> : <Copy size={13} />}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Account Number & IFSC */}
+                      <div style={{ padding: '0.75rem 0.9rem', background: 'rgba(15, 23, 42, 0.75)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700 }}>
+                            Bank Account Number
+                          </span>
+                          <button
+                            type="button"
+                            className="btn btn-secondary btn-sm"
+                            style={{ padding: '0.15rem 0.5rem', fontSize: '0.7rem' }}
+                            onClick={() => handleCopyText(payout.accountNumber, 'modal_accNo')}
+                          >
+                            {approveWithdrawalModal.copiedField === 'modal_accNo' ? <><Check size={12} color="#34d399" /> Copied</> : <><Copy size={12} /> Copy A/C</>}
+                          </button>
+                        </div>
+                        <div style={{ fontFamily: 'monospace', fontWeight: 900, fontSize: '1.25rem', color: '#38bdf8', letterSpacing: '0.04em', margin: '0.25rem 0 0.65rem' }}>
+                          {payout.accountNumber}
+                        </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700 }}>
+                            IFSC Code
+                          </span>
+                          <button
+                            type="button"
+                            className="btn btn-secondary btn-sm"
+                            style={{ padding: '0.15rem 0.5rem', fontSize: '0.7rem' }}
+                            onClick={() => handleCopyText(payout.ifsc, 'modal_ifsc')}
+                          >
+                            {approveWithdrawalModal.copiedField === 'modal_ifsc' ? <><Check size={12} color="#34d399" /> Copied</> : <><Copy size={12} /> Copy IFSC</>}
+                          </button>
+                        </div>
+                        <div style={{ fontFamily: 'monospace', fontWeight: 900, fontSize: '1.15rem', color: '#fbbf24', letterSpacing: '0.05em', marginTop: '0.2rem' }}>
+                          {payout.ifsc}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ marginTop: '0.75rem', textAlign: 'right' }}>
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        style={{ fontSize: '0.74rem', padding: '0.25rem 0.65rem' }}
+                        onClick={() => handleCopyText(`A/C: ${payout.accountNumber}, IFSC: ${payout.ifsc}, Bank: ${payout.bankName}, Name: ${payout.holderName || req.userName}`, 'modal_bank_all')}
+                      >
+                        {approveWithdrawalModal.copiedField === 'modal_bank_all' ? <><Check size={12} color="#34d399" /> Copied All Bank Info</> : <><Copy size={12} /> Copy Full Bank Details String</>}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Case 4: Custom / Other */}
+                {payout.type === 'custom' && (
+                  <div>
+                    <div style={{ fontFamily: 'monospace', fontSize: '1rem', color: '#f8fafc', padding: '0.75rem', background: 'rgba(15, 23, 42, 0.8)', borderRadius: 'var(--radius-md)' }}>
+                      {payout.primaryAddress}
+                    </div>
+                    {payout.copyText && (
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        style={{ marginTop: '0.5rem' }}
+                        onClick={() => handleCopyText(payout.copyText, 'modal_custom')}
+                      >
+                        {approveWithdrawalModal.copiedField === 'modal_custom' ? <Check size={12} color="#34d399" /> : <Copy size={12} />} Copy
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Step 2: Disbursal Transaction Reference / UTR Input */}
+              <form onSubmit={handleConfirmApproveWithdrawal}>
+                <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+                  <div className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontWeight: 700, color: '#f8fafc' }}>Disbursal Reference / UTR Number</span>
+                    <button
+                      type="button"
+                      style={{ background: 'none', border: 'none', color: '#38bdf8', fontSize: '0.74rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
+                      onClick={() => setApproveWithdrawalModal((prev) => ({ ...prev, utr: `IMPS${Date.now().toString().slice(-9)}` }))}
+                    >
+                      <RotateCcw size={12} /> Generate Auto UTR
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    className="input-field"
+                    style={{ fontFamily: 'monospace', fontWeight: 800, color: '#34d399', fontSize: '1rem' }}
+                    value={approveWithdrawalModal.utr}
+                    onChange={(e) => setApproveWithdrawalModal({ ...approveWithdrawalModal, utr: e.target.value })}
+                    placeholder="Enter 12-digit Bank/UPI UTR reference or keep generated ID"
+                    required
+                  />
+                  <div style={{ fontSize: '0.74rem', color: '#94a3b8', marginTop: '0.35rem' }}>
+                    💡 Once paid via your bank/UPI app, paste the official reference number here so the user can verify the disbursal.
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem', flexWrap: 'wrap' }}>
+                  <button 
+                    type="submit" 
+                    className="btn btn-primary" 
+                    style={{ 
+                      flex: 2, 
+                      minWidth: '220px',
+                      background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center', 
+                      gap: '0.5rem',
+                      padding: '0.75rem 1rem',
+                      fontSize: '0.92rem',
+                      fontWeight: 800
+                    }}
+                  >
+                    <CheckCircle2 size={18} /> Confirm Disbursal & Approve ({formatINR(req.amount)})
+                  </button>
+
+                  <button 
+                    type="button" 
+                    className="btn btn-danger" 
+                    style={{ flex: 1, minWidth: '130px', fontSize: '0.85rem' }}
+                    onClick={() => {
+                      const reqId = req.id;
+                      setApproveWithdrawalModal({ isOpen: false, req: null, utr: '', copiedField: null });
+                      setRejectModal({ isOpen: true, type: 'withdrawal', id: reqId, reason: 'Invalid UPI / Bank details' });
+                    }}
+                  >
+                    <XCircle size={15} /> Reject
+                  </button>
+
+                  <button 
+                    type="button" 
+                    className="btn btn-secondary" 
+                    style={{ fontSize: '0.85rem' }}
+                    onClick={() => setApproveWithdrawalModal({ isOpen: false, req: null, utr: '', copiedField: null })}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Reject Modal */}
       {rejectModal.isOpen && (

@@ -1405,22 +1405,24 @@ export function AppProvider({ children }) {
   };
 
   const requestPasswordReset = (phone) => {
-    const rawDigits = phone.replace(/\D/g, '');
-    const matchedUser = state.allUsers.find((u) => {
-      const uDigits = (u.phone || '').replace(/\D/g, '');
-      return uDigits === rawDigits || (rawDigits.length >= 10 && uDigits.endsWith(rawDigits.slice(-10)));
-    });
-
-    if (!matchedUser) {
-      showToast('No registered user found with this mobile number. Please check or register.', 'error');
+    const rawDigits = (phone || '').replace(/\D/g, '');
+    if (!rawDigits || rawDigits.length < 5) {
+      showToast('Please enter a valid mobile number.', 'error');
       return false;
     }
 
+    const matchedUser = (state.allUsers || []).find((u) => {
+      const uDigits = (u.phone || '').replace(/\D/g, '');
+      return uDigits === rawDigits || 
+             (rawDigits.length >= 10 && uDigits.endsWith(rawDigits.slice(-10))) ||
+             (uDigits.length >= 10 && rawDigits.endsWith(uDigits.slice(-10)));
+    });
+
     const newReq = {
       id: `REQ-${Math.floor(100000 + Math.random() * 900000)}`,
-      userId: matchedUser.id,
-      userName: matchedUser.name,
-      userPhone: matchedUser.phone,
+      userId: matchedUser ? matchedUser.id : `USER-${rawDigits}`,
+      userName: matchedUser ? matchedUser.name : `User (${phone})`,
+      userPhone: phone,
       requestedAt: new Date().toISOString(),
       status: 'PENDING',
     };
@@ -1431,7 +1433,11 @@ export function AppProvider({ children }) {
     }));
 
     showToast('পাসওয়ার্ড রিসেট রিকোয়েস্ট জমা নেওয়া হয়েছে। অ্যাডমিন টিম আপনার নম্বরে এসএমএস করে নতুন পাসওয়ার্ড পাঠাবে।', 'success');
-    return true;
+    return {
+      success: true,
+      found: !!matchedUser,
+      user: matchedUser
+    };
   };
 
   const resolvePasswordReset = (requestId, customTempPassword) => {

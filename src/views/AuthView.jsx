@@ -74,15 +74,20 @@ export default function AuthView({ onOpenAdminLogin }) {
     }
   };
 
+  const [forgotError, setForgotError] = useState('');
+
   const handleForgotSubmit = (e) => {
     e.preventDefault();
+    setForgotError('');
     if (!forgotPhone.trim()) {
-      showToast('Please enter your registered mobile number.', 'error');
+      setForgotError('Please enter your mobile number.');
       return;
     }
-    const success = requestPasswordReset(forgotPhone.trim());
-    if (success) {
+    const res = requestPasswordReset(forgotPhone.trim());
+    if (res && res.success) {
       setForgotSubmitted(true);
+    } else {
+      setForgotError('Please enter a valid mobile number.');
     }
   };
 
@@ -530,6 +535,12 @@ export default function AuthView({ onOpenAdminLogin }) {
                 <p style={{ fontSize: '0.82rem', color: '#94a3b8', lineHeight: 1.5, marginBottom: '1.25rem' }}>
                   কোনো OTP লাগবে না। আপনার রেজিস্টার্ড মোবাইল নম্বর দিলে অ্যাডমিন টিম আপনার নম্বরে সাধারণ <strong style={{ color: '#38bdf8' }}>SMS</strong> করে নতুন পাসওয়ার্ড পাঠিয়ে দেবে।
                 </p>
+
+                {forgotError && (
+                  <div style={{ padding: '0.65rem 0.85rem', background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.4)', borderRadius: '8px', color: '#fca5a5', fontSize: '0.82rem', marginBottom: '1rem' }}>
+                    {forgotError}
+                  </div>
+                )}
 
                 <div className="form-group" style={{ marginBottom: '1.25rem' }}>
                   <label className="form-label">

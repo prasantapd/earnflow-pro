@@ -13,22 +13,32 @@ const SCRATCH_PRIZE_POOL = [
 ];
 
 export default function ScratchCardModal({ isOpen, onClose, task }) {
-  const { completeTask } = useApp();
+  const { completeTask, userMembershipTier } = useApp();
+  const taskMultiplier = userMembershipTier?.taskMultiplier || 1.0;
   const canvasRef = useRef(null);
   const [isScratched, setIsScratched] = useState(false);
-  const [prizeInfo, setPrizeInfo] = useState({ amount: 25, tier: 'High Chance' });
+  const [prizeInfo, setPrizeInfo] = useState(() => ({ 
+    amount: Math.round(25 * (userMembershipTier?.taskMultiplier || 1.0)), 
+    tier: 'High Chance' 
+  }));
   const isDrawingRef = useRef(false);
 
   const pickWeightedPrize = () => {
     const totalWeight = SCRATCH_PRIZE_POOL.reduce((sum, p) => sum + p.weight, 0);
     let rand = Math.random() * totalWeight;
+    let picked = SCRATCH_PRIZE_POOL[0];
     for (let i = 0; i < SCRATCH_PRIZE_POOL.length; i++) {
       if (rand < SCRATCH_PRIZE_POOL[i].weight) {
-        return SCRATCH_PRIZE_POOL[i];
+        picked = SCRATCH_PRIZE_POOL[i];
+        break;
       }
       rand -= SCRATCH_PRIZE_POOL[i].weight;
     }
-    return SCRATCH_PRIZE_POOL[0];
+    const scaledAmount = Math.round(picked.amount * taskMultiplier);
+    return {
+      amount: scaledAmount,
+      tier: picked.tier,
+    };
   };
 
   const initCanvas = () => {

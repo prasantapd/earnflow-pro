@@ -16,7 +16,18 @@ const SEGMENTS = [
 ];
 
 export default function SpinWheelModal({ isOpen, onClose, task }) {
-  const { completeTask } = useApp();
+  const { completeTask, userMembershipTier } = useApp();
+  const taskMultiplier = userMembershipTier?.taskMultiplier || 1.0;
+
+  const segments = SEGMENTS.map((seg) => {
+    const multipliedVal = Math.round(seg.value * taskMultiplier);
+    return {
+      ...seg,
+      value: multipliedVal,
+      text: `₹${multipliedVal}`,
+    };
+  });
+
   const canvasRef = useRef(null);
   const [isSpinning, setIsSpinning] = useState(false);
   const [wonPrize, setWonPrize] = useState(null);
@@ -34,11 +45,11 @@ export default function SpinWheelModal({ isOpen, onClose, task }) {
 
     ctx.clearRect(0, 0, width, height);
 
-    const numSegments = SEGMENTS.length;
+    const numSegments = segments.length;
     const arc = (2 * Math.PI) / numSegments;
 
     // Draw slices
-    SEGMENTS.forEach((seg, i) => {
+    segments.forEach((seg, i) => {
       const angle = currentRotation + i * arc;
       ctx.beginPath();
       ctx.fillStyle = seg.color;
@@ -96,21 +107,21 @@ export default function SpinWheelModal({ isOpen, onClose, task }) {
 
     // Weighted Probability Selection:
     // Low amounts have high probability, high amounts have low probability
-    const totalWeight = SEGMENTS.reduce((sum, s) => sum + s.weight, 0);
+    const totalWeight = segments.reduce((sum, s) => sum + s.weight, 0);
     let rand = Math.random() * totalWeight;
     let winningIndex = 0;
 
-    for (let i = 0; i < SEGMENTS.length; i++) {
-      if (rand < SEGMENTS[i].weight) {
+    for (let i = 0; i < segments.length; i++) {
+      if (rand < segments[i].weight) {
         winningIndex = i;
         break;
       }
-      rand -= SEGMENTS[i].weight;
+      rand -= segments[i].weight;
     }
 
-    const winningSegment = SEGMENTS[winningIndex];
+    const winningSegment = segments[winningIndex];
 
-    const numSegments = SEGMENTS.length;
+    const numSegments = segments.length;
     const arc = (2 * Math.PI) / numSegments;
 
     // Target angle where pointer (at top: 3*PI/2) points to winning segment

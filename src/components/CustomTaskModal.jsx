@@ -24,7 +24,7 @@ export default function CustomTaskModal({ task, onClose }) {
   const [isVerifying, setIsVerifying] = useState(false);
 
   const taskMultiplier = userMembershipTier?.taskMultiplier || 1.0;
-  const effectiveReward = Math.round((Number(task?.reward) || 25) * taskMultiplier);
+  const effectiveReward = Number(task?.reward) || Math.round(25 * taskMultiplier);
 
   // Timer countdown effect
   useEffect(() => {

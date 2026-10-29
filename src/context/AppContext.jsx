@@ -960,6 +960,9 @@ export function AppProvider({ children }) {
 
     const numReward = Number(rewardAmount);
 
+    const mult = userMembershipTier?.taskMultiplier || 1.0;
+    const multLabel = mult > 1 ? ` (${mult}× Multiplier)` : '';
+
     const newTxn = {
       id: `TXN-${Math.floor(100000 + Math.random() * 900000)}`,
       type: 'TASK_REWARD',
@@ -967,7 +970,7 @@ export function AppProvider({ children }) {
       amount: numReward,
       timestamp: new Date().toISOString(),
       status: 'COMPLETED',
-      meta: meta || `Completed task ID: ${taskId}`,
+      meta: meta ? `${meta}${mult > 1 ? ` • ${mult}× Multiplier (${userMembershipTier?.tierBadge})` : ''}` : `Completed task ID: ${taskId}${multLabel}`,
     };
 
     setState((prev) => {
@@ -993,7 +996,7 @@ export function AppProvider({ children }) {
       };
     });
 
-    showToast(`+${formatINR(numReward)} credited to your Task Wallet!`);
+    showToast(`+${formatINR(numReward)} credited to your Task Wallet!${multLabel}`);
     triggerCelebration();
     return true;
   };

@@ -170,10 +170,10 @@ export function getMembershipTier(activePlan) {
   }
 
   const amount = Number(activePlan.amount) || 2000;
-  // Multiplier directly scales from basic deposit (₹2,000 = 1.0x, ₹5,000 = 2.5x, etc.)
+  // Multiplier directly scales from basic deposit (₹2,000 = 1.0x, ₹5,000 = 2.5x, ₹10,000 = 5.0x, etc.)
   const rawMultiplier = +(amount / 2000).toFixed(2);
   const loginMultiplier = Math.max(1.0, rawMultiplier);
-  const taskMultiplier = Math.max(1.0, +(Math.min(4.0, rawMultiplier)).toFixed(2));
+  const taskMultiplier = Math.max(1.0, rawMultiplier);
 
   let tierKey = 'basic_2000';
   let tierBadge = '🥉 Basic Member (₹2k)';

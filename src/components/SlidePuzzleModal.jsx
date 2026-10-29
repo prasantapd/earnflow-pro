@@ -69,7 +69,7 @@ export default function SlidePuzzleModal({
   const entryFee = isDaily ? 0 : (gridSize === 3 ? 5 : 10);
   const taskMultiplier = userMembershipTier?.taskMultiplier || 1.0;
   const rewardAmount = isDaily 
-    ? Math.round((Number(task?.reward) || 40) * taskMultiplier) 
+    ? (Number(task?.reward) || Math.round(40 * taskMultiplier)) 
     : (gridSize === 3 ? 8 : 16);
   const initialDuration = isDaily ? (task?.duration || 60) : (gridSize === 3 ? 60 : 120);
 

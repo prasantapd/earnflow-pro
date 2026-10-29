@@ -12,138 +12,211 @@ import {
   User, 
   Sparkles,
   HelpCircle,
-  AlertCircle
+  AlertCircle,
+  Swords
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useApp } from '../context/AppContext';
 import { formatINR } from '../utils/finance';
 
 /* =========================================================================
-   37-NODE AUTHENTIC 16 GUTI (SHOLO GUTI) BOARD TOPOLOGY
-   Nodes 0..24: Central 5x5 Square
-   Nodes 25..30: Top Triangle Castle
-   Nodes 31..36: Bottom Triangle Castle
+   AUTHENTIC 16 GUTI (SHOLO GUTI / ১৬ গুটি) BOARD TOPOLOGY
+   37 Interconnected Nodes matching real traditional board layout:
+   - Top Triangle Castle: Nodes 0..5 (Connected to apex at Node 8)
+   - Central 5x5 Grid: Nodes 6..30 (Rows 0 to 4, Cols 0 to 4)
+   - Bottom Triangle Castle: Nodes 31..36 (Connected to apex at Node 28)
    ========================================================================= */
 
 export const NODES = [
-  // Row 0
-  { id: 0, x: 70, y: 200, row: 0, col: 0 },
-  { id: 1, x: 160, y: 200, row: 0, col: 1 },
-  { id: 2, x: 250, y: 200, row: 0, col: 2 },
-  { id: 3, x: 340, y: 200, row: 0, col: 3 },
-  { id: 4, x: 430, y: 200, row: 0, col: 4 },
-  // Row 1
-  { id: 5, x: 70, y: 275, row: 1, col: 0 },
-  { id: 6, x: 160, y: 275, row: 1, col: 1 },
-  { id: 7, x: 250, y: 275, row: 1, col: 2 },
-  { id: 8, x: 340, y: 275, row: 1, col: 3 },
-  { id: 9, x: 430, y: 275, row: 1, col: 4 },
-  // Row 2 (Middle - Neutral at start)
-  { id: 10, x: 70, y: 350, row: 2, col: 0 },
-  { id: 11, x: 160, y: 350, row: 2, col: 1 },
-  { id: 12, x: 250, y: 350, row: 2, col: 2 },
-  { id: 13, x: 340, y: 350, row: 2, col: 3 },
-  { id: 14, x: 430, y: 350, row: 2, col: 4 },
-  // Row 3
-  { id: 15, x: 70, y: 425, row: 3, col: 0 },
-  { id: 16, x: 160, y: 425, row: 3, col: 1 },
-  { id: 17, x: 250, y: 425, row: 3, col: 2 },
-  { id: 18, x: 340, y: 425, row: 3, col: 3 },
-  { id: 19, x: 430, y: 425, row: 3, col: 4 },
-  // Row 4
-  { id: 20, x: 70, y: 500, row: 4, col: 0 },
-  { id: 21, x: 160, y: 500, row: 4, col: 1 },
-  { id: 22, x: 250, y: 500, row: 4, col: 2 },
-  { id: 23, x: 340, y: 500, row: 4, col: 3 },
-  { id: 24, x: 430, y: 500, row: 4, col: 4 },
+  // Top Triangle Outer Row (row -2, y = 50)
+  { id: 0, x: 104, y: 50, label: 'T0' },
+  { id: 1, x: 200, y: 50, label: 'T1' },
+  { id: 2, x: 296, y: 50, label: 'T2' },
 
-  // Top Castle
-  { id: 25, x: 250, y: 50 },  // Apex
-  { id: 26, x: 205, y: 100 },
-  { id: 27, x: 295, y: 100 },
-  { id: 28, x: 160, y: 150 },
-  { id: 29, x: 250, y: 150 },
-  { id: 30, x: 340, y: 150 },
+  // Top Triangle Middle Row (row -1, y = 115)
+  { id: 3, x: 152, y: 115, label: 'T3' },
+  { id: 4, x: 200, y: 115, label: 'T4' },
+  { id: 5, x: 248, y: 115, label: 'T5' },
 
-  // Bottom Castle
-  { id: 31, x: 160, y: 550 },
-  { id: 32, x: 250, y: 550 },
-  { id: 33, x: 340, y: 550 },
-  { id: 34, x: 205, y: 600 },
-  { id: 35, x: 295, y: 600 },
-  { id: 36, x: 250, y: 650 }, // Apex
+  // 5x5 Square Grid (r = 0..4, c = 0..4 -> IDs 6 to 30)
+  // Row 0: y = 180 (Node 8 is apex where top triangle rays converge)
+  { id: 6, x: 60, y: 180, r: 0, c: 0 },
+  { id: 7, x: 130, y: 180, r: 0, c: 1 },
+  { id: 8, x: 200, y: 180, r: 0, c: 2, isApex: true },
+  { id: 9, x: 270, y: 180, r: 0, c: 3 },
+  { id: 10, x: 340, y: 180, r: 0, c: 4 },
+
+  // Row 1: y = 250
+  { id: 11, x: 60, y: 250, r: 1, c: 0 },
+  { id: 12, x: 130, y: 250, r: 1, c: 1 },
+  { id: 13, x: 200, y: 250, r: 1, c: 2 },
+  { id: 14, x: 270, y: 250, r: 1, c: 3 },
+  { id: 15, x: 340, y: 250, r: 1, c: 4 },
+
+  // Row 2 (Middle Neutral Line): y = 320 (Starts completely empty)
+  { id: 16, x: 60, y: 320, r: 2, c: 0 },
+  { id: 17, x: 130, y: 320, r: 2, c: 1 },
+  { id: 18, x: 200, y: 320, r: 2, c: 2 },
+  { id: 19, x: 270, y: 320, r: 2, c: 3 },
+  { id: 20, x: 340, y: 320, r: 2, c: 4 },
+
+  // Row 3: y = 390
+  { id: 21, x: 60, y: 390, r: 3, c: 0 },
+  { id: 22, x: 130, y: 390, r: 3, c: 1 },
+  { id: 23, x: 200, y: 390, r: 3, c: 2 },
+  { id: 24, x: 270, y: 390, r: 3, c: 3 },
+  { id: 25, x: 340, y: 390, r: 3, c: 4 },
+
+  // Row 4: y = 460 (Node 28 is apex where bottom triangle rays converge)
+  { id: 26, x: 60, y: 460, r: 4, c: 0 },
+  { id: 27, x: 130, y: 460, r: 4, c: 1 },
+  { id: 28, x: 200, y: 460, r: 4, c: 2, isApex: true },
+  { id: 29, x: 270, y: 460, r: 4, c: 3 },
+  { id: 30, x: 340, y: 460, r: 4, c: 4 },
+
+  // Bottom Triangle Middle Row (row 5, y = 525)
+  { id: 31, x: 152, y: 525, label: 'B3' },
+  { id: 32, x: 200, y: 525, label: 'B4' },
+  { id: 33, x: 248, y: 525, label: 'B5' },
+
+  // Bottom Triangle Outer Row (row 6, y = 590)
+  { id: 34, x: 104, y: 590, label: 'B0' },
+  { id: 35, x: 200, y: 590, label: 'B1' },
+  { id: 36, x: 296, y: 590, label: 'B2' },
 ];
 
-// Graph Adjacency with Jump over relationships: [from, to, jumpedOverNode]
-// For standard adjacent moves, jumpedOverNode is null.
-// For straight jump captures: { from, to, jumped }
-const BOARD_EDGES = [
-  // Horizontal 5x5
-  [0,1],[1,2],[2,3],[3,4],
-  [5,6],[6,7],[7,8],[8,9],
-  [10,11],[11,12],[12,13],[13,14],
-  [15,16],[16,17],[17,18],[18,19],
-  [20,21],[21,22],[22,23],[23,24],
+// All 76 Undirected Edges on the Board
+export const BOARD_EDGES = [
+  // Top Triangle Horizontals
+  [0, 1], [1, 2],
+  [3, 4], [4, 5],
 
-  // Vertical 5x5
-  [0,5],[5,10],[10,15],[15,20],
-  [1,6],[6,11],[11,16],[16,21],
-  [2,7],[7,12],[12,17],[17,22],
-  [3,8],[8,13],[13,18],[18,23],
-  [4,9],[9,14],[14,19],[19,24],
+  // Top Triangle Rays (connecting to Apex Node 8)
+  [0, 3], [3, 8],
+  [1, 4], [4, 8],
+  [2, 5], [5, 8],
 
-  // Major Diagonals
-  [0,6],[6,12],[12,18],[18,24],
-  [4,8],[8,12],[12,16],[16,20],
-  [2,6],[6,10],[10,16],[16,22],
-  [2,8],[8,14],[14,18],[18,22],
-  [0,12],[12,24],[4,12],[12,20],
+  // 5x5 Grid Horizontals
+  [6, 7], [7, 8], [8, 9], [9, 10],
+  [11, 12], [12, 13], [13, 14], [14, 15],
+  [16, 17], [17, 18], [18, 19], [19, 20],
+  [21, 22], [22, 23], [23, 24], [24, 25],
+  [26, 27], [27, 28], [28, 29], [29, 30],
 
-  // Top Castle Connections
-  [25,26],[25,27],[26,27],[26,28],[26,29],[27,29],[27,30],
-  [28,29],[29,30],[28,1],[29,2],[30,3],[25,29],[29,2],
+  // 5x5 Grid Verticals
+  [6, 11], [11, 16], [16, 21], [21, 26],
+  [7, 12], [12, 17], [17, 22], [22, 27],
+  [8, 13], [13, 18], [18, 23], [23, 28],
+  [9, 14], [14, 19], [19, 24], [24, 29],
+  [10, 15], [15, 20], [20, 25], [25, 30],
 
-  // Bottom Castle Connections
-  [36,34],[36,35],[34,35],[34,31],[34,32],[35,32],[35,33],
-  [31,32],[32,33],[31,21],[32,22],[33,23],[36,32],[32,22]
+  // 5x5 Grid Diagonals
+  [6, 12], [12, 18], [18, 24], [24, 30],
+  [10, 14], [14, 18], [18, 22], [22, 26],
+  [8, 12], [12, 16],
+  [8, 14], [14, 20],
+  [16, 22], [22, 28],
+  [20, 24], [24, 28],
+
+  // Bottom Triangle Rays (connecting to Apex Node 28)
+  [28, 31], [31, 34],
+  [28, 32], [32, 35],
+  [28, 33], [33, 36],
+
+  // Bottom Triangle Horizontals
+  [31, 32], [32, 33],
+  [34, 35], [35, 36]
 ];
 
-// Straight jump table for captures: from, over, to
-const JUMP_TABLE = [
-  // Horizontal 5x5 jumps
-  { from: 0, over: 1, to: 2 }, { from: 1, over: 2, to: 3 }, { from: 2, over: 3, to: 4 },
-  { from: 4, over: 3, to: 2 }, { from: 3, over: 2, to: 1 }, { from: 2, over: 1, to: 0 },
-  { from: 5, over: 6, to: 7 }, { from: 6, over: 7, to: 8 }, { from: 7, over: 8, to: 9 },
-  { from: 9, over: 8, to: 7 }, { from: 8, over: 7, to: 6 }, { from: 7, over: 6, to: 5 },
-  { from: 10, over: 11, to: 12 }, { from: 11, over: 12, to: 13 }, { from: 12, over: 13, to: 14 },
-  { from: 14, over: 13, to: 12 }, { from: 13, over: 12, to: 11 }, { from: 12, over: 11, to: 10 },
-  { from: 15, over: 16, to: 17 }, { from: 16, over: 17, to: 18 }, { from: 17, over: 18, to: 19 },
-  { from: 19, over: 18, to: 17 }, { from: 18, over: 17, to: 16 }, { from: 17, over: 16, to: 15 },
-  { from: 20, over: 21, to: 22 }, { from: 21, over: 22, to: 23 }, { from: 22, over: 23, to: 24 },
-  { from: 24, over: 23, to: 22 }, { from: 23, over: 22, to: 21 }, { from: 22, over: 21, to: 20 },
+// Straight line triplets for jump captures: [from, over, to]
+export const JUMP_LINES = [
+  // Top Triangle
+  [0, 1, 2],
+  [3, 4, 5],
+  [0, 3, 8],
+  [1, 4, 8],
+  [4, 8, 13],
+  [2, 5, 8],
 
-  // Vertical 5x5 jumps
-  { from: 0, over: 5, to: 10 }, { from: 5, over: 10, to: 15 }, { from: 10, over: 15, to: 20 },
-  { from: 20, over: 15, to: 10 }, { from: 15, over: 10, to: 5 }, { from: 10, over: 5, to: 0 },
-  { from: 1, over: 6, to: 11 }, { from: 6, over: 11, to: 16 }, { from: 11, over: 16, to: 21 },
-  { from: 21, over: 16, to: 11 }, { from: 16, over: 11, to: 6 }, { from: 11, over: 6, to: 1 },
-  { from: 2, over: 7, to: 12 }, { from: 7, over: 12, to: 17 }, { from: 12, over: 17, to: 22 },
-  { from: 22, over: 17, to: 12 }, { from: 17, over: 12, to: 7 }, { from: 12, over: 7, to: 2 },
-  { from: 3, over: 8, to: 13 }, { from: 8, over: 13, to: 18 }, { from: 13, over: 18, to: 23 },
-  { from: 23, over: 18, to: 13 }, { from: 18, over: 13, to: 8 }, { from: 13, over: 8, to: 3 },
-  { from: 4, over: 9, to: 14 }, { from: 9, over: 14, to: 19 }, { from: 14, over: 19, to: 24 },
-  { from: 24, over: 19, to: 14 }, { from: 19, over: 14, to: 9 }, { from: 14, over: 9, to: 4 },
+  // 5x5 Grid Horizontals
+  [6, 7, 8], [7, 8, 9], [8, 9, 10],
+  [11, 12, 13], [12, 13, 14], [13, 14, 15],
+  [16, 17, 18], [17, 18, 19], [18, 19, 20],
+  [21, 22, 23], [22, 23, 24], [23, 24, 25],
+  [26, 27, 28], [27, 28, 29], [28, 29, 30],
 
-  // Diagonal jumps
-  { from: 0, over: 6, to: 12 }, { from: 6, over: 12, to: 18 }, { from: 12, over: 18, to: 24 },
-  { from: 24, over: 18, to: 12 }, { from: 18, over: 12, to: 6 }, { from: 12, over: 6, to: 0 },
-  { from: 4, over: 8, to: 12 }, { from: 8, over: 12, to: 16 }, { from: 12, over: 16, to: 20 },
-  { from: 20, over: 16, to: 12 }, { from: 16, over: 12, to: 8 }, { from: 12, over: 8, to: 4 },
+  // 5x5 Grid Verticals
+  [6, 11, 16], [11, 16, 21], [16, 21, 26],
+  [7, 12, 17], [12, 17, 22], [17, 22, 27],
+  [8, 13, 18], [13, 18, 23], [18, 23, 28],
+  [9, 14, 19], [14, 19, 24], [19, 24, 29],
+  [10, 15, 20], [15, 20, 25], [20, 25, 30],
 
-  // Castle jumps
-  { from: 25, over: 29, to: 2 }, { from: 2, over: 29, to: 25 },
-  { from: 36, over: 32, to: 22 }, { from: 22, over: 32, to: 36 }
+  // 5x5 Grid Diagonals
+  [6, 12, 18], [12, 18, 24], [18, 24, 30],
+  [10, 14, 18], [14, 18, 22], [18, 22, 26],
+  [8, 12, 16],
+  [8, 14, 20],
+  [16, 22, 28],
+  [20, 24, 28],
+
+  // Bottom Triangle
+  [23, 28, 32],
+  [28, 32, 35],
+  [28, 31, 34],
+  [28, 33, 36],
+  [31, 32, 33],
+  [34, 35, 36]
 ];
+
+// Generate bidirectional jump captures
+export const JUMP_TABLE = [];
+JUMP_LINES.forEach(([a, b, c]) => {
+  JUMP_TABLE.push({ from: a, over: b, to: c });
+  JUMP_TABLE.push({ from: c, over: b, to: a });
+});
+
+/* Synthesized Authentic Audio for Real Board Experience */
+const playGutiTone = (type, enabled = true) => {
+  if (!enabled) return;
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    const now = ctx.currentTime;
+    if (type === 'move') {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(320, now);
+      osc.frequency.exponentialRampToValueAtTime(120, now + 0.12);
+      gain.gain.setValueAtTime(0.25, now);
+      gain.gain.linearRampToValueAtTime(0, now + 0.12);
+      osc.start(now);
+      osc.stop(now + 0.12);
+    } else if (type === 'capture') {
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(580, now);
+      osc.frequency.exponentialRampToValueAtTime(140, now + 0.28);
+      gain.gain.setValueAtTime(0.35, now);
+      gain.gain.linearRampToValueAtTime(0, now + 0.28);
+      osc.start(now);
+      osc.stop(now + 0.28);
+    } else if (type === 'win') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(440, now);
+      osc.frequency.setValueAtTime(554.37, now + 0.12);
+      osc.frequency.setValueAtTime(659.25, now + 0.24);
+      gain.gain.setValueAtTime(0.3, now);
+      gain.gain.linearRampToValueAtTime(0, now + 0.5);
+      osc.start(now);
+      osc.stop(now + 0.5);
+    }
+  } catch (e) {
+    // Audio fallback
+  }
+};
 
 export default function Real16GutiModal({ isOpen, onClose }) {
   const { rewardWallet, playSoloSkillGame, showToast, userMembershipTier } = useApp();
@@ -152,15 +225,16 @@ export default function Real16GutiModal({ isOpen, onClose }) {
   const [gameState, setGameState] = useState('lobby'); // 'lobby', 'playing', 'gameover'
   const [soundEnabled, setSoundEnabled] = useState(true);
 
-  // Board State: 37 nodes. 'player' (Red/White beads), 'bot' (Green/Black beads), or null
+  // Board State: Array of 37 elements: 'player' (Blue), 'bot' (Red), or null
   const [board, setBoard] = useState(Array(37).fill(null));
   const [selectedNode, setSelectedNode] = useState(null);
   const [validMoves, setValidMoves] = useState([]); // [{ to, isJump, over }]
 
-  const [turn, setTurn] = useState('player'); // 'player' or 'bot'
-  const [playerCaptured, setPlayerCaptured] = useState(0); // number of bot beads captured
-  const [botCaptured, setBotCaptured] = useState(0); // number of player beads captured
+  const [turn, setTurn] = useState('player'); // 'player' (Blue) or 'bot' (Red)
+  const [playerCaptured, setPlayerCaptured] = useState(0); // number of bot beads eaten
+  const [botCaptured, setBotCaptured] = useState(0); // number of player beads eaten
   const [winner, setWinner] = useState(null);
+  const [lastAction, setLastAction] = useState('Select a Blue bead to begin!');
 
   useEffect(() => {
     if (!isOpen) {
@@ -168,6 +242,7 @@ export default function Real16GutiModal({ isOpen, onClose }) {
       setSelectedNode(null);
       setValidMoves([]);
       setWinner(null);
+      setLastAction('Select a Blue bead to begin!');
     }
   }, [isOpen]);
 
@@ -177,13 +252,13 @@ export default function Real16GutiModal({ isOpen, onClose }) {
   const platformCut = +(grossPot * 0.10).toFixed(2);
   const winPrize = +(grossPot - platformCut).toFixed(2);
 
-  // Initialize Authentic 16 Guti Board
-  // Bot occupies top 16 nodes (25..30 and 0..9)
-  // Player occupies bottom 16 nodes (15..24 and 31..36)
-  // Middle row (10..14) starts empty!
+  // Start Authentic 16 Guti Match
+  // Bot (Red): 16 beads (Nodes 0..5 and Nodes 6..15)
+  // Player (Blue): 16 beads (Nodes 21..30 and Nodes 31..36)
+  // Neutral Line: Nodes 16..20 (Row 2 of 5x5 grid starts empty)
   const handleStartMatch = () => {
     if (rewardWallet < entryFee) {
-      showToast(`Insufficient Task Wallet! Entry fee is ${formatINR(entryFee)}.`, 'error');
+      showToast(`Insufficient Task Wallet! Entry fee is ${formatINR(entryFee)}. You cannot use locked membership capital.`, 'error');
       return;
     }
 
@@ -198,12 +273,12 @@ export default function Real16GutiModal({ isOpen, onClose }) {
     if (!deducted) return;
 
     const initialBoard = Array(37).fill(null);
-    // Top 16 for Bot
-    for (let i = 0; i < 10; i++) initialBoard[i] = 'bot';
-    for (let i = 25; i <= 30; i++) initialBoard[i] = 'bot';
+    // Top 16 Red Beads (Bot / Opponent)
+    for (let i = 0; i < 6; i++) initialBoard[i] = 'bot';
+    for (let i = 6; i <= 15; i++) initialBoard[i] = 'bot';
 
-    // Bottom 16 for Player
-    for (let i = 15; i < 25; i++) initialBoard[i] = 'player';
+    // Bottom 16 Blue Beads (Player / You)
+    for (let i = 21; i <= 30; i++) initialBoard[i] = 'player';
     for (let i = 31; i <= 36; i++) initialBoard[i] = 'player';
 
     setBoard(initialBoard);
@@ -214,6 +289,7 @@ export default function Real16GutiModal({ isOpen, onClose }) {
     setPlayerCaptured(0);
     setBotCaptured(0);
     setWinner(null);
+    setLastAction('Your turn! Tap any Blue bead to view valid moves or jump captures.');
   };
 
   // Find legal moves & jump captures for a selected node
@@ -221,7 +297,7 @@ export default function Real16GutiModal({ isOpen, onClose }) {
     const oppSide = side === 'player' ? 'bot' : 'player';
     const moves = [];
 
-    // 1. Jump captures (higher priority in Sholo Guti)
+    // 1. Jump captures (jump over adjacent opponent piece to vacant space)
     JUMP_TABLE.forEach(j => {
       if (j.from === nodeId) {
         if (curBoard[j.over] === oppSide && curBoard[j.to] === null) {
@@ -230,7 +306,7 @@ export default function Real16GutiModal({ isOpen, onClose }) {
       }
     });
 
-    // 2. Adjacent regular 1-step moves
+    // 2. Adjacent regular 1-step moves along board lines
     BOARD_EDGES.forEach(([u, v]) => {
       let target = null;
       if (u === nodeId) target = v;
@@ -244,7 +320,7 @@ export default function Real16GutiModal({ isOpen, onClose }) {
     return moves;
   };
 
-  // Handle Player Node Selection
+  // Handle Player Bead Selection or Target Destination Click
   const handleNodeClick = (nodeId) => {
     if (turn !== 'player' || gameState !== 'playing') return;
 
@@ -255,8 +331,14 @@ export default function Real16GutiModal({ isOpen, onClose }) {
       setSelectedNode(nodeId);
       const moves = getMovesForNode(nodeId, board, 'player');
       setValidMoves(moves);
+      if (moves.length === 0) {
+        setLastAction('That bead has no legal moves! Choose another bead.');
+      } else {
+        const hasJump = moves.some(m => m.isJump);
+        setLastAction(hasJump ? '⚡ JUMP CAPTURE available! Tap the red highlighted node.' : 'Tap any green node to advance 1 step.');
+      }
     } else if (selectedNode !== null) {
-      // Check if clicked node is a valid move destination
+      // Check if clicked node is an allowed destination
       const validMove = validMoves.find(m => m.to === nodeId);
       if (validMove) {
         executeMove('player', selectedNode, validMove);
@@ -277,22 +359,29 @@ export default function Real16GutiModal({ isOpen, onClose }) {
     let nextCapturedCount = side === 'player' ? playerCaptured : botCaptured;
 
     if (move.isJump && move.over !== null) {
-      newBoard[move.over] = null; // Captured!
+      newBoard[move.over] = null; // Captured bead removed!
       nextCapturedCount += 1;
+      playGutiTone('capture', soundEnabled);
+
       if (side === 'player') {
         setPlayerCaptured(nextCapturedCount);
-        showToast('You captured a bead! +1 Guti', 'success');
+        setLastAction('⚔️ You jumped over and captured a Red bead!');
+        showToast('⚔️ Captured Red bead! +1 Guti', 'success');
       } else {
         setBotCaptured(nextCapturedCount);
-        showToast('Bot jumped and captured your bead!', 'warning');
+        setLastAction('⚠️ Bot jumped over and captured your Blue bead!');
+        showToast('⚠️ Bot captured your Blue bead!', 'warning');
       }
+    } else {
+      playGutiTone('move', soundEnabled);
+      setLastAction(side === 'player' ? 'Moved 1 step.' : 'Bot moved 1 step.');
     }
 
     setBoard(newBoard);
     setSelectedNode(null);
     setValidMoves([]);
 
-    // Check Victory condition (16 captures or no opponent moves)
+    // Check Victory Condition (All 16 beads captured or opponent locked)
     if (nextCapturedCount >= 16) {
       handleMatchOver(side);
       return;
@@ -303,15 +392,15 @@ export default function Real16GutiModal({ isOpen, onClose }) {
     setTurn(nextTurn);
 
     if (nextTurn === 'bot') {
-      setTimeout(() => executeBotTurn(newBoard), 800);
+      setTimeout(() => executeBotTurn(newBoard), 750);
     }
   };
 
-  // AI Bot Logic
+  // Strategic AI Bot Logic
   const executeBotTurn = (curBoard) => {
     if (gameState !== 'playing') return;
 
-    // Collect all valid moves for all bot pieces
+    // Collect all active bot pieces
     const allBotPieces = [];
     curBoard.forEach((p, idx) => {
       if (p === 'bot') allBotPieces.push(idx);
@@ -320,7 +409,7 @@ export default function Real16GutiModal({ isOpen, onClose }) {
     let bestMove = null;
     let bestFrom = null;
 
-    // 1. Check for any jump captures first!
+    // Priority 1: Check for any jump captures!
     for (const fromIdx of allBotPieces) {
       const moves = getMovesForNode(fromIdx, curBoard, 'bot');
       const jump = moves.find(m => m.isJump);
@@ -331,34 +420,62 @@ export default function Real16GutiModal({ isOpen, onClose }) {
       }
     }
 
-    // 2. If no jumps, pick any valid regular move
+    // Priority 2: Regular 1-step move that doesn't walk into immediate capture
     if (!bestMove) {
+      const safeMoves = [];
+      const anyMoves = [];
+
       for (const fromIdx of allBotPieces) {
         const moves = getMovesForNode(fromIdx, curBoard, 'bot');
-        if (moves.length > 0) {
-          bestMove = moves[Math.floor(Math.random() * moves.length)];
-          bestFrom = fromIdx;
-          break;
-        }
+        moves.forEach(m => {
+          anyMoves.push({ from: fromIdx, move: m });
+          // Check if destination is vulnerable
+          const testBoard = [...curBoard];
+          testBoard[fromIdx] = null;
+          testBoard[m.to] = 'bot';
+
+          // Can player jump this piece on next turn?
+          let vulnerable = false;
+          JUMP_TABLE.forEach(j => {
+            if (j.over === m.to && testBoard[j.from] === 'player' && testBoard[j.to] === null) {
+              vulnerable = true;
+            }
+          });
+
+          if (!vulnerable) {
+            safeMoves.push({ from: fromIdx, move: m });
+          }
+        });
+      }
+
+      if (safeMoves.length > 0) {
+        const picked = safeMoves[Math.floor(Math.random() * safeMoves.length)];
+        bestFrom = picked.from;
+        bestMove = picked.move;
+      } else if (anyMoves.length > 0) {
+        const picked = anyMoves[Math.floor(Math.random() * anyMoves.length)];
+        bestFrom = picked.from;
+        bestMove = picked.move;
       }
     }
 
     if (bestMove && bestFrom !== null) {
       executeMove('bot', bestFrom, bestMove);
     } else {
-      // Bot has no moves left -> Player wins!
+      // Bot has zero legal moves -> Player wins by stalemate lock!
       handleMatchOver('player');
     }
   };
 
   // Match Over Handler
-  const handleMatchOver = (winnerSide) => {
+  const handleMatchOver = (winningSide) => {
     setGameState('gameover');
-    setWinner(winnerSide);
+    setWinner(winningSide);
 
-    if (winnerSide === 'player') {
+    if (winningSide === 'player') {
       confetti({ particleCount: 120, spread: 80 });
-      showToast(`🏆 VICTORY! You defeated the Bot in 16 Guti! Won ${formatINR(winPrize)}!`);
+      playGutiTone('win', soundEnabled);
+      showToast(`🏆 VICTORY! You won the ১৬ গুটি match and earned ${formatINR(winPrize)}!`);
 
       playSoloSkillGame({
         gameId: 'real_16_guti',
@@ -368,7 +485,7 @@ export default function Real16GutiModal({ isOpen, onClose }) {
         won: true
       });
     } else {
-      showToast('Bot captured your army. Better luck next game!', 'error');
+      showToast('Bot captured your army. Better luck next match!', 'error');
     }
   };
 
@@ -377,27 +494,36 @@ export default function Real16GutiModal({ isOpen, onClose }) {
       <div 
         className="modal-content" 
         onClick={(e) => e.stopPropagation()} 
-        style={{ maxWidth: 680, width: '95%', padding: '1.25rem', textAlign: 'center' }}
+        style={{ maxWidth: 520, width: '96%', padding: '1.25rem', textAlign: 'center' }}
       >
         {/* Header */}
-        <div className="modal-header" style={{ marginBottom: '0.75rem', paddingBottom: '0.65rem' }}>
+        <div className="modal-header" style={{ marginBottom: '0.65rem', paddingBottom: '0.65rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-            <div style={{ width: 40, height: 40, borderRadius: '12px', background: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff', boxShadow: '0 4px 12px rgba(217, 119, 6, 0.4)' }}>
+            <div style={{ width: 40, height: 40, borderRadius: '12px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.4)' }}>
               <Award size={22} />
             </div>
             <div style={{ textAlign: 'left' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <h2 style={{ fontSize: '1.2rem', fontWeight: 800 }}>১৬ গুটি (16 Guti / Sholo Guti)</h2>
-                <span className="badge badge-gold" style={{ fontSize: '0.62rem' }}>37-Node Board</span>
+                <h2 style={{ fontSize: '1.2rem', fontWeight: 800 }}>১৬ গুটি (Sholo Guti Arena)</h2>
+                <span className="badge badge-gold" style={{ fontSize: '0.62rem' }}>100% Authentic Board</span>
               </div>
               <p style={{ fontSize: '0.76rem', color: '#94a3b8' }}>
-                Traditional South Asian Bead Jumping Game • 16 Beads • 10% Platform Rake
+                Traditional South Asian Bead War • Jump Captures • 10% Platform Cut
               </p>
             </div>
           </div>
-          <button className="modal-close" onClick={onClose}>
-            <X size={18} />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <button 
+              type="button" 
+              onClick={() => setSoundEnabled(!soundEnabled)} 
+              style={{ background: 'transparent', border: 'none', color: soundEnabled ? '#34d399' : '#64748b', cursor: 'pointer', padding: '4px' }}
+            >
+              {soundEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
+            </button>
+            <button className="modal-close" onClick={onClose}>
+              <X size={18} />
+            </button>
+          </div>
         </div>
 
         {/* LOBBY VIEW */}
@@ -439,11 +565,12 @@ export default function Real16GutiModal({ isOpen, onClose }) {
             </div>
 
             <div style={{ marginBottom: '1.25rem', fontSize: '0.8rem', color: '#94a3b8', lineHeight: 1.5, textAlign: 'left', padding: '0.75rem', background: 'rgba(0, 0, 0, 0.2)', borderRadius: '8px' }}>
-              📌 <strong>16 Guti Traditional Rules:</strong>
+              📌 <strong>Authentic ১৬ গুটি Rules:</strong>
               <ul style={{ paddingLeft: '1.2rem', marginTop: '0.3rem' }}>
-                <li>Move 1 step along the board lines to any connected empty node.</li>
-                <li><strong>Jump & Capture:</strong> If an opponent bead is directly ahead and the space behind it is empty, jump over to capture and eliminate it!</li>
-                <li>Capture all 16 opponent beads or block all their moves to win.</li>
+                <li><strong>You play Blue (bottom army)</strong> vs Bot plays Red (top army).</li>
+                <li>Move 1 step along any line to an adjacent empty node.</li>
+                <li><strong>Jump & Capture:</strong> If an opponent bead is directly in front and the space behind it is empty, jump over to capture and eliminate it!</li>
+                <li>Eliminate all 16 opponent beads or trap the opponent to claim the cash pot!</li>
               </ul>
             </div>
 
@@ -460,9 +587,9 @@ export default function Real16GutiModal({ isOpen, onClose }) {
         {/* IN-GAME 16 GUTI BOARD */}
         {(gameState === 'playing' || gameState === 'gameover') && (
           <div>
-            {/* Captured Bead Scores */}
+            {/* Score Strip: Captured Beads */}
             <div style={{ 
-              marginBottom: '0.75rem', 
+              marginBottom: '0.65rem', 
               padding: '0.5rem 0.85rem', 
               borderRadius: '8px', 
               background: 'rgba(15, 23, 42, 0.85)',
@@ -472,109 +599,234 @@ export default function Real16GutiModal({ isOpen, onClose }) {
               justifyContent: 'space-between',
               fontSize: '0.82rem'
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#38bdf8', fontWeight: 700 }}>
-                <User size={15} /> You Captured: {playerCaptured}/16 Beads
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: '#60a5fa', fontWeight: 700 }}>
+                <span style={{ width: 12, height: 12, borderRadius: '50%', background: '#2563eb', display: 'inline-block', boxShadow: '0 0 6px #3b82f6' }} />
+                <span>You (Blue): Captured {playerCaptured}/16</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#f87171', fontWeight: 700 }}>
-                <Bot size={15} /> Bot Captured: {botCaptured}/16 Beads
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: '#f87171', fontWeight: 700 }}>
+                <span style={{ width: 12, height: 12, borderRadius: '50%', background: '#dc2626', display: 'inline-block', boxShadow: '0 0 6px #ef4444' }} />
+                <span>Bot (Red): Captured {botCaptured}/16</span>
               </div>
             </div>
 
-            {/* Traditional Wooden SVG Canvas */}
+            {/* Action Guidance Banner */}
+            <div style={{
+              marginBottom: '0.65rem',
+              padding: '0.4rem 0.75rem',
+              borderRadius: '6px',
+              background: turn === 'player' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+              border: `1px solid ${turn === 'player' ? 'rgba(59, 130, 246, 0.35)' : 'rgba(239, 68, 68, 0.35)'}`,
+              color: turn === 'player' ? '#93c5fd' : '#fca5a5',
+              fontSize: '0.78rem',
+              fontWeight: 700,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.4rem'
+            }}>
+              <Swords size={14} />
+              <span>{lastAction}</span>
+            </div>
+
+            {/* AUTHENTIC WOODEN SHOLO GUTI BOARD (100% Matching Uploaded Image) */}
             <div style={{
               width: '100%',
               maxWidth: '380px',
-              margin: '0 auto 1rem',
-              aspectRatio: '5/7',
+              margin: '0 auto 0.75rem',
+              aspectRatio: '400/640',
               borderRadius: '16px',
               overflow: 'hidden',
-              background: 'linear-gradient(135deg, #78350f 0%, #451a03 100%)',
-              border: '4px solid #b45309',
-              boxShadow: 'inset 0 0 40px rgba(0,0,0,0.8), 0 8px 30px rgba(0,0,0,0.6)',
+              background: '#caa073',
+              boxShadow: 'inset 0 0 30px rgba(74, 34, 5, 0.45), 0 10px 32px rgba(0,0,0,0.7)',
+              border: '3px solid #6b3f17',
               position: 'relative'
             }}>
-              <svg viewBox="0 0 500 700" style={{ width: '100%', height: '100%', display: 'block' }}>
-                {/* Board Lines */}
+              <svg viewBox="0 0 400 640" style={{ width: '100%', height: '100%', display: 'block' }}>
+                <defs>
+                  {/* Realistic Wood Planks & Grain */}
+                  <linearGradient id="woodTable" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#d9ad7c" />
+                    <stop offset="35%" stopColor="#c89666" />
+                    <stop offset="70%" stopColor="#caa073" />
+                    <stop offset="100%" stopColor="#ba8654" />
+                  </linearGradient>
+
+                  {/* Red Bead Gradient (3D Glossy Marble) */}
+                  <radialGradient id="redBead" cx="35%" cy="30%" r="70%">
+                    <stop offset="0%" stopColor="#ff7b7b" />
+                    <stop offset="45%" stopColor="#dc2626" />
+                    <stop offset="85%" stopColor="#991b1b" />
+                    <stop offset="100%" stopColor="#450a0a" />
+                  </radialGradient>
+
+                  {/* Blue Bead Gradient (3D Glossy Marble) */}
+                  <radialGradient id="blueBead" cx="35%" cy="30%" r="70%">
+                    <stop offset="0%" stopColor="#93c5fd" />
+                    <stop offset="45%" stopColor="#2563eb" />
+                    <stop offset="85%" stopColor="#1e40af" />
+                    <stop offset="100%" stopColor="#0f172a" />
+                  </radialGradient>
+                </defs>
+
+                {/* Wood Texture Background */}
+                <rect width="400" height="640" fill="url(#woodTable)" />
+
+                {/* Subtle Horizontal Wood Plank Grooves */}
+                {[100, 200, 300, 400, 500, 600].map((py, idx) => (
+                  <line 
+                    key={`plank_${idx}`} 
+                    x1="0" 
+                    y1={py} 
+                    x2="400" 
+                    y2={py} 
+                    stroke="#8c5828" 
+                    strokeWidth="0.8" 
+                    opacity="0.25" 
+                  />
+                ))}
+
+                {/* Traditional Board Dark Brown Lines */}
                 {BOARD_EDGES.map(([u, v], idx) => {
-                  const nodeU = NODES[u];
-                  const nodeV = NODES[v];
+                  const nu = NODES[u];
+                  const nv = NODES[v];
                   return (
                     <line 
                       key={`edge_${idx}`} 
-                      x1={nodeU.x} 
-                      y1={nodeU.y} 
-                      x2={nodeV.x} 
-                      y2={nodeV.y} 
-                      stroke="#fde68a" 
-                      strokeWidth="2.5" 
-                      opacity="0.85"
+                      x1={nu.x} 
+                      y1={nu.y} 
+                      x2={nv.x} 
+                      y2={nv.y} 
+                      stroke="#4a2205" 
+                      strokeWidth="3.4" 
+                      strokeLinecap="round" 
                     />
                   );
                 })}
 
-                {/* 37 Board Nodes */}
+                {/* Node Points & Beads */}
                 {NODES.map(node => {
                   const piece = board[node.id];
                   const isSelected = selectedNode === node.id;
-                  const isValidTarget = validMoves.some(m => m.to === node.id);
+                  const validMove = validMoves.find(m => m.to === node.id);
+                  const isTarget = Boolean(validMove);
+                  const isJumpTarget = validMove?.isJump;
 
                   return (
                     <g 
                       key={`node_${node.id}`} 
                       onClick={() => handleNodeClick(node.id)}
-                      style={{ cursor: (piece === 'player' || isValidTarget) ? 'pointer' : 'default' }}
+                      style={{ cursor: (piece === 'player' || isTarget) ? 'pointer' : 'default' }}
                     >
-                      {/* Node Point Anchor */}
+                      {/* Node Intersection Anchor Pin */}
                       <circle 
                         cx={node.x} 
                         cy={node.y} 
-                        r="7" 
-                        fill="#fde68a" 
-                        opacity="0.9"
+                        r="3.5" 
+                        fill="#3e1d03" 
+                        opacity="0.75" 
                       />
 
-                      {/* Valid Move Highlight Aura */}
-                      {isValidTarget && (
-                        <circle 
-                          cx={node.x} 
-                          cy={node.y} 
-                          r="18" 
-                          fill="none" 
-                          stroke="#34d399" 
-                          strokeWidth="3.5" 
-                          strokeDasharray="4 2"
-                        />
-                      )}
-
-                      {/* Player Bead (Red/White) */}
-                      {piece === 'player' && (
+                      {/* Valid Move Indicator on Empty Target Node */}
+                      {isTarget && (
                         <g>
                           <circle 
                             cx={node.x} 
                             cy={node.y} 
-                            r={isSelected ? 17 : 14} 
-                            fill="radial-gradient(circle, #ffffff 0%, #cbd5e1 100%)" 
-                            stroke={isSelected ? '#38bdf8' : '#334155'} 
-                            strokeWidth={isSelected ? '3.5' : '2'}
-                            filter="drop-shadow(0 3px 6px rgba(0,0,0,0.6))"
-                          />
-                          <circle cx={node.x} cy={node.y} r="5" fill="#38bdf8" opacity="0.8" />
+                            r={isJumpTarget ? 18 : 15} 
+                            fill={isJumpTarget ? 'rgba(239, 68, 68, 0.3)' : 'rgba(16, 185, 129, 0.3)'} 
+                            stroke={isJumpTarget ? '#ef4444' : '#10b981'} 
+                            strokeWidth="3" 
+                            strokeDasharray={isJumpTarget ? '4 2' : 'none'}
+                          >
+                            <animate attributeName="r" values={isJumpTarget ? "16;20;16" : "13;17;13"} dur="1s" repeatCount="indefinite" />
+                          </circle>
+                          <circle cx={node.x} cy={node.y} r="5" fill={isJumpTarget ? '#ef4444' : '#10b981'} />
                         </g>
                       )}
 
-                      {/* Bot Bead (Black/Gold) */}
+                      {/* Red Bead (Bot / Opponent) */}
                       {piece === 'bot' && (
-                        <g>
+                        <g filter="drop-shadow(0 3px 5px rgba(0,0,0,0.55))">
                           <circle 
                             cx={node.x} 
                             cy={node.y} 
-                            r="14" 
-                            fill="radial-gradient(circle, #475569 0%, #0f172a 100%)" 
-                            stroke="#f59e0b" 
-                            strokeWidth="2"
-                            filter="drop-shadow(0 3px 6px rgba(0,0,0,0.6))"
+                            r="15" 
+                            fill="url(#redBead)" 
+                            stroke="#7f1d1d" 
+                            strokeWidth="1.2" 
                           />
-                          <circle cx={node.x} cy={node.y} r="5" fill="#f59e0b" opacity="0.8" />
+                          {/* Inner Bevel Ring */}
+                          <circle 
+                            cx={node.x} 
+                            cy={node.y} 
+                            r="11.5" 
+                            fill="none" 
+                            stroke="rgba(255,255,255,0.25)" 
+                            strokeWidth="1.2" 
+                          />
+                          {/* Embossed Star Center */}
+                          <text 
+                            x={node.x} 
+                            y={node.y + 4.5} 
+                            fontSize="12" 
+                            textAnchor="middle" 
+                            fill="#fca5a5" 
+                            opacity="0.85"
+                          >
+                            ★
+                          </text>
+                          {/* Specular Highlight */}
+                          <circle cx={node.x - 4} cy={node.y - 4} r="2.8" fill="#ffffff" opacity="0.65" />
+                        </g>
+                      )}
+
+                      {/* Blue Bead (Player / You) */}
+                      {piece === 'player' && (
+                        <g filter="drop-shadow(0 3px 5px rgba(0,0,0,0.55))">
+                          {/* Selection Golden Pulse Halo */}
+                          {isSelected && (
+                            <circle 
+                              cx={node.x} 
+                              cy={node.y} 
+                              r="20" 
+                              fill="none" 
+                              stroke="#fbbf24" 
+                              strokeWidth="3.5" 
+                              opacity="0.95"
+                            >
+                              <animate attributeName="r" values="18;23;18" dur="1s" repeatCount="indefinite" />
+                            </circle>
+                          )}
+                          <circle 
+                            cx={node.x} 
+                            cy={node.y} 
+                            r={isSelected ? 16.5 : 15} 
+                            fill="url(#blueBead)" 
+                            stroke={isSelected ? '#fbbf24' : '#1e3a8a'} 
+                            strokeWidth={isSelected ? '2.5' : '1.2'} 
+                          />
+                          {/* Inner Bevel Ring */}
+                          <circle 
+                            cx={node.x} 
+                            cy={node.y} 
+                            r="11.5" 
+                            fill="none" 
+                            stroke="rgba(255,255,255,0.3)" 
+                            strokeWidth="1.2" 
+                          />
+                          {/* Embossed Star Center */}
+                          <text 
+                            x={node.x} 
+                            y={node.y + 4.5} 
+                            fontSize="12" 
+                            textAnchor="middle" 
+                            fill="#93c5fd" 
+                            opacity="0.9"
+                          >
+                            ★
+                          </text>
+                          {/* Specular Highlight */}
+                          <circle cx={node.x - 4} cy={node.y - 4} r="2.8" fill="#ffffff" opacity="0.75" />
                         </g>
                       )}
                     </g>
@@ -583,10 +835,10 @@ export default function Real16GutiModal({ isOpen, onClose }) {
               </svg>
             </div>
 
-            {/* Turn Status Command Bar */}
+            {/* Bottom Match Command Bar */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.4rem 0.75rem', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', fontSize: '0.8rem' }}>
-              <div style={{ fontWeight: 700, color: turn === 'player' ? '#38bdf8' : '#f59e0b' }}>
-                {turn === 'player' ? '👉 Your Turn: Tap a white bead to move/jump' : '⏳ Bot is calculating strategy...'}
+              <div style={{ fontWeight: 700, color: turn === 'player' ? '#60a5fa' : '#f87171' }}>
+                {turn === 'player' ? '👉 Your Turn (Blue Army)' : '⏳ Bot is calculating strategy (Red Army)...'}
               </div>
               <span className="badge badge-gold" style={{ fontSize: '0.68rem' }}>
                 Pot: {formatINR(winPrize)}
@@ -600,7 +852,7 @@ export default function Real16GutiModal({ isOpen, onClose }) {
                   {winner === 'player' ? `🏆 VICTORY! You Won ${formatINR(winPrize)}!` : '💔 16 Guti Match Lost!'}
                 </h3>
                 <p style={{ fontSize: '0.82rem', color: '#cbd5e1', marginTop: '0.2rem', marginBottom: '0.75rem' }}>
-                  {winner === 'player' ? 'All opponent beads captured! Prize credited to your Task Wallet.' : 'Bot captured your army.'}
+                  {winner === 'player' ? 'All 16 opponent beads captured! Winnings credited to your Task Wallet.' : 'Bot captured your army.'}
                 </p>
                 <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
                   <button className="btn btn-gold btn-sm" onClick={() => setGameState('lobby')}>

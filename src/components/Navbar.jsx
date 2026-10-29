@@ -15,7 +15,8 @@ import {
   ShieldCheck,
   Smartphone,
   GitBranch,
-  LogOut
+  LogOut,
+  Clock
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { formatINR } from '../utils/finance';
@@ -51,6 +52,23 @@ export default function Navbar({ activeTab, setActiveTab, onOpenAuth, onOpenPayo
   return (
     <header className="navbar">
       <div className="app-container" style={{ paddingBottom: 0 }}>
+        {/* Warning banner if account is pending activation */}
+        {user?.status === 'PENDING_ACTIVATION' && (
+          <div style={{ background: 'rgba(245, 158, 11, 0.15)', border: '1px solid rgba(245, 158, 11, 0.35)', borderRadius: 'var(--radius-md)', padding: '0.45rem 0.85rem', marginBottom: '0.65rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem', color: '#fbbf24', flexWrap: 'wrap', gap: '0.4rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Clock size={15} style={{ flexShrink: 0 }} />
+              <span><strong>Account Pending Admin Activation:</strong> Payment approval is required before earning features and daily tasks unlock.</span>
+            </div>
+            <button 
+              type="button" 
+              onClick={() => setActiveTab('plans')} 
+              style={{ background: 'rgba(245, 158, 11, 0.25)', border: 'none', color: '#fef3c7', padding: '0.2rem 0.55rem', borderRadius: '4px', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}
+            >
+              Check Plan / Deposit →
+            </button>
+          </div>
+        )}
+
         {/* Warning banner if account is suspended/deactivated */}
         {user?.status === 'SUSPENDED' && (
           <div style={{ background: 'rgba(239, 68, 68, 0.2)', border: '1px solid rgba(239, 68, 68, 0.4)', borderRadius: 'var(--radius-md)', padding: '0.5rem 1rem', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.82rem', color: '#fca5a5' }}>
@@ -202,11 +220,29 @@ export default function Navbar({ activeTab, setActiveTab, onOpenAuth, onOpenPayo
                 <button 
                   onClick={onOpenAuth}
                   className="btn btn-secondary btn-sm"
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', padding: '0.35rem 0.65rem' }}
-                  title={`Logged in as ${user?.name || 'Member'} (${user?.email || user?.phone || 'Verified'})`}
+                  style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '0.35rem', 
+                    fontSize: '0.8rem', 
+                    padding: '0.35rem 0.65rem',
+                    borderColor: user?.status === 'PENDING_ACTIVATION' ? 'rgba(245, 158, 11, 0.45)' : undefined,
+                    color: user?.status === 'PENDING_ACTIVATION' ? '#fbbf24' : undefined,
+                    background: user?.status === 'PENDING_ACTIVATION' ? 'rgba(245, 158, 11, 0.12)' : undefined
+                  }}
+                  title={user?.status === 'PENDING_ACTIVATION' ? 'Account Pending Admin Activation' : `Logged in as ${user?.name || 'Member'} (${user?.email || user?.phone || 'Verified'})`}
                 >
-                  <UserCheck size={14} color="#34d399" />
+                  {user?.status === 'PENDING_ACTIVATION' ? (
+                    <Clock size={14} color="#fbbf24" />
+                  ) : (
+                    <UserCheck size={14} color="#34d399" />
+                  )}
                   <span>{(user?.name || 'Member').split(' ')[0]}</span>
+                  {user?.status === 'PENDING_ACTIVATION' && (
+                    <span style={{ fontSize: '0.62rem', background: 'rgba(245, 158, 11, 0.3)', padding: '1px 4px', borderRadius: '4px', fontWeight: 800 }}>
+                      WAIT
+                    </span>
+                  )}
                 </button>
                 <button
                   onClick={logoutUser}

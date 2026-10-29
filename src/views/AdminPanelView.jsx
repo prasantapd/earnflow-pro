@@ -274,7 +274,11 @@ export default function AdminPanelView() {
   const withList = withdrawalRequests || [];
 
   const filteredUsers = usersList.filter((u) => {
-    if (userStatusFilter !== 'ALL' && u.status !== userStatusFilter) return false;
+    if (userStatusFilter === 'PENDING') {
+      if (u.status !== 'PENDING_ACTIVATION' && u.status !== 'PENDING') return false;
+    } else if (userStatusFilter !== 'ALL' && u.status !== userStatusFilter) {
+      return false;
+    }
     if (userSearch.trim()) {
       const q = userSearch.toLowerCase();
       const matchName = u.name?.toLowerCase().includes(q);
@@ -537,7 +541,7 @@ export default function AdminPanelView() {
             {allUsers.length}
           </div>
           <div style={{ fontSize: '0.75rem', color: '#34d399' }}>
-            {allUsers.filter((u) => u.status === 'ACTIVE').length} Active • {allUsers.filter((u) => u.status === 'SUSPENDED').length} Suspended
+            {allUsers.filter((u) => u.status === 'ACTIVE').length} Active • {allUsers.filter((u) => u.status === 'PENDING_ACTIVATION' || u.status === 'PENDING').length} Pending • {allUsers.filter((u) => u.status === 'SUSPENDED').length} Suspended
           </div>
         </div>
 
@@ -694,14 +698,14 @@ export default function AdminPanelView() {
             }}
           >
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-              {['ALL', 'ACTIVE', 'DEACTIVATED', 'SUSPENDED'].map((st) => (
+              {['ALL', 'PENDING', 'ACTIVE', 'DEACTIVATED', 'SUSPENDED'].map((st) => (
                 <button
                   key={st}
                   className={`btn btn-sm ${userStatusFilter === st ? 'btn-primary' : 'btn-secondary'}`}
                   style={{ fontSize: '0.78rem' }}
                   onClick={() => setUserStatusFilter(st)}
                 >
-                  {st}
+                  {st === 'PENDING' ? '⏳ PENDING ACTIVATION' : st}
                 </button>
               ))}
             </div>
@@ -737,6 +741,10 @@ export default function AdminPanelView() {
                   const isActive = u.status === 'ACTIVE';
                   const isSuspended = u.status === 'SUSPENDED';
                   const isDeactivated = u.status === 'DEACTIVATED';
+                  const isPending = u.status === 'PENDING_ACTIVATION' || u.status === 'PENDING' || (!isActive && !isSuspended && !isDeactivated);
+                  const userPendingDep = pendingDeposits.find(
+                    (d) => d.userId === u.id || d.userName === u.name || (d.userPhone && u.phone && d.userPhone === u.phone)
+                  );
 
                   return (
                     <tr key={u.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.04)' }}>
@@ -761,6 +769,11 @@ export default function AdminPanelView() {
                         {isActive && (
                           <span className="badge badge-emerald" style={{ fontSize: '0.65rem' }}>
                             <CheckCircle2 size={12} /> Active
+                          </span>
+                        )}
+                        {isPending && (
+                          <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.2)', color: '#fbbf24', border: '1px solid rgba(245, 158, 11, 0.4)', fontSize: '0.65rem' }}>
+                            <Clock size={12} /> Pending Activation
                           </span>
                         )}
                         {isSuspended && (
@@ -793,16 +806,29 @@ export default function AdminPanelView() {
 
                       <td style={{ padding: '0.85rem 0.75rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                          {/* Approve Deposit shortcut if pending payment exists */}
+                          {userPendingDep && (
+                            <button
+                              type="button"
+                              className="btn btn-gold btn-sm"
+                              style={{ fontSize: '0.74rem', padding: '0.25rem 0.55rem', fontWeight: 700 }}
+                              onClick={() => approveDeposit(userPendingDep.id)}
+                              title={`Approve payment of ₹${userPendingDep.amount} (UTR: ${userPendingDep.utr}) and activate user`}
+                            >
+                              <CheckCircle2 size={12} /> Approve Payment (₹{userPendingDep.amount})
+                            </button>
+                          )}
+
                           {/* Activation */}
                           {!isActive && (
                             <button
                               type="button"
-                              className="btn btn-outline-emerald btn-sm"
-                              style={{ fontSize: '0.72rem', padding: '0.2rem 0.5rem' }}
+                              className="btn btn-primary btn-sm"
+                              style={{ fontSize: '0.74rem', padding: '0.25rem 0.55rem', fontWeight: 700 }}
                               onClick={() => activateUser(u.id)}
-                              title="Activate user"
+                              title="Activate user and grant full earning access"
                             >
-                              <Unlock size={12} /> Activate
+                              <Unlock size={12} /> Activate Account
                             </button>
                           )}
 

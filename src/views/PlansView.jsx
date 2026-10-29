@@ -12,14 +12,15 @@ import {
   Sparkles,
   ArrowDownCircle,
   ArrowUpCircle,
-  AlertTriangle
+  AlertTriangle,
+  Clock
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { DEPOSIT_PRESETS, LOCKIN_PERIODS, calculateEarnings, formatINR } from '../utils/finance';
 import PlanCard from '../components/PlanCard';
 
 export default function PlansView({ onOpenDeposit, onWithdrawPrincipal }) {
-  const { plans, subscribePlan, showToast } = useApp();
+  const { plans, subscribePlan, showToast, pendingDeposit, pendingPlan, isUserActivated, canUserEarn } = useApp();
 
   const activePlan = (plans || []).find((p) => p.status === 'active');
 
@@ -123,6 +124,46 @@ export default function PlansView({ onOpenDeposit, onWithdrawPrincipal }) {
 
           <span className="badge badge-gold" style={{ fontSize: '0.72rem', padding: '0.35rem 0.75rem' }}>
             <ArrowUpCircle size={14} /> Upgrades Permitted
+          </span>
+        </div>
+      )}
+
+      {/* Pending Deposit / Activation Notice */}
+      {pendingDeposit && !activePlan && (
+        <div
+          className="glass-card"
+          style={{
+            padding: '1.25rem 1.5rem',
+            marginBottom: '2rem',
+            background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.14) 0%, rgba(234, 88, 12, 0.1) 100%)',
+            borderColor: 'rgba(245, 158, 11, 0.4)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '1rem'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+            <div style={{ width: 44, height: 44, borderRadius: '12px', background: 'rgba(245, 158, 11, 0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fbbf24' }}>
+              <Clock size={22} />
+            </div>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.2rem' }}>
+                <span className="badge badge-amber" style={{ fontSize: '0.65rem' }}>⏳ Payment Verification Pending</span>
+                <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Deposit #{pendingDeposit.id}</span>
+              </div>
+              <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#f8fafc' }}>
+                Deposit of {formatINR(pendingDeposit.amount)} Submitted (UTR: {pendingDeposit.utr || 'Under Review'})
+              </h3>
+              <p style={{ fontSize: '0.82rem', color: '#cbd5e1' }}>
+                Admin is verifying your payment. Once approved by the administrator, your account and membership tier will be activated immediately to unlock all daily tasks & earnings!
+              </p>
+            </div>
+          </div>
+
+          <span className="badge badge-amber" style={{ fontSize: '0.72rem', padding: '0.35rem 0.75rem' }}>
+            Awaiting Admin Approval
           </span>
         </div>
       )}

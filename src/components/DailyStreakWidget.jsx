@@ -29,6 +29,9 @@ export default function DailyStreakWidget({ onOpenDeposit }) {
     userMembershipTier,
     activePlan,
     streakRewards,
+    pendingDeposit,
+    canUserEarn,
+    isUserActivated,
     setState,
     showToast
   } = useApp();
@@ -169,8 +172,34 @@ export default function DailyStreakWidget({ onOpenDeposit }) {
         </div>
       </div>
 
+      {/* Pending Deposit Warning Strip */}
+      {pendingDeposit && !activePlan && (
+        <div 
+          style={{ 
+            marginBottom: '1.25rem', 
+            padding: '0.75rem 1rem', 
+            background: 'rgba(245, 158, 11, 0.12)', 
+            borderRadius: 'var(--radius-md)', 
+            border: '1px solid rgba(245, 158, 11, 0.4)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '0.75rem',
+            flexWrap: 'wrap'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#fbbf24', fontSize: '0.82rem' }}>
+            <Lock size={16} style={{ flexShrink: 0 }} />
+            <span><strong>Payment Verification Pending:</strong> Your deposit of ₹{pendingDeposit.amount.toLocaleString()} is awaiting Admin approval. Daily streak rewards unlock automatically once verified!</span>
+          </div>
+          <span className="badge badge-amber" style={{ fontSize: '0.72rem' }}>
+            Under Review
+          </span>
+        </div>
+      )}
+
       {/* No Active Plan Warning Strip */}
-      {!activePlan && (
+      {!activePlan && !pendingDeposit && (
         <div 
           style={{ 
             marginBottom: '1.25rem', 
@@ -506,7 +535,29 @@ export default function DailyStreakWidget({ onOpenDeposit }) {
         </div>
 
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-          {!activePlan ? (
+          {pendingDeposit && !activePlan ? (
+            <button 
+              type="button"
+              className="btn btn-secondary btn-lg"
+              disabled
+              style={{ 
+                padding: '0.68rem 1.6rem', 
+                fontSize: '0.9rem', 
+                fontWeight: 800,
+                background: 'rgba(245, 158, 11, 0.12)',
+                border: '1.5px solid rgba(245, 158, 11, 0.4)',
+                color: '#fbbf24',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                cursor: 'not-allowed',
+                opacity: 0.95
+              }}
+            >
+              <Lock size={16} />
+              <span>Payment Pending Approval (+₹{currentReward}.00)</span>
+            </button>
+          ) : !activePlan ? (
             <button 
               type="button"
               className="btn btn-secondary btn-lg"

@@ -643,7 +643,13 @@ export function AppProvider({ children }) {
 
   // Derive active membership plan and tiered earning multipliers
   const activePlan = (state.plans || []).find((p) => p.status === 'active');
+  const pendingPlan = (state.plans || []).find((p) => p.status === 'pending_approval');
+  const pendingDeposit = (state.depositRequests || []).find(
+    (d) => d.status === 'PENDING' && (d.userId === state.user?.id || d.userName === state.user?.name)
+  );
   const userMembershipTier = getMembershipTier(activePlan);
+  const isUserActivated = state.user?.status === 'ACTIVE';
+  const canUserEarn = isUserActivated && Boolean(activePlan) && activePlan.status === 'active';
 
   // Sync state to localStorage
   useEffect(() => {
@@ -746,9 +752,10 @@ export function AppProvider({ children }) {
       password: userData.password,
       referralCode: userData.referralCode || refCode,
       joinedDate: new Date().toISOString(),
-      status: 'ACTIVE',
+      status: 'PENDING_ACTIVATION',
+      isActivated: false,
       suspensionReason: '',
-      isVerified: true,
+      isVerified: false,
       totalDeposited: 0,
       walletBalance: 0.00,
     };
@@ -759,7 +766,7 @@ export function AppProvider({ children }) {
       allUsers: [newUser, ...(prev.allUsers || [])],
     }));
 
-    showToast(`Welcome to TaskCoin Pro, ${userData.name}! Account registered successfully.`);
+    showToast(`Registration successful! Account created. Please select an Investment Plan and submit payment for Admin activation.`, 'info');
     triggerCelebration();
     return true;
   };
@@ -891,40 +898,32 @@ export function AppProvider({ children }) {
       dailyQuota: calc.estimatedDailyIncome,
       estimatedDailyQuota: calc.estimatedDailyIncome,
       earnedSoFar: 0,
-      status: 'active',
+      status: 'pending_approval', // STRICT: Requires Admin approval before becoming 'active'
       isUpgrade: isUpgrade,
       depositRef: depositRef,
+      utr: utr,
     };
 
     const newTxn = {
       id: `TXN-${Math.floor(100000 + Math.random() * 900000)}`,
       type: 'DEPOSIT',
-      title: isUpgrade ? 'Membership Plan Upgrade' : 'Membership Tier Subscription',
+      title: isUpgrade ? 'Plan Upgrade (Pending Admin Approval)' : 'Plan Deposit (Pending Admin Approval)',
       amount: numAmount,
       timestamp: new Date().toISOString(),
-      status: 'COMPLETED',
-      meta: `${lockinPeriod.label} Tier (${newPlan.id}) - UTR: ${utr}${isUpgrade ? ` [Upgraded from ${existingActivePlan.id}]` : ''}`,
+      status: 'PENDING',
+      meta: `${lockinPeriod.label} Tier (${newPlan.id}) - UTR: ${utr} [Awaiting Admin Payment Verification]`,
     };
 
     setState((prev) => {
-      const updatedPlans = (prev.plans || []).map((p) =>
-        p.status === 'active' ? { ...p, status: 'superseded_upgrade' } : p
-      );
-
       return {
         ...prev,
-        plans: [newPlan, ...updatedPlans],
+        plans: [newPlan, ...(prev.plans || [])],
         depositRequests: [newDepositRequest, ...prev.depositRequests],
         transactions: [newTxn, ...prev.transactions],
       };
     });
 
-    if (isUpgrade) {
-      showToast(`Membership upgraded to ₹${numAmount.toLocaleString()} tier! Higher estimated task income unlocked.`);
-    } else {
-      showToast(`Successfully subscribed to ₹${numAmount.toLocaleString()} (${lockinPeriod.label}) plan!`);
-    }
-    triggerCelebration();
+    showToast(`Payment receipt submitted! UTR: ${utr}. Admin verification takes 5–15 minutes. Plan will activate upon approval.`, 'info');
     return newPlan;
   };
 
@@ -939,8 +938,13 @@ export function AppProvider({ children }) {
       return false;
     }
 
-    if (!activePlan) {
-      showToast('No active plan! Please subscribe to an investment plan (min ₹2,000) to earn task cash rewards.', 'error');
+    if (state.user?.status === 'PENDING_ACTIVATION') {
+      showToast('Account pending activation! Payment approval by Admin is required before you can earn task rewards.', 'error');
+      return false;
+    }
+
+    if (!activePlan || activePlan.status !== 'active') {
+      showToast('Payment approval required! Your deposit must be verified and approved by Admin to activate task earnings.', 'error');
       return false;
     }
 
@@ -1075,8 +1079,13 @@ export function AppProvider({ children }) {
       return false;
     }
 
-    if (!activePlan) {
-      showToast('No active plan! Please subscribe to an investment plan (₹2,000+) first to unlock daily bonus claims.', 'error');
+    if (state.user?.status === 'PENDING_ACTIVATION') {
+      showToast('Account pending activation! Payment approval by Admin is required to claim daily login bonus.', 'error');
+      return false;
+    }
+
+    if (!activePlan || activePlan.status !== 'active') {
+      showToast('Payment approval required! Please subscribe to an investment plan (₹2,000+) and get Admin payment verification to unlock daily bonus.', 'error');
       return false;
     }
 
@@ -1206,6 +1215,10 @@ export function AppProvider({ children }) {
   const playSoloSkillGame = ({ gameId, gameTitle, entryFee, rewardAmount, won, score }) => {
     if (state.user?.status === 'SUSPENDED' || state.user?.status === 'DEACTIVATED') {
       showToast('Account suspended/inactive. Cannot play skill games.', 'error');
+      return false;
+    }
+    if (state.user?.status === 'PENDING_ACTIVATION' || !activePlan || activePlan.status !== 'active') {
+      showToast('Account pending payment approval! Active membership is required to participate in arenas.', 'error');
       return false;
     }
 
@@ -1449,13 +1462,27 @@ export function AppProvider({ children }) {
      ========================================================================= */
   const activateUser = (userId) => {
     setState((prev) => {
-      const updatedUsers = prev.allUsers.map((u) =>
-        u.id === userId ? { ...u, status: 'ACTIVE', suspensionReason: '' } : u
+      const targetUser = (prev.allUsers || []).find((u) => u.id === userId);
+      const updatedUsers = (prev.allUsers || []).map((u) =>
+        u.id === userId ? { ...u, status: 'ACTIVE', isActivated: true, suspensionReason: '' } : u
       );
-      const updatedCurUser = prev.user?.id === userId ? { ...prev.user, status: 'ACTIVE', suspensionReason: '' } : prev.user;
-      return { ...prev, allUsers: updatedUsers, user: updatedCurUser };
+      const isCur = prev.user?.id === userId || (targetUser && prev.user?.email === targetUser.email);
+      const updatedCurUser = isCur 
+        ? { ...prev.user, status: 'ACTIVE', isActivated: true, suspensionReason: '' } 
+        : prev.user;
+
+      // Also activate any pending plan for this user
+      const updatedPlans = (prev.plans || []).map((p) => {
+        if (p.status === 'pending_approval' && (isCur || p.depositRef)) {
+          return { ...p, status: 'active' };
+        }
+        return p;
+      });
+
+      return { ...prev, allUsers: updatedUsers, user: updatedCurUser, plans: updatedPlans };
     });
-    showToast(`User ${userId} has been ACTIVATED.`);
+    showToast(`User ${userId} successfully ACTIVATED by Admin!`);
+    triggerCelebration();
   };
 
   const deactivateUser = (userId) => {
@@ -1620,11 +1647,53 @@ export function AppProvider({ children }) {
         status: 'active',
         isUpgrade: req.isUpgrade,
         depositRef: req.id,
+        utr: req.utr,
       };
 
-      const updatedPlans = (prev.plans || []).map((p) =>
+      // Filter out any pending plan that was linked to this deposit
+      const nonMatchingPlans = (prev.plans || []).filter((p) => p.depositRef !== req.id);
+      const updatedPlans = nonMatchingPlans.map((p) =>
         req.isUpgrade && p.status === 'active' ? { ...p, status: 'superseded_upgrade' } : p
       );
+
+      // Activate User in allUsers and current user!
+      const updatedUsers = (prev.allUsers || []).map((u) => {
+        if (u.id === req.userId || u.name === req.userName || (u.phone && req.userPhone && u.phone === req.userPhone)) {
+          return {
+            ...u,
+            status: 'ACTIVE',
+            isActivated: true,
+            isVerified: true,
+            suspensionReason: '',
+            totalDeposited: (u.totalDeposited || 0) + req.amount,
+          };
+        }
+        return u;
+      });
+
+      const isCurrent = prev.user && (
+        prev.user.id === req.userId ||
+        prev.user.name === req.userName ||
+        (prev.user.phone && req.userPhone && prev.user.phone === req.userPhone)
+      );
+      const updatedCurUser = isCurrent
+        ? {
+            ...prev.user,
+            status: 'ACTIVE',
+            isActivated: true,
+            isVerified: true,
+            suspensionReason: '',
+            totalDeposited: (prev.user.totalDeposited || 0) + req.amount,
+          }
+        : prev.user;
+
+      // Update matching transactions
+      const updatedTxns = (prev.transactions || []).map((t) => {
+        if (t.type === 'DEPOSIT' && (t.meta?.includes(req.utr) || t.title?.includes('Pending'))) {
+          return { ...t, status: 'COMPLETED', title: req.isUpgrade ? 'Membership Plan Upgrade' : 'Membership Tier Subscription' };
+        }
+        return t;
+      });
 
       return {
         ...prev,
@@ -1632,21 +1701,29 @@ export function AppProvider({ children }) {
         depositRequests: prev.depositRequests.map((d) =>
           d.id === depositId ? { ...d, status: 'APPROVED' } : d
         ),
+        allUsers: updatedUsers,
+        user: updatedCurUser,
+        transactions: updatedTxns,
       };
     });
-    showToast(`Deposit ${depositId} APPROVED! Membership plan activated.`);
+    showToast(`Deposit ${depositId} APPROVED! User account and membership plan activated.`);
     triggerCelebration();
   };
 
   const rejectDeposit = (depositId, reason) => {
     const rejReason = reason || 'Invalid UTR / Payment not received in bank account';
-    setState((prev) => ({
-      ...prev,
-      depositRequests: prev.depositRequests.map((d) =>
-        d.id === depositId ? { ...d, status: 'REJECTED', rejectionReason: rejReason } : d
-      ),
-    }));
-    showToast(`Deposit ${depositId} REJECTED.`, 'error');
+    setState((prev) => {
+      // Remove or mark pending plan as rejected
+      const updatedPlans = (prev.plans || []).filter((p) => p.depositRef !== depositId);
+      return {
+        ...prev,
+        plans: updatedPlans,
+        depositRequests: prev.depositRequests.map((d) =>
+          d.id === depositId ? { ...d, status: 'REJECTED', rejectionReason: rejReason } : d
+        ),
+      };
+    });
+    showToast(`Deposit ${depositId} REJECTED. Reason: ${rejReason}`, 'error');
   };
 
   const approveWithdrawal = (withdrawalId, customUtr) => {
@@ -1983,9 +2060,13 @@ export function AppProvider({ children }) {
         gamingStats: state.gamingStats,
         playSoloSkillGame,
         playMultiplayerPvPMatch,
-        // Membership Plan Tier Scaling
+        // Membership Plan Tier Scaling & Activation
         userMembershipTier,
         activePlan,
+        pendingPlan,
+        pendingDeposit,
+        isUserActivated,
+        canUserEarn,
         // Payment & Banking Gateway Settings
         paymentSettings: state.paymentSettings || INITIAL_PAYMENT_SETTINGS,
         updatePaymentSettings,

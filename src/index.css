@@ -565,11 +565,7 @@ h1, h2, h3, h4, .font-display {
 }
 
 /* Responsive adjustments */
-@media (max-width: 900px) {
-  .navbar-inner {
-    flex-direction: column;
-    align-items: stretch;
-  }
+@media (max-width: 1024px) {
   .nav-links {
     overflow-x: auto;
     justify-content: flex-start;
@@ -577,14 +573,135 @@ h1, h2, h3, h4, .font-display {
 }
 
 @media (max-width: 768px) {
-  .mobile-bottom-nav {
-    display: flex;
+  html, body {
+    overflow-x: hidden;
+    width: 100%;
+    position: relative;
   }
-  .app-container {
-    padding-bottom: 5.5rem !important;
+
+  .navbar {
+    padding: 0.4rem 0;
+    margin-bottom: 0.75rem;
   }
+
+  .navbar-inner {
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 0.5rem !important;
+    width: 100%;
+  }
+
+  .brand {
+    gap: 0.45rem;
+  }
+
+  .brand-icon {
+    width: 30px;
+    height: 30px;
+  }
+
+  .brand-text h1 {
+    font-size: 1.05rem !important;
+  }
+
+  .brand-tag {
+    display: none !important;
+  }
+
   .nav-links {
-    display: none;
+    display: none !important;
+  }
+
+  .mobile-bottom-nav {
+    display: flex !important;
+  }
+
+  .app-container {
+    padding: 0 0.75rem 6.5rem !important;
+    max-width: 100vw !important;
+    box-sizing: border-box !important;
+    overflow-x: hidden !important;
+  }
+
+  .glass-card {
+    padding: 1rem !important;
+    border-radius: 14px !important;
+  }
+
+  /* Headings responsive fluid clamp */
+  h1, .h1 {
+    font-size: clamp(1.25rem, 5.5vw, 1.65rem) !important;
+    line-height: 1.25 !important;
+    word-break: break-word;
+  }
+
+  h2, .h2 {
+    font-size: clamp(1.15rem, 4.5vw, 1.45rem) !important;
+    line-height: 1.3 !important;
+    word-break: break-word;
+  }
+
+  h3, .h3 {
+    font-size: clamp(1.0rem, 4vw, 1.2rem) !important;
+    word-break: break-word;
+  }
+
+  /* Responsive button sizing */
+  .btn {
+    padding: 0.45rem 0.8rem;
+    font-size: 0.8rem;
+  }
+
+  .btn-sm {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.74rem;
+  }
+
+  .btn-lg {
+    padding: 0.65rem 1.15rem;
+    font-size: 0.92rem;
+  }
+
+  /* Mobile Tables */
+  table {
+    display: block !important;
+    width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  /* Modals on Mobile */
+  .modal-overlay {
+    padding: 0.5rem;
+    align-items: center;
+  }
+
+  .modal-content {
+    padding: 1.25rem 1rem !important;
+    border-radius: 16px !important;
+    max-height: 94vh !important;
+    width: 100% !important;
+  }
+
+  .modal-header {
+    margin-bottom: 1rem;
+    padding-bottom: 0.65rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .app-container {
+    padding: 0 0.5rem 6.5rem !important;
+  }
+
+  .glass-card {
+    padding: 0.85rem !important;
+  }
+
+  /* Grid auto columns adjust to single column on small phones */
+  div[style*="repeat(auto-fit"] {
+    grid-template-columns: 1fr !important;
   }
 }
 

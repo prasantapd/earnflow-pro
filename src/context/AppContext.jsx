@@ -600,6 +600,17 @@ const INITIAL_STATE = {
   paymentSettings: INITIAL_PAYMENT_SETTINGS,
   adminAnnouncement: INITIAL_ADMIN_ANNOUNCEMENT,
   adminPassword: 'admin123',
+  streakRewards: STREAK_REWARDS,
+  passwordResetRequests: [
+    {
+      id: 'REQ-100482',
+      userId: 'usr_rohan',
+      userName: 'Rohan Sharma',
+      userPhone: '+91 98765 43210',
+      requestedAt: new Date(Date.now() - 3600000).toISOString(),
+      status: 'PENDING',
+    }
+  ],
 };
 
 export function AppProvider({ children }) {
@@ -617,6 +628,8 @@ export function AppProvider({ children }) {
           ...INITIAL_STATE,
           ...parsed,
           adminPassword: parsed.adminPassword || 'admin123',
+          streakRewards: parsed.streakRewards || STREAK_REWARDS,
+          passwordResetRequests: parsed.passwordResetRequests || INITIAL_STATE.passwordResetRequests,
           scheduledTasksByDate: sched,
           dailyTaskRoster: sched[todayStr] || parsed.dailyTaskRoster || INITIAL_DAILY_TASK_ROSTER,
           paymentSettings: {
@@ -1033,7 +1046,8 @@ export function AppProvider({ children }) {
     }
 
     const currentDay = Math.min(30, Math.max(1, streak.currentDay || 1));
-    const baseReward = STREAK_REWARDS[currentDay] || (currentDay >= 30 ? 12 : 1);
+    const activeStreakRewards = state.streakRewards || STREAK_REWARDS;
+    const baseReward = activeStreakRewards[currentDay] || (currentDay >= 30 ? 12 : 1);
     const reward = Math.round(baseReward * userMembershipTier.loginMultiplier);
 
     const newHistory = [...(streak.history || Array(30).fill(false))];
@@ -1380,6 +1394,70 @@ export function AppProvider({ children }) {
       return { ...prev, allUsers: updatedUsers };
     });
     showToast(`Password for user ${userId} reset successfully!`);
+  };
+
+  const updateStreakRewards = (newRewards) => {
+    setState((prev) => ({
+      ...prev,
+      streakRewards: { ...prev.streakRewards, ...newRewards },
+    }));
+    showToast('Daily login streak rewards successfully updated by Admin!', 'success');
+  };
+
+  const requestPasswordReset = (phone) => {
+    const rawDigits = phone.replace(/\D/g, '');
+    const matchedUser = state.allUsers.find((u) => {
+      const uDigits = (u.phone || '').replace(/\D/g, '');
+      return uDigits === rawDigits || (rawDigits.length >= 10 && uDigits.endsWith(rawDigits.slice(-10)));
+    });
+
+    if (!matchedUser) {
+      showToast('No registered user found with this mobile number. Please check or register.', 'error');
+      return false;
+    }
+
+    const newReq = {
+      id: `REQ-${Math.floor(100000 + Math.random() * 900000)}`,
+      userId: matchedUser.id,
+      userName: matchedUser.name,
+      userPhone: matchedUser.phone,
+      requestedAt: new Date().toISOString(),
+      status: 'PENDING',
+    };
+
+    setState((prev) => ({
+      ...prev,
+      passwordResetRequests: [newReq, ...(prev.passwordResetRequests || [])],
+    }));
+
+    showToast('পাসওয়ার্ড রিসেট রিকোয়েস্ট জমা নেওয়া হয়েছে। অ্যাডমিন টিম আপনার নম্বরে এসএমএস করে নতুন পাসওয়ার্ড পাঠাবে।', 'success');
+    return true;
+  };
+
+  const resolvePasswordReset = (requestId, customTempPassword) => {
+    const req = (state.passwordResetRequests || []).find((r) => r.id === requestId);
+    if (!req) return null;
+    const tempPass = customTempPassword || `Task@${Math.floor(1000 + Math.random() * 9000)}`;
+
+    // Reset user password
+    resetUserPassword(req.userId, tempPass);
+
+    // Update request state
+    setState((prev) => ({
+      ...prev,
+      passwordResetRequests: (prev.passwordResetRequests || []).map((r) =>
+        r.id === requestId
+          ? { ...r, status: 'RESOLVED', resolvedAt: new Date().toISOString(), tempPassword: tempPass }
+          : r
+      ),
+    }));
+
+    return {
+      success: true,
+      phone: req.userPhone,
+      name: req.userName,
+      tempPassword: tempPass,
+    };
   };
 
   const approveDeposit = (depositId) => {
@@ -1729,6 +1807,12 @@ export function AppProvider({ children }) {
         toastMessage,
         // Daily Login Streak methods
         claimDailyLoginBonus,
+        streakRewards: state.streakRewards || STREAK_REWARDS,
+        updateStreakRewards,
+        // Password Reset via Admin SMS Requests
+        passwordResetRequests: state.passwordResetRequests || [],
+        requestPasswordReset,
+        resolvePasswordReset,
         // MLM 2:1 Binary functions
         setPreferredLeg,
         addDownlineMember,

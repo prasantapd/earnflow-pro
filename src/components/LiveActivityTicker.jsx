@@ -194,15 +194,15 @@ export default function LiveActivityTicker() {
   return (
     <div 
       style={{
-        background: 'linear-gradient(90deg, rgba(15, 23, 42, 0.95) 0%, rgba(17, 24, 39, 0.92) 50%, rgba(15, 23, 42, 0.95) 100%)',
-        borderBottom: '1px solid rgba(245, 158, 11, 0.25)',
-        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.4)',
+        background: 'rgba(15, 23, 42, 0.75)',
+        border: '1px solid rgba(245, 158, 11, 0.2)',
+        borderRadius: '20px',
         display: 'flex',
         alignItems: 'center',
-        height: '40px',
+        height: '30px',
         overflow: 'hidden',
         position: 'relative',
-        zIndex: 40,
+        marginBottom: '1rem',
         userSelect: 'none'
       }}
     >
@@ -211,10 +211,10 @@ export default function LiveActivityTicker() {
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '0.45rem',
-          padding: '0 1rem',
-          background: 'linear-gradient(135deg, rgba(244, 63, 94, 0.2) 0%, rgba(245, 158, 11, 0.15) 100%)',
-          borderRight: '1px solid rgba(255, 255, 255, 0.1)',
+          gap: '0.35rem',
+          padding: '0 0.75rem',
+          background: 'rgba(244, 63, 94, 0.15)',
+          borderRight: '1px solid rgba(255, 255, 255, 0.08)',
           height: '100%',
           flexShrink: 0,
           zIndex: 2
@@ -223,14 +223,14 @@ export default function LiveActivityTicker() {
         <span 
           className="live-pulse-dot" 
           style={{ 
-            width: 8, 
-            height: 8, 
+            width: 6, 
+            height: 6, 
             borderRadius: '50%', 
             background: '#ef4444',
-            boxShadow: '0 0 10px #ef4444' 
+            boxShadow: '0 0 8px #ef4444' 
           }} 
         />
-        <span style={{ fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.5px', color: '#f8fafc', textTransform: 'uppercase' }}>
+        <span style={{ fontSize: '0.65rem', fontWeight: 800, letterSpacing: '0.5px', color: '#f8fafc', textTransform: 'uppercase' }}>
           Live Stream
         </span>
       </div>

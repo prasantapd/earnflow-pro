@@ -50,78 +50,62 @@ export default function AdminAnnouncementBanner() {
 
   return (
     <div
-      className="glass-card"
       style={{
-        padding: '1rem 1.25rem',
-        marginBottom: '1.75rem',
-        border: `1.5px solid ${borderColor}`,
+        padding: '0.55rem 0.95rem',
+        marginBottom: '1rem',
+        border: `1px solid ${borderColor}`,
         background: bgGradient,
-        borderRadius: 'var(--radius-md)',
+        borderRadius: '10px',
         position: 'relative',
-        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.35)',
-        animation: 'fadeIn 0.3s ease-out'
+        boxShadow: '0 4px 14px rgba(0, 0, 0, 0.25)',
+        animation: 'fadeIn 0.2s ease-out'
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.85rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flex: 1, minWidth: 260 }}>
           <div
             style={{
-              width: 38,
-              height: 38,
-              borderRadius: '10px',
+              width: 28,
+              height: 28,
+              borderRadius: '8px',
               background: badgeBg,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               color: badgeColor,
               flexShrink: 0,
-              marginTop: '0.1rem',
               border: `1px solid ${badgeColor}40`
             }}
           >
-            <Icon size={20} />
+            <Icon size={16} />
           </div>
 
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.25rem' }}>
-              <span
-                style={{
-                  fontSize: '0.65rem',
-                  fontWeight: 800,
-                  textTransform: 'uppercase',
-                  padding: '2px 8px',
-                  borderRadius: '12px',
-                  background: badgeBg,
-                  color: badgeColor,
-                  border: `1px solid ${badgeColor}50`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.3rem'
-                }}
-              >
-                <Megaphone size={11} /> Admin Broadcast
-              </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', flex: 1 }}>
+            <span
+              style={{
+                fontSize: '0.62rem',
+                fontWeight: 800,
+                textTransform: 'uppercase',
+                padding: '1px 6px',
+                borderRadius: '8px',
+                background: badgeBg,
+                color: badgeColor,
+                border: `1px solid ${badgeColor}50`,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.25rem'
+              }}
+            >
+              <Megaphone size={10} /> Notice
+            </span>
 
-              {updatedAt && (
-                <span style={{ fontSize: '0.7rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                  <Clock size={11} /> {formatDate(updatedAt)}
-                </span>
-              )}
-
-              {broadcastBy && (
-                <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
-                  • Posted by {broadcastBy}
-                </span>
-              )}
-            </div>
-
-            <h4 style={{ fontSize: '1rem', fontWeight: 800, color: '#ffffff', marginBottom: '0.25rem' }}>
+            <strong style={{ fontSize: '0.82rem', color: '#ffffff' }}>
               {title}
-            </h4>
+            </strong>
 
-            <p style={{ fontSize: '0.85rem', color: '#cbd5e1', lineHeight: 1.5, whiteSpace: 'pre-line' }}>
+            <span style={{ fontSize: '0.78rem', color: '#cbd5e1' }}>
               {message}
-            </p>
+            </span>
           </div>
         </div>
 
@@ -133,8 +117,8 @@ export default function AdminAnnouncementBanner() {
             background: 'rgba(255, 255, 255, 0.05)',
             border: 'none',
             color: '#94a3b8',
-            width: 26,
-            height: 26,
+            width: 22,
+            height: 22,
             borderRadius: '50%',
             display: 'flex',
             alignItems: 'center',
@@ -146,7 +130,7 @@ export default function AdminAnnouncementBanner() {
           onMouseEnter={(e) => { e.currentTarget.style.color = '#ffffff'; e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)'; }}
           onMouseLeave={(e) => { e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'; }}
         >
-          <X size={15} />
+          <X size={13} />
         </button>
       </div>
     </div>

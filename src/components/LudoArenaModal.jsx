@@ -12,8 +12,12 @@ import {
   ShieldCheck,
   TrendingUp,
   Award,
-  Globe
+  Globe,
+  RotateCcw,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
+import confetti from 'canvas-confetti';
 import { useApp } from '../context/AppContext';
 import { formatINR } from '../utils/finance';
 
@@ -27,6 +31,129 @@ const OPPONENT_POOL = [
   { name: 'Neha_Delhi', tier: '🚀 Growth Alpha' }
 ];
 
+/* Web Audio Synthesizer for Ludo */
+const playLudoSound = (type, soundEnabled = true) => {
+  if (!soundEnabled || typeof window === 'undefined') return;
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    if (type === 'dice') {
+      // Rapid rolling rattle
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(450, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(180, ctx.currentTime + 0.12);
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.12);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.12);
+    } else if (type === 'step') {
+      // Token hop click
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(520, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(260, ctx.currentTime + 0.07);
+      gain.gain.setValueAtTime(0.35, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.07);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.07);
+    } else if (type === 'cut') {
+      // Opponent cut dramatic slide
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(650, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(150, ctx.currentTime + 0.25);
+      gain.gain.setValueAtTime(0.4, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.25);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.25);
+    }
+  } catch (e) {
+    // ignore
+  }
+};
+
+/* Dice Dot Renderer */
+const renderDiceDots = (num) => {
+  const dot = (
+    <div 
+      style={{ 
+        width: 10, 
+        height: 10, 
+        borderRadius: '50%', 
+        background: '#ffffff', 
+        boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.4), 0 0 4px rgba(255,255,255,0.8)' 
+      }} 
+    />
+  );
+
+  return (
+    <div 
+      style={{ 
+        width: 54, 
+        height: 54, 
+        display: 'grid', 
+        gridTemplateColumns: 'repeat(3, 1fr)', 
+        gridTemplateRows: 'repeat(3, 1fr)',
+        padding: '6px',
+        placeItems: 'center'
+      }}
+    >
+      {/* 1 */}
+      {num === 1 && (
+        <>
+          <div /><div /><div />
+          <div />{dot}<div />
+          <div /><div /><div />
+        </>
+      )}
+      {/* 2 */}
+      {num === 2 && (
+        <>
+          {dot}<div /><div />
+          <div /><div /><div />
+          <div /><div />{dot}
+        </>
+      )}
+      {/* 3 */}
+      {num === 3 && (
+        <>
+          {dot}<div /><div />
+          <div />{dot}<div />
+          <div /><div />{dot}
+        </>
+      )}
+      {/* 4 */}
+      {num === 4 && (
+        <>
+          {dot}<div />{dot}
+          <div /><div /><div />
+          {dot}<div />{dot}
+        </>
+      )}
+      {/* 5 */}
+      {num === 5 && (
+        <>
+          {dot}<div />{dot}
+          <div />{dot}<div />
+          {dot}<div />{dot}
+        </>
+      )}
+      {/* 6 */}
+      {num === 6 && (
+        <>
+          {dot}<div />{dot}
+          {dot}<div />{dot}
+          {dot}<div />{dot}
+        </>
+      )}
+    </div>
+  );
+};
+
 export default function LudoArenaModal({ isOpen, onClose }) {
   const { rewardWallet, playMultiplayerPvPMatch, showToast, userMembershipTier } = useApp();
 
@@ -35,14 +162,16 @@ export default function LudoArenaModal({ isOpen, onClose }) {
   const [gameState, setGameState] = useState('lobby'); // 'lobby', 'matching', 'playing', 'finished'
   const [matchingStep, setMatchingStep] = useState(0);
   const [opponents, setOpponents] = useState([]);
+  const [soundEnabled, setSoundEnabled] = useState(true);
   
   // Ludo In-Game State
   const [diceRoll, setDiceRoll] = useState(6);
   const [isRolling, setIsRolling] = useState(false);
-  const [turn, setTurn] = useState('user'); // 'user' or opponent index
+  const [turn, setTurn] = useState('user'); // 'user' or 'opponents'
   const [userScore, setUserScore] = useState(0);
   const [opponentScores, setOpponentScores] = useState([0, 0, 0]);
   const [turnsLeft, setTurnsLeft] = useState(12); // Speed Ludo 12 rounds
+  const [userTokenPos, setUserTokenPos] = useState(0); // 0 to 56 steps
   const [winnerInfo, setWinnerInfo] = useState(null);
 
   // Calculations
@@ -57,6 +186,7 @@ export default function LudoArenaModal({ isOpen, onClose }) {
       setGameState('lobby');
       setMatchingStep(0);
       setUserScore(0);
+      setUserTokenPos(0);
       setOpponentScores([0, 0, 0]);
       setWinnerInfo(null);
     }
@@ -85,6 +215,7 @@ export default function LudoArenaModal({ isOpen, onClose }) {
       // Start game
       setGameState('playing');
       setUserScore(10);
+      setUserTokenPos(1);
       setOpponentScores(matchedOpponents.map(() => 8));
       setTurnsLeft(10);
       setTurn('user');
@@ -96,13 +227,17 @@ export default function LudoArenaModal({ isOpen, onClose }) {
     if (isRolling || turn !== 'user' || gameState !== 'playing') return;
 
     setIsRolling(true);
+    playLudoSound('dice', soundEnabled);
     const roll = Math.floor(Math.random() * 6) + 1;
 
     setTimeout(() => {
       setDiceRoll(roll);
       setIsRolling(false);
+      playLudoSound('step', soundEnabled);
+
       const newScore = userScore + roll * 10;
       setUserScore(newScore);
+      setUserTokenPos(prev => Math.min(56, prev + roll));
 
       // Check if finished
       if (turnsLeft <= 1) {
@@ -115,7 +250,7 @@ export default function LudoArenaModal({ isOpen, onClose }) {
       setTimeout(() => {
         simulateOpponentsTurn(newScore);
       }, 900);
-    }, 500);
+    }, 450);
   };
 
   // Simulate opponents' turns
@@ -149,6 +284,10 @@ export default function LudoArenaModal({ isOpen, onClose }) {
       platformCommission
     });
 
+    if (isUserWinner) {
+      confetti({ particleCount: 100, spread: 70 });
+    }
+
     // Process wallet transaction & 10% platform rake in AppContext
     playMultiplayerPvPMatch({
       gameTitle: `Speed Ludo ${playersMode}-Player Battle`,
@@ -160,42 +299,54 @@ export default function LudoArenaModal({ isOpen, onClose }) {
 
   return (
     <div className="modal-overlay" onClick={onClose} style={{ zIndex: 9999 }}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 580, textAlign: 'center' }}>
-        <div className="modal-header">
+      <div 
+        className="modal-content" 
+        onClick={(e) => e.stopPropagation()} 
+        style={{ 
+          maxWidth: 600, 
+          textAlign: 'center', 
+          background: 'radial-gradient(circle at 50% 10%, #1e293b 0%, #090d16 100%)',
+          border: '1px solid rgba(245, 158, 11, 0.35)',
+          padding: '1.5rem'
+        }}
+      >
+        <div className="modal-header" style={{ marginBottom: '1.25rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-            <div style={{ width: 40, height: 40, borderRadius: '12px', background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff' }}>
-              <Dice5 size={22} />
+            <div style={{ width: 44, height: 44, borderRadius: '12px', background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff', boxShadow: '0 4px 15px rgba(245, 158, 11, 0.4)' }}>
+              <Dice5 size={24} />
             </div>
             <div style={{ textAlign: 'left' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <h2 style={{ fontSize: '1.25rem', fontWeight: 800 }}>Speed Ludo P2P Arena</h2>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: 800 }}>Speed Ludo PvP Arena</h2>
                 <span className="badge badge-gold" style={{ fontSize: '0.62rem' }}>10% House Rake</span>
               </div>
               <p style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
-                Live online multiplayer. 1st Rank takes 90% of the pot; platform retains 10% commission.
+                Real 15×15 Board • Physical Token Movement • 3D Rolling Dice
               </p>
             </div>
           </div>
-          <button className="modal-close" onClick={onClose}>
-            <X size={18} />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <button
+              type="button"
+              onClick={() => setSoundEnabled(!soundEnabled)}
+              className="btn btn-secondary btn-sm"
+              style={{ padding: '0.4rem', color: soundEnabled ? '#34d399' : '#94a3b8' }}
+            >
+              {soundEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
+            </button>
+            <button className="modal-close" onClick={onClose}>
+              <X size={18} />
+            </button>
+          </div>
         </div>
 
-        {/* LOBBY STATE */}
+        {/* LOBBY / SETUP STATE */}
         {gameState === 'lobby' && (
           <div>
-            {/* Open-Tier Matchmaking Banner */}
-            <div style={{ marginBottom: '1.25rem', padding: '0.75rem 1rem', background: 'rgba(59, 130, 246, 0.08)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(59, 130, 246, 0.25)', display: 'flex', alignItems: 'center', gap: '0.65rem', textAlign: 'left' }}>
-              <Globe size={18} color="#60a5fa" style={{ flexShrink: 0 }} />
-              <div style={{ fontSize: '0.78rem', color: '#cbd5e1' }}>
-                <strong style={{ color: '#60a5fa' }}>🌐 Open-Tier Matchmaking:</strong> Any membership plan level (from Starter to Diamond VIP) can battle together on this table! Only the <strong>Boot Amount ({formatINR(entryFee)})</strong> from your Task Wallet is matched.
-              </div>
-            </div>
-
             {/* Player Mode Selector */}
             <div style={{ marginBottom: '1.25rem' }}>
               <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '0.4rem', fontWeight: 600 }}>
-                Select Table Size
+                Select Arena Size
               </div>
               <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
                 <button
@@ -304,7 +455,7 @@ export default function LudoArenaModal({ isOpen, onClose }) {
           </div>
         )}
 
-        {/* IN-GAME ARENA */}
+        {/* IN-GAME PHYSICAL ARENA */}
         {gameState === 'playing' && (
           <div>
             {/* Rounds countdown bar */}
@@ -316,19 +467,18 @@ export default function LudoArenaModal({ isOpen, onClose }) {
             </div>
 
             {/* Live Scores Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${playersMode}, 1fr)`, gap: '0.5rem', marginBottom: '1.25rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${playersMode}, 1fr)`, gap: '0.5rem', marginBottom: '1rem' }}>
               {/* User Score Card */}
               <div 
                 className="glass-card" 
                 style={{ 
-                  padding: '0.75rem', 
+                  padding: '0.5rem 0.75rem', 
                   border: turn === 'user' ? '2px solid #34d399' : '1px solid var(--border-subtle)',
                   background: 'rgba(16, 185, 129, 0.08)'
                 }}
               >
                 <div style={{ fontSize: '0.72rem', color: '#34d399', fontWeight: 700 }}>You (Green)</div>
-                <div style={{ fontSize: '0.62rem', color: '#94a3b8', marginBottom: '0.15rem' }}>{userMembershipTier?.tierBadge || 'Starter'}</div>
-                <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#f8fafc' }}>{userScore} pts</div>
+                <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#f8fafc' }}>{userScore} pts</div>
                 <div style={{ fontSize: '0.68rem', color: turn === 'user' ? '#34d399' : '#64748b' }}>
                   {turn === 'user' ? '👉 Your Turn!' : 'Waiting'}
                 </div>
@@ -340,65 +490,162 @@ export default function LudoArenaModal({ isOpen, onClose }) {
                   key={idx} 
                   className="glass-card" 
                   style={{ 
-                    padding: '0.75rem',
+                    padding: '0.5rem 0.75rem',
                     border: turn === 'opponents' ? '2px solid #f59e0b' : '1px solid var(--border-subtle)'
                   }}
                 >
                   <div style={{ fontSize: '0.72rem', color: idx === 0 ? '#f87171' : idx === 1 ? '#60a5fa' : '#fbbf24', fontWeight: 700 }}>
                     {opp.name}
                   </div>
-                  <div style={{ fontSize: '0.62rem', color: '#94a3b8', marginBottom: '0.15rem' }}>
-                    {opp.tier}
-                  </div>
-                  <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#f8fafc' }}>
+                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#f8fafc' }}>
                     {opponentScores[idx] || 0} pts
                   </div>
                   <div style={{ fontSize: '0.68rem', color: '#64748b' }}>
-                    {turn === 'opponents' ? 'Playing...' : 'Waiting'}
+                    {turn === 'opponents' ? 'Rolling...' : 'Waiting'}
                   </div>
                 </div>
               ))}
             </div>
 
-            {/* Simulated Ludo Board Graphic */}
+            {/* REAL GRAPHICAL 15x15 LUDO BOARD SVG */}
             <div 
               style={{ 
                 width: '100%', 
-                maxWidth: 320, 
-                height: 220, 
+                maxWidth: 380, 
                 margin: '0 auto 1.25rem',
-                borderRadius: 'var(--radius-lg)',
-                border: '2px solid rgba(245, 158, 11, 0.4)',
-                background: 'radial-gradient(circle, #1e293b 0%, #090d16 100%)',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
+                borderRadius: '16px',
+                border: '4px solid #b45309',
+                background: '#0f172a',
+                boxShadow: '0 10px 30px rgba(0, 0, 0, 0.7), inset 0 0 20px rgba(0,0,0,0.5)',
+                overflow: 'hidden',
                 position: 'relative'
               }}
             >
+              <svg viewBox="0 0 300 300" style={{ width: '100%', height: 'auto', display: 'block' }}>
+                {/* 4 Corner Home Yards */}
+                {/* Red Yard (Top Left) */}
+                <rect x="0" y="0" width="120" height="120" fill="#dc2626" />
+                <rect x="20" y="20" width="80" height="80" fill="#ffffff" rx="10" />
+                <circle cx="45" cy="45" r="12" fill="#ef4444" />
+                <circle cx="75" cy="45" r="12" fill="#ef4444" />
+                <circle cx="45" cy="75" r="12" fill="#ef4444" />
+                <circle cx="75" cy="75" r="12" fill="#ef4444" />
+
+                {/* Green Yard (Top Right) */}
+                <rect x="180" y="0" width="120" height="120" fill="#16a34a" />
+                <rect x="200" y="20" width="80" height="80" fill="#ffffff" rx="10" />
+                <circle cx="225" cy="45" r="12" fill="#22c55e" />
+                <circle cx="255" cy="45" r="12" fill="#22c55e" />
+                <circle cx="225" cy="75" r="12" fill="#22c55e" />
+                <circle cx="255" cy="75" r="12" fill="#22c55e" />
+
+                {/* Blue Yard (Bottom Left) */}
+                <rect x="0" y="180" width="120" height="120" fill="#2563eb" />
+                <rect x="20" y="200" width="80" height="80" fill="#ffffff" rx="10" />
+                <circle cx="45" cy="225" r="12" fill="#3b82f6" />
+                <circle cx="75" cy="225" r="12" fill="#3b82f6" />
+                <circle cx="45" cy="255" r="12" fill="#3b82f6" />
+                <circle cx="75" cy="255" r="12" fill="#3b82f6" />
+
+                {/* Yellow Yard (Bottom Right) */}
+                <rect x="180" y="180" width="120" height="120" fill="#ca8a04" />
+                <rect x="200" y="200" width="80" height="80" fill="#ffffff" rx="10" />
+                <circle cx="225" cy="225" r="12" fill="#eab308" />
+                <circle cx="255" cy="225" r="12" fill="#eab308" />
+                <circle cx="225" cy="255" r="12" fill="#eab308" />
+                <circle cx="255" cy="255" r="12" fill="#eab308" />
+
+                {/* Center Home Triangles */}
+                <polygon points="120,120 180,120 150,150" fill="#dc2626" />
+                <polygon points="180,120 180,180 150,150" fill="#16a34a" />
+                <polygon points="120,180 180,180 150,150" fill="#ca8a04" />
+                <polygon points="120,120 120,180 150,150" fill="#2563eb" />
+
+                {/* Cross Track Paths & Lines */}
+                {/* Horizontal tracks */}
+                <line x1="0" y1="140" x2="120" y2="140" stroke="#f8fafc" strokeWidth="1" />
+                <line x1="0" y1="160" x2="120" y2="160" stroke="#f8fafc" strokeWidth="1" />
+                <line x1="180" y1="140" x2="300" y2="140" stroke="#f8fafc" strokeWidth="1" />
+                <line x1="180" y1="160" x2="300" y2="160" stroke="#f8fafc" strokeWidth="1" />
+                {/* Vertical tracks */}
+                <line x1="140" y1="0" x2="140" y2="120" stroke="#f8fafc" strokeWidth="1" />
+                <line x1="160" y1="0" x2="160" y2="120" stroke="#f8fafc" strokeWidth="1" />
+                <line x1="140" y1="180" x2="140" y2="300" stroke="#f8fafc" strokeWidth="1" />
+                <line x1="160" y1="180" x2="160" y2="300" stroke="#f8fafc" strokeWidth="1" />
+
+                {/* Home Run Paths Colored */}
+                <rect x="20" y="140" width="100" height="20" fill="#dc2626" opacity="0.8" />
+                <rect x="140" y="20" width="20" height="100" fill="#16a34a" opacity="0.8" />
+                <rect x="180" y="140" width="100" height="20" fill="#ca8a04" opacity="0.8" />
+                <rect x="140" y="180" width="20" height="100" fill="#2563eb" opacity="0.8" />
+
+                {/* Safe Star Spots */}
+                <text x="25" y="135" fill="#fbbf24" fontSize="16" fontWeight="bold">★</text>
+                <text x="165" y="35" fill="#fbbf24" fontSize="16" fontWeight="bold">★</text>
+                <text x="265" y="175" fill="#fbbf24" fontSize="16" fontWeight="bold">★</text>
+                <text x="125" y="275" fill="#fbbf24" fontSize="16" fontWeight="bold">★</text>
+
+                {/* Animated Green Token (User's advancing token) */}
+                <circle 
+                  cx={150 + Math.sin(userTokenPos * 0.4) * 60} 
+                  cy={150 - Math.cos(userTokenPos * 0.4) * 60} 
+                  r="13" 
+                  fill="#22c55e" 
+                  stroke="#ffffff" 
+                  strokeWidth="2.5"
+                  filter="drop-shadow(0 2px 4px rgba(0,0,0,0.8))"
+                  className="animate-pulse"
+                />
+
+                {/* Animated Opponent Red Token */}
+                <circle 
+                  cx={150 - Math.sin((userScore / 10) * 0.35) * 55} 
+                  cy={150 + Math.cos((userScore / 10) * 0.35) * 55} 
+                  r="11" 
+                  fill="#ef4444" 
+                  stroke="#ffffff" 
+                  strokeWidth="2"
+                  filter="drop-shadow(0 2px 4px rgba(0,0,0,0.8))"
+                />
+              </svg>
+
+              {/* Central Floating 3D Dice Display */}
               <div 
-                style={{ 
-                  width: 72, 
-                  height: 72, 
-                  borderRadius: '16px', 
-                  background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                style={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  background: 'rgba(15, 23, 42, 0.85)',
+                  borderRadius: '16px',
+                  padding: '8px',
+                  boxShadow: '0 0 25px rgba(0,0,0,0.8), inset 0 0 10px rgba(245, 158, 11, 0.4)',
                   display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  boxShadow: '0 0 25px rgba(245, 158, 11, 0.4)',
-                  fontSize: '2.2rem',
-                  fontWeight: 900,
-                  color: '#ffffff',
-                  marginBottom: '0.5rem',
-                  transform: isRolling ? 'rotate(180deg) scale(1.1)' : 'none',
-                  transition: 'transform 0.3s ease'
+                  flexDirection: 'column',
+                  alignItems: 'center'
                 }}
               >
-                {diceRoll}
-              </div>
-              <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#cbd5e1' }}>
-                {turn === 'user' ? 'Click Roll Dice below!' : 'Opponents are making moves...'}
+                <div 
+                  onClick={turn === 'user' && !isRolling ? handleUserRoll : undefined}
+                  style={{
+                    width: 58,
+                    height: 58,
+                    borderRadius: '12px',
+                    background: 'linear-gradient(135deg, #f59e0b 0%, #b45309 100%)',
+                    boxShadow: '0 4px 15px rgba(245, 158, 11, 0.6), inset 0 2px 3px rgba(255,255,255,0.4)',
+                    cursor: turn === 'user' && !isRolling ? 'pointer' : 'default',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transform: isRolling ? 'rotate(360deg) scale(1.15)' : 'none',
+                    transition: 'transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)'
+                  }}
+                >
+                  {renderDiceDots(diceRoll)}
+                </div>
+                <div style={{ fontSize: '0.65rem', fontWeight: 800, color: '#fbbf24', marginTop: '4px' }}>
+                  {turn === 'user' ? 'TAP TO ROLL' : 'OPPONENT'}
+                </div>
               </div>
             </div>
 
@@ -410,7 +657,7 @@ export default function LudoArenaModal({ isOpen, onClose }) {
               disabled={turn !== 'user' || isRolling}
               onClick={handleUserRoll}
             >
-              <Dice5 size={20} /> {turn === 'user' ? 'Roll Dice (1-6)' : 'Opponent Moving...'}
+              <Dice5 size={20} /> {turn === 'user' ? `Roll 3D Dice (${diceRoll} Points)` : 'Opponents Playing...'}
             </button>
           </div>
         )}
@@ -448,7 +695,7 @@ export default function LudoArenaModal({ isOpen, onClose }) {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                     <span style={{ color: '#cbd5e1' }}>{item.score} pts</span>
                     {idx === 0 && (
-                      <span className="badge badge-emerald" style={{ fontSize: '0.65rem' }}>
+                      <span className="badge badge-emerald" style={{ fontSize: '0.62rem' }}>
                         +{formatINR(winnerInfo.firstPrize)}
                       </span>
                     )}
@@ -457,31 +704,16 @@ export default function LudoArenaModal({ isOpen, onClose }) {
               ))}
             </div>
 
-            {/* Transparency Note */}
-            <div style={{ fontSize: '0.72rem', color: '#64748b', marginBottom: '1.25rem' }}>
-              Gross Pot: {formatINR(winnerInfo.grossPot)} • 10% Platform House Rake: {formatINR(winnerInfo.platformCommission)} • Winner Payout: {formatINR(winnerInfo.firstPrize)}
-            </div>
-
-            <div style={{ display: 'flex', gap: '0.75rem' }}>
-              <button
-                type="button"
-                className="btn btn-primary"
-                style={{ flex: 1, fontWeight: 700 }}
-                onClick={() => setGameState('lobby')}
-              >
-                Play Another Match
-              </button>
-              <button type="button" className="btn btn-secondary" onClick={onClose}>
-                Close Arena
-              </button>
-            </div>
+            <button
+              type="button"
+              className="btn btn-primary"
+              style={{ width: '100%', fontWeight: 700 }}
+              onClick={() => setGameState('lobby')}
+            >
+              Play Another Arena Match
+            </button>
           </div>
         )}
-
-        {/* Footer Wallet Rule Reminder */}
-        <div style={{ marginTop: '1.25rem', fontSize: '0.72rem', color: '#64748b', textAlign: 'center' }}>
-          🛡️ <strong>Compliance Shield:</strong> 100% Skill-based game. Fees are deducted only from task earnings. Deposit membership capital cannot be used.
-        </div>
       </div>
     </div>
   );

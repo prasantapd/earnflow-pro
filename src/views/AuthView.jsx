@@ -18,10 +18,10 @@ import {
 import { useApp } from '../context/AppContext';
 
 export default function AuthView({ onOpenAdminLogin }) {
-  const { registerUser, loginUser, showToast } = useApp();
+  const { registerUser, loginUser, requestPasswordReset, showToast } = useApp();
   const [isLoginMode, setIsLoginMode] = useState(false); // Default to register or toggle to login
 
-  // Registration form
+  // Registration form (No OTP required!)
   const [regForm, setRegForm] = useState({
     name: '',
     email: '',
@@ -37,10 +37,15 @@ export default function AuthView({ onOpenAdminLogin }) {
     password: '',
   });
 
+  // Forgot Password modal state
+  const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
+  const [forgotPhone, setForgotPhone] = useState('');
+  const [forgotSubmitted, setForgotSubmitted] = useState(false);
+
   const handleRegisterSubmit = (e) => {
     e.preventDefault();
-    if (!regForm.name.trim() || !regForm.email.trim() || !regForm.phone.trim() || !regForm.password.trim()) {
-      showToast('Please fill in all required fields.', 'error');
+    if (!regForm.name.trim() || !regForm.phone.trim() || !regForm.password.trim()) {
+      showToast('Please fill in your Name, Mobile Number, and Password.', 'error');
       return;
     }
     if (regForm.password.length < 6) {
@@ -52,16 +57,32 @@ export default function AuthView({ onOpenAdminLogin }) {
       return;
     }
 
+    const emailValue = regForm.email.trim()
+      ? regForm.email.trim().toLowerCase()
+      : `${regForm.phone.replace(/\D/g, '') || 'user'}@earnflow.app`;
+
     const success = registerUser({
       name: regForm.name.trim(),
-      email: regForm.email.trim().toLowerCase(),
+      email: emailValue,
       phone: regForm.phone.trim(),
       password: regForm.password,
       referralCode: regForm.referralCode.trim().toUpperCase() || undefined,
     });
 
     if (success) {
-      showToast('Welcome to TaskCoin Pro! Your account is active and ready.', 'success');
+      showToast('Welcome! Your account is active. Instant login (No OTP required)!', 'success');
+    }
+  };
+
+  const handleForgotSubmit = (e) => {
+    e.preventDefault();
+    if (!forgotPhone.trim()) {
+      showToast('Please enter your registered mobile number.', 'error');
+      return;
+    }
+    const success = requestPasswordReset(forgotPhone.trim());
+    if (success) {
+      setForgotSubmitted(true);
     }
   };
 
@@ -229,14 +250,13 @@ export default function AuthView({ onOpenAdminLogin }) {
 
             <div className="form-group" style={{ marginBottom: '1rem' }}>
               <label className="form-label">
-                <span>Email Address *</span>
+                <span>Email Address (Optional)</span>
               </label>
               <div style={{ position: 'relative' }}>
                 <Mail size={16} color="#94a3b8" style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)' }} />
                 <input
                   type="email"
-                  required
-                  placeholder="you@example.com"
+                  placeholder="Optional (e.g. you@example.com)"
                   className="input-field"
                   style={{ paddingLeft: '2.5rem' }}
                   value={regForm.email}
@@ -303,11 +323,51 @@ export default function AuthView({ onOpenAdminLogin }) {
             <button 
               type="submit" 
               className="btn btn-primary btn-lg" 
-              style={{ width: '100%', fontWeight: 800, padding: '0.75rem' }}
+              style={{ width: '100%', fontWeight: 800, padding: '0.75rem', marginBottom: '1rem' }}
             >
-              <span>Create Account & Start Earning</span>
+              <span>Create Account & Start Earning (No OTP)</span>
               <ArrowRight size={17} />
             </button>
+
+            {/* Quick Switch / Forgot Password Helper */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.82rem', padding: '0 0.25rem' }}>
+              <span style={{ color: '#94a3b8' }}>Already have an account?</span>
+              <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsLoginMode(true)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#34d399',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    padding: 0
+                  }}
+                >
+                  Log In
+                </button>
+                <span style={{ color: '#475569' }}>|</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setForgotPhone(regForm.phone || '');
+                    setForgotSubmitted(false);
+                    setIsForgotModalOpen(true);
+                  }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#38bdf8',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    padding: 0
+                  }}
+                >
+                  Forgot Password?
+                </button>
+              </div>
+            </div>
           </form>
         )}
 
@@ -332,7 +392,7 @@ export default function AuthView({ onOpenAdminLogin }) {
               </div>
             </div>
 
-            <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+            <div className="form-group" style={{ marginBottom: '0.75rem' }}>
               <label className="form-label">
                 <span>Security Password *</span>
               </label>
@@ -348,6 +408,34 @@ export default function AuthView({ onOpenAdminLogin }) {
                   onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
                 />
               </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+              <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>Need access?</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setForgotPhone(loginForm.identifier || '');
+                  setForgotSubmitted(false);
+                  setIsForgotModalOpen(true);
+                }}
+                style={{
+                  background: 'rgba(56, 189, 248, 0.1)',
+                  border: '1px solid rgba(56, 189, 248, 0.3)',
+                  borderRadius: '6px',
+                  color: '#38bdf8',
+                  fontSize: '0.82rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  padding: '4px 10px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                <KeyRound size={13} />
+                <span>Forgot Password? (পাসওয়ার্ড রিসেট)</span>
+              </button>
             </div>
 
             <button 
@@ -395,6 +483,114 @@ export default function AuthView({ onOpenAdminLogin }) {
           </button>
         </div>
       </div>
+
+      {/* FORGOT PASSWORD MODAL (No OTP - Admin SMS Reset) */}
+      {isForgotModalOpen && (
+        <div 
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.75)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '1rem'
+          }}
+        >
+          <div 
+            className="glass-card"
+            style={{
+              maxWidth: '420px',
+              width: '100%',
+              padding: '2rem',
+              border: '1px solid rgba(56, 189, 248, 0.3)',
+              position: 'relative'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div style={{ width: 36, height: 36, borderRadius: '8px', background: 'rgba(56, 189, 248, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#38bdf8' }}>
+                  <KeyRound size={20} />
+                </div>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 800 }}>Password Reset Request</h3>
+              </div>
+              <button 
+                type="button" 
+                onClick={() => setIsForgotModalOpen(false)}
+                style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '1.25rem', lineHeight: 1 }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {!forgotSubmitted ? (
+              <form onSubmit={handleForgotSubmit}>
+                <p style={{ fontSize: '0.82rem', color: '#94a3b8', lineHeight: 1.5, marginBottom: '1.25rem' }}>
+                  কোনো OTP লাগবে না। আপনার রেজিস্টার্ড মোবাইল নম্বর দিলে অ্যাডমিন টিম আপনার নম্বরে সাধারণ <strong style={{ color: '#38bdf8' }}>SMS</strong> করে নতুন পাসওয়ার্ড পাঠিয়ে দেবে।
+                </p>
+
+                <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+                  <label className="form-label">
+                    <span>Registered Mobile Number *</span>
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <Phone size={16} color="#94a3b8" style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)' }} />
+                    <input
+                      type="tel"
+                      required
+                      placeholder="e.g. 9876543210"
+                      className="input-field"
+                      style={{ paddingLeft: '2.5rem' }}
+                      value={forgotPhone}
+                      onChange={(e) => setForgotPhone(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                  <button 
+                    type="button"
+                    className="btn btn-secondary"
+                    style={{ flex: 1 }}
+                    onClick={() => setIsForgotModalOpen(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit"
+                    className="btn btn-primary"
+                    style={{ flex: 1.5, fontWeight: 700, background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)' }}
+                  >
+                    Send Request
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '1rem 0' }}>
+                <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem' }}>
+                  <CheckCircle2 size={28} />
+                </div>
+                <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#34d399', marginBottom: '0.5rem' }}>
+                  রিকোয়েস্ট সফলভাবে জমা হয়েছে!
+                </h4>
+                <p style={{ fontSize: '0.85rem', color: '#cbd5e1', lineHeight: 1.5, marginBottom: '1.5rem' }}>
+                  অ্যাডমিন টিম আপনার মোবাইল নম্বর (<strong style={{ color: '#38bdf8' }}>{forgotPhone}</strong>) এ একটি নতুন পাসওয়ার্ড সহ SMS পাঠাবে। আপনি সেই পাসওয়ার্ড দিয়ে সাথে সাথে লগইন করতে পারবেন।
+                </p>
+                <button 
+                  type="button"
+                  className="btn btn-primary"
+                  style={{ width: '100%', fontWeight: 700 }}
+                  onClick={() => setIsForgotModalOpen(false)}
+                >
+                  OK (লগইন পেজে যান)
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

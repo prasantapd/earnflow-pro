@@ -95,9 +95,6 @@ function MainApp() {
         onOpenAdminLogin={() => setIsAdminLoginOpen(true)}
       />
 
-      {/* Live Activity Real-Time Stream Marquee */}
-      <LiveActivityTicker />
-
       {/* Main Content Area */}
       <main className="app-container" style={{ flex: 1 }}>
         {currentRole === 'admin' ? (
@@ -107,6 +104,9 @@ function MainApp() {
           <AuthView onOpenAdminLogin={() => setIsAdminLoginOpen(true)} />
         ) : (
           <>
+            {/* Live Activity Stream (Scrolls with page content, does not block header) */}
+            <LiveActivityTicker />
+
             {activeTab === 'dashboard' && (
               <DashboardView
                 setActiveTab={setActiveTab}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   PlayCircle, 
   Video, 
@@ -38,6 +38,7 @@ import DailyStreakWidget from '../components/DailyStreakWidget';
 import SlidePuzzleModal from '../components/SlidePuzzleModal';
 import LudoArenaModal from '../components/LudoArenaModal';
 import CardGamesArenaModal from '../components/CardGamesArenaModal';
+import SixteenGutiModal from '../components/SixteenGutiModal';
 import CustomTaskModal from '../components/CustomTaskModal';
 import { getLocalDateString, formatFullReadableDate, getTimeUntilMidnight } from '../utils/dateUtils';
 
@@ -74,6 +75,7 @@ export default function TaskCenterView({ onOpenWithdraw }) {
   const [isPuzzleOpen, setIsPuzzleOpen] = useState(false);
   const [isLudoOpen, setIsLudoOpen] = useState(false);
   const [isCardGamesOpen, setIsCardGamesOpen] = useState(false);
+  const [is16GutiOpen, setIs16GutiOpen] = useState(false);
 
   const taskMultiplier = userMembershipTier?.taskMultiplier || 1.0;
 
@@ -82,7 +84,8 @@ export default function TaskCenterView({ onOpenWithdraw }) {
     ? dailyTaskRoster.filter((t) => t.status === 'ACTIVE')
     : [];
 
-  const completedCount = activeRosterTasks.filter((t) => tasksCompletedToday[t.id]).length;
+  const safeCompletedTasks = tasksCompletedToday || {};
+  const completedCount = activeRosterTasks.filter((t) => safeCompletedTasks[t.id]).length;
   const totalCount = activeRosterTasks.length;
   const progressPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
   const totalPotentialIncentive = activeRosterTasks.reduce((sum, t) => sum + Math.round((Number(t.reward) || 0) * taskMultiplier), 0);
@@ -350,7 +353,7 @@ export default function TaskCenterView({ onOpenWithdraw }) {
             {activeRosterTasks.map((task) => {
               const effectiveReward = Math.round((Number(task.reward) || 0) * taskMultiplier);
               const effectiveTask = { ...task, reward: effectiveReward };
-              const isDone = tasksCompletedToday[task.id];
+              const isDone = Boolean(safeCompletedTasks[task.id]);
               const visuals = getTaskVisuals(task, effectiveReward);
 
               return (
@@ -581,6 +584,32 @@ export default function TaskCenterView({ onOpenWithdraw }) {
               <Trophy size={16} /> Play Call Bridge
             </button>
           </div>
+
+          {/* Game 5: 16 Guti (Sholo Guti) Championship */}
+          <div className="glass-card card-interactive" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', border: '1px solid rgba(245, 158, 11, 0.4)' }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                <span className="badge badge-gold" style={{ fontSize: '0.68rem' }}>
+                  <Award size={11} /> 37-Node Board • Traditional
+                </span>
+                <span style={{ fontSize: '1.15rem', fontWeight: 800, color: '#fbbf24' }}>
+                  Win {formatINR(9)} - {formatINR(45)}
+                </span>
+              </div>
+              <h4 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '0.4rem' }}>
+                ১৬ গুটি (16 Guti / Sholo Guti)
+              </h4>
+              <p style={{ fontSize: '0.82rem', color: '#94a3b8', lineHeight: 1.4, marginBottom: '1.25rem' }}>
+                Traditional South Asian strategic bead game. Authentic wooden board, bead jumping over opponent to capture, Smart AI Bot & 2-player pass & play!
+              </p>
+              <div style={{ fontSize: '0.75rem', color: '#cbd5e1', marginBottom: '1.25rem', padding: '0.5rem', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '6px' }}>
+                🔴 16 Beads Each • Capture Opponent Army • 100% Real Board
+              </div>
+            </div>
+            <button className="btn btn-gold" style={{ width: '100%', fontWeight: 700 }} onClick={() => setIs16GutiOpen(true)}>
+              <Award size={16} /> Play ১৬ গুটি (Sholo Guti)
+            </button>
+          </div>
         </div>
       </div>
 
@@ -641,6 +670,12 @@ export default function TaskCenterView({ onOpenWithdraw }) {
       <CardGamesArenaModal
         isOpen={isCardGamesOpen}
         onClose={() => setIsCardGamesOpen(false)}
+      />
+
+      {/* 16 Guti Traditional Modal */}
+      <SixteenGutiModal
+        isOpen={is16GutiOpen}
+        onClose={() => setIs16GutiOpen(false)}
       />
 
       {/* Custom Task Execution Modal */}

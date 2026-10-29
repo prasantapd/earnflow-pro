@@ -26,6 +26,7 @@ export default function DailyStreakWidget() {
     resetDailyStreak, 
     fastForwardNextDay,
     userMembershipTier,
+    streakRewards,
     setState,
     showToast
   } = useApp();
@@ -38,11 +39,27 @@ export default function DailyStreakWidget() {
     history: Array(30).fill(false),
   };
 
+  const activeRewards = streakRewards || STREAK_REWARDS;
   const loginMultiplier = userMembershipTier?.loginMultiplier || 1.0;
   const currentDay = Math.min(30, Math.max(1, streak.currentDay || 1));
   const claimedToday = streak.claimedToday;
-  const baseReward = STREAK_REWARDS[currentDay] || (currentDay >= 30 ? 12 : 1);
+  const baseReward = activeRewards[currentDay] || (currentDay >= 30 ? 12 : 1);
   const currentReward = Math.round(baseReward * loginMultiplier);
+
+  // Dynamic schedule derived from active admin-configured streak rewards
+  const dynamicSchedule = Array.from({ length: 30 }, (_, i) => {
+    const day = i + 1;
+    const reward = activeRewards[day] ?? STREAK_REWARDS[day] ?? 1;
+    const weekNum = day <= 7 ? 1 : day <= 14 ? 2 : day <= 21 ? 3 : 4;
+    return {
+      day,
+      reward,
+      label: `Day ${day}`,
+      week: weekNum,
+      isWeeklyFinish: day === 7 || day === 14 || day === 21,
+      isGrandFinish: day === 30,
+    };
+  });
 
   // Determine current active week (1 to 4)
   const currentWeekNum = currentDay <= 7 ? 1 : currentDay <= 14 ? 2 : currentDay <= 21 ? 3 : 4;
@@ -53,8 +70,8 @@ export default function DailyStreakWidget() {
 
   // Active items based on view mode
   const displayedSchedule = viewMode === 'full30' 
-    ? STREAK_SCHEDULE 
-    : STREAK_SCHEDULE.filter(item => {
+    ? dynamicSchedule 
+    : dynamicSchedule.filter(item => {
         const week = STREAK_WEEKS.find(w => w.weekNum === selectedWeek);
         return week && item.day >= week.startDay && item.day <= week.endDay;
       });

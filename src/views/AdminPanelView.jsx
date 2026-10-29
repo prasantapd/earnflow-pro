@@ -45,7 +45,11 @@ import {
   Globe,
   Eye,
   EyeOff,
-  KeyRound
+  KeyRound,
+  Flame,
+  CalendarCheck,
+  MessageSquare,
+  PhoneCall
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { formatINR, formatDate } from '../utils/finance';
@@ -93,12 +97,67 @@ export default function AdminPanelView() {
     // Admin Master Authentication & Password
     adminPassword,
     updateAdminPassword,
-    switchRole
+    switchRole,
+    // Daily Login Streak Configuration
+    streakRewards,
+    updateStreakRewards,
+    // Password Reset via SMS Requests
+    passwordResetRequests,
+    resolvePasswordReset
   } = useApp();
 
-  const [activeAdminTab, setActiveAdminTab] = useState('users'); // 'users', 'deposits', 'withdrawals', 'settings', 'tasks', 'payments', 'broadcast', 'security'
+  const [activeAdminTab, setActiveAdminTab] = useState('users'); // 'users', 'deposits', 'withdrawals', 'settings', 'tasks', 'payments', 'broadcast', 'security', 'streak', 'reset_requests'
   const [userSearch, setUserSearch] = useState('');
   const [userStatusFilter, setUserStatusFilter] = useState('ALL');
+
+  // Daily Streak Rewards Editor Local State
+  const [editableStreak, setEditableStreak] = useState(() => ({ ...(streakRewards || {}) }));
+
+  // Keep in sync when streakRewards changes from context
+  React.useEffect(() => {
+    if (streakRewards) {
+      setEditableStreak({ ...streakRewards });
+    }
+  }, [streakRewards]);
+
+  // Handle saving streak rewards
+  const handleSaveStreakRewards = (e) => {
+    e.preventDefault();
+    updateStreakRewards(editableStreak);
+  };
+
+  // Preset generator for Daily Streak Rewards
+  const handleApplyStreakPreset = (type) => {
+    let preset = {};
+    if (type === 'conservative') {
+      for (let i = 1; i <= 30; i++) {
+        preset[i] = ((i - 1) % 7) + 1;
+      }
+    } else if (type === 'generous') {
+      for (let i = 1; i <= 30; i++) {
+        preset[i] = 3 + ((i - 1) % 7) * 2;
+      }
+    } else if (type === 'highroller') {
+      for (let i = 1; i <= 30; i++) {
+        preset[i] = 5 + ((i - 1) % 7) * 5;
+      }
+    }
+    setEditableStreak(preset);
+    updateStreakRewards(preset);
+  };
+
+  // Handle Dispatch SMS for password reset
+  const handleDispatchSmsReset = (reqId) => {
+    const res = resolvePasswordReset(reqId);
+    if (!res) return;
+    const cleanPhone = (res.phone || '').replace(/\s+/g, '');
+    const smsMessage = encodeURIComponent(
+      `Hello ${res.name}, Your password has been reset to: ${res.tempPassword}. Login now at TaskCoin / EarnFlow.`
+    );
+    // Trigger native SMS link
+    const smsUrl = `sms:${cleanPhone}?body=${smsMessage}`;
+    window.location.href = smsUrl;
+  };
 
   // Admin Master Password Form state
   const [adminPassForm, setAdminPassForm] = useState({
@@ -434,6 +493,25 @@ export default function AdminPanelView() {
           onClick={() => setActiveAdminTab('settings')}
         >
           <Sliders size={16} /> System & Treasury Rates
+        </button>
+
+        <button
+          className={`btn ${activeAdminTab === 'streak' ? 'btn-primary' : 'btn-secondary'} btn-sm`}
+          onClick={() => setActiveAdminTab('streak')}
+        >
+          <Flame size={16} color="#fbbf24" /> Daily Login Bonus Rates (Day 1–30)
+        </button>
+
+        <button
+          className={`btn ${activeAdminTab === 'reset_requests' ? 'btn-primary' : 'btn-secondary'} btn-sm`}
+          onClick={() => setActiveAdminTab('reset_requests')}
+        >
+          <Phone size={16} color="#38bdf8" /> Password Reset SMS
+          {(passwordResetRequests || []).filter((r) => r.status === 'PENDING').length > 0 && (
+            <span className="badge badge-gold" style={{ marginLeft: '0.35rem', fontSize: '0.62rem' }}>
+              {(passwordResetRequests || []).filter((r) => r.status === 'PENDING').length}
+            </span>
+          )}
         </button>
       </div>
 
@@ -1939,6 +2017,234 @@ export default function AdminPanelView() {
                   <div style={{ fontSize: '0.75rem', marginTop: '0.25rem' }}>Enable the checkbox on the left to activate this notice for users.</div>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 8: DAILY LOGIN STREAK REWARDS EDITOR */}
+      {activeAdminTab === 'streak' && (
+        <div>
+          {/* Header & Quick Action Presets */}
+          <div 
+            className="glass-card" 
+            style={{ 
+              padding: '1.5rem', 
+              marginBottom: '1.5rem',
+              background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(15, 23, 42, 0.95) 100%)',
+              border: '1px solid rgba(245, 158, 11, 0.3)'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.3rem' }}>
+                  <span className="badge badge-gold">
+                    <Flame size={12} /> Daily Login Bonus Rates
+                  </span>
+                  <span className="badge badge-emerald">30-Day Calendar</span>
+                </div>
+                <h3 style={{ fontSize: '1.35rem', fontWeight: 800, margin: 0 }}>
+                  ডেইলি লগইন বোনাস কন্ট্রোলার (Day 1 – Day 30)
+                </h3>
+                <p style={{ fontSize: '0.82rem', color: '#94a3b8', margin: '0.25rem 0 0' }}>
+                  প্রতিদিন ইউজার অ্যাপে ঢুকলে কত টাকা লগইন বোনাস পাবে তা আপনি নিজে এখান থেকে নির্ধারণ করতে পারবেন।
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => handleApplyStreakPreset('conservative')}
+                >
+                  🌱 Standard (₹1–₹7)
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => handleApplyStreakPreset('generous')}
+                >
+                  🚀 Boosted (₹3–₹15)
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => handleApplyStreakPreset('highroller')}
+                >
+                  💎 Super (₹5–₹35)
+                </button>
+              </div>
+            </div>
+
+            <form onSubmit={handleSaveStreakRewards}>
+              {/* 4 Weeks Grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+                {[
+                  { title: 'Week 1 (Days 1–7)', start: 1, end: 7, color: '#38bdf8' },
+                  { title: 'Week 2 (Days 8–14)', start: 8, end: 14, color: '#34d399' },
+                  { title: 'Week 3 (Days 15–21)', start: 15, end: 21, color: '#fbbf24' },
+                  { title: 'Week 4 (Days 22–30)', start: 22, end: 30, color: '#c084fc' }
+                ].map((wk, wIdx) => (
+                  <div key={wIdx} className="glass-card" style={{ padding: '1rem', borderLeft: `3px solid ${wk.color}` }}>
+                    <div style={{ fontSize: '0.82rem', fontWeight: 800, color: wk.color, marginBottom: '0.75rem' }}>
+                      {wk.title}
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(68px, 1fr))', gap: '0.5rem' }}>
+                      {Array.from({ length: wk.end - wk.start + 1 }, (_, i) => wk.start + i).map((day) => (
+                        <div key={day} style={{ textAlign: 'center' }}>
+                          <label style={{ fontSize: '0.68rem', color: '#94a3b8', display: 'block', marginBottom: '0.2rem', fontWeight: 600 }}>
+                            Day {day}
+                          </label>
+                          <div style={{ position: 'relative' }}>
+                            <span style={{ position: 'absolute', left: '0.4rem', top: '50%', transform: 'translateY(-50%)', fontSize: '0.75rem', color: '#64748b' }}>
+                              ₹
+                            </span>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.5"
+                              value={editableStreak[day] ?? ''}
+                              onChange={(e) => setEditableStreak({ ...editableStreak, [day]: Number(e.target.value) })}
+                              className="input-field"
+                              style={{ paddingLeft: '1.1rem', paddingRight: '0.25rem', textAlign: 'center', fontSize: '0.82rem', fontWeight: 800, height: '34px' }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                <button
+                  type="submit"
+                  className="btn btn-primary btn-lg"
+                  style={{ fontWeight: 800, background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', boxShadow: '0 4px 15px rgba(245, 158, 11, 0.4)' }}
+                >
+                  <Save size={18} /> Save Daily Login Rewards (সব ইউজারের জন্য কার্যকর করুন)
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 9: PASSWORD RESET REQUESTS (VIA ADMIN SMS) */}
+      {activeAdminTab === 'reset_requests' && (
+        <div>
+          <div 
+            className="glass-card" 
+            style={{ 
+              padding: '1.5rem', 
+              marginBottom: '1.5rem',
+              background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.08) 0%, rgba(15, 23, 42, 0.95) 100%)',
+              border: '1px solid rgba(56, 189, 248, 0.3)'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.3rem' }}>
+                  <span className="badge badge-indigo">
+                    <Phone size={12} /> SMS Direct Dispatch
+                  </span>
+                  <span className="badge badge-emerald">Zero Cost Gateway</span>
+                </div>
+                <h3 style={{ fontSize: '1.35rem', fontWeight: 800, margin: 0 }}>
+                  Password Reset Requests (মোবাইল এসএমএস রিসেট)
+                </h3>
+                <p style={{ fontSize: '0.82rem', color: '#94a3b8', margin: '0.25rem 0 0' }}>
+                  ইউজাররা পাসওয়ার্ড ভুলে গেলে এখান থেকে রিকোয়েস্ট জমা হয়। আপনি <strong>"Reset & Send SMS"</strong> বাটনে ক্লিক করলে আপনার ফোন থেকে সরাসরি ইউজারের নম্বরে পাসওয়ার্ড সহ SMS চলে যাবে।
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span className="badge badge-gold" style={{ fontSize: '0.75rem', padding: '0.35rem 0.65rem' }}>
+                  Pending: {(passwordResetRequests || []).filter(r => r.status === 'PENDING').length}
+                </span>
+                <span className="badge badge-emerald" style={{ fontSize: '0.75rem', padding: '0.35rem 0.65rem' }}>
+                  Resolved: {(passwordResetRequests || []).filter(r => r.status === 'RESOLVED').length}
+                </span>
+              </div>
+            </div>
+
+            {/* Requests Table */}
+            <div className="table-container" style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)', textAlign: 'left', color: '#94a3b8' }}>
+                    <th style={{ padding: '0.75rem' }}>Req ID</th>
+                    <th style={{ padding: '0.75rem' }}>User Info</th>
+                    <th style={{ padding: '0.75rem' }}>Phone Number</th>
+                    <th style={{ padding: '0.75rem' }}>Requested At</th>
+                    <th style={{ padding: '0.75rem' }}>Status</th>
+                    <th style={{ padding: '0.75rem' }}>Temp Password</th>
+                    <th style={{ padding: '0.75rem', textAlign: 'right' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(passwordResetRequests || []).length === 0 ? (
+                    <tr>
+                      <td colSpan={7} style={{ textAlign: 'center', padding: '2.5rem', color: '#64748b' }}>
+                        <CheckCircle2 size={36} color="#10b981" style={{ margin: '0 auto 0.5rem', opacity: 0.5 }} />
+                        <div>No password reset requests pending. All clear!</div>
+                      </td>
+                    </tr>
+                  ) : (
+                    (passwordResetRequests || []).map((req) => (
+                      <tr key={req.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                        <td style={{ padding: '0.75rem', fontFamily: 'monospace', color: '#94a3b8' }}>
+                          {req.id}
+                        </td>
+                        <td style={{ padding: '0.75rem', fontWeight: 700, color: '#f8fafc' }}>
+                          {req.userName || 'User'}
+                        </td>
+                        <td style={{ padding: '0.75rem', fontFamily: 'monospace', color: '#38bdf8' }}>
+                          {req.userPhone}
+                        </td>
+                        <td style={{ padding: '0.75rem', color: '#94a3b8', fontSize: '0.75rem' }}>
+                          {new Date(req.requestedAt).toLocaleString()}
+                        </td>
+                        <td style={{ padding: '0.75rem' }}>
+                          {req.status === 'PENDING' ? (
+                            <span className="badge badge-gold" style={{ fontSize: '0.68rem' }}>PENDING</span>
+                          ) : (
+                            <span className="badge badge-emerald" style={{ fontSize: '0.68rem' }}>RESOLVED</span>
+                          )}
+                        </td>
+                        <td style={{ padding: '0.75rem', fontFamily: 'monospace', color: req.tempPassword ? '#34d399' : '#64748b' }}>
+                          {req.tempPassword || '—'}
+                        </td>
+                        <td style={{ padding: '0.75rem', textAlign: 'right' }}>
+                          <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'flex-end' }}>
+                            <button
+                              type="button"
+                              className="btn btn-primary btn-sm"
+                              onClick={() => handleDispatchSmsReset(req.id)}
+                              style={{
+                                background: req.status === 'PENDING' ? 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)' : '#334155',
+                                fontWeight: 700,
+                                fontSize: '0.75rem',
+                                padding: '0.35rem 0.65rem'
+                              }}
+                            >
+                              <PhoneCall size={13} /> {req.status === 'PENDING' ? 'Reset & Send SMS' : 'Resend SMS'}
+                            </button>
+                            <a
+                              href={`tel:${(req.userPhone || '').replace(/\s+/g, '')}`}
+                              className="btn btn-secondary btn-sm"
+                              style={{ padding: '0.35rem 0.5rem' }}
+                              title="Call User"
+                            >
+                              <Phone size={13} />
+                            </a>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>

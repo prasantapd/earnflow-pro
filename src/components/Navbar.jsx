@@ -93,75 +93,87 @@ export default function Navbar({ activeTab, setActiveTab, onOpenAuth, onOpenPayo
             </div>
           </div>
 
-          {/* Quick Wallet Stats */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-            {/* Task Wallet */}
-            <div 
-              className="glass-card" 
-              style={{ 
-                padding: '0.45rem 0.85rem', 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '0.6rem',
-                border: '1px solid rgba(16, 185, 129, 0.3)',
-                background: 'rgba(16, 185, 129, 0.08)'
-              }}
-              title="Accumulated task earnings withdrawable every Sunday"
-            >
-              <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(16, 185, 129, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#34d399' }}>
-                <Wallet size={16} />
-              </div>
-              <div>
-                <div style={{ fontSize: '0.68rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>Task Wallet</div>
-                <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#34d399' }}>{formatINR(rewardWallet)}</div>
-              </div>
-            </div>
+          {/* Center Navigation Tabs (Desktop & Tablet) */}
+          {currentRole === 'investor' ? (
+            <nav className="nav-links" style={{ margin: 0, overflowX: 'auto', maxWidth: '100%' }}>
+              <button 
+                className={`nav-btn ${activeTab === 'dashboard' ? 'active' : ''}`}
+                onClick={() => setActiveTab('dashboard')}
+              >
+                <TrendingUp size={15} /> Dashboard
+              </button>
 
-            {/* Principal Locked */}
-            <div 
-              className="glass-card" 
-              style={{ 
-                padding: '0.45rem 0.85rem', 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '0.6rem',
-                border: '1px solid rgba(6, 182, 212, 0.25)',
-                background: 'rgba(6, 182, 212, 0.06)'
-              }}
-              title="Locked deposit capital earning monthly compound return"
-            >
-              <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(6, 182, 212, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#22d3ee' }}>
-                <Lock size={15} />
-              </div>
-              <div>
-                <div style={{ fontSize: '0.68rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>Locked Principal</div>
-                <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#22d3ee' }}>{formatINR(totalLockedPrincipal)}</div>
-              </div>
-            </div>
+              <button 
+                className={`nav-btn ${activeTab === 'plans' ? 'active' : ''}`}
+                onClick={() => setActiveTab('plans')}
+              >
+                <Layers size={15} /> Plans
+              </button>
 
-            {/* 24/7 Payouts Status */}
-            <div 
-              style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '0.5rem',
-                padding: '0.35rem 0.75rem',
-                borderRadius: 'var(--radius-full)',
-                background: 'rgba(16, 185, 129, 0.15)',
-                border: '1px solid rgba(16, 185, 129, 0.4)'
-              }}
-              title="24/7 Anytime Payouts are enabled with Min ₹100 and 1 withdrawal per 24 hours"
-            >
-              <Zap size={14} color="#34d399" />
-              <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#34d399' }}>
-                24/7 Payouts Active
-              </span>
-              <span className="badge badge-emerald" style={{ fontSize: '0.62rem', padding: '1px 6px' }}>
-                Min ₹100
-              </span>
-            </div>
+              <button 
+                className={`nav-btn ${activeTab === 'tasks' ? 'active' : ''}`}
+                onClick={() => setActiveTab('tasks')}
+              >
+                <PlayCircle size={15} color="#fbbf24" /> Tasks
+                <span className="badge badge-gold" style={{ fontSize: '0.58rem', padding: '1px 5px' }}>EARN</span>
+              </button>
 
-            {/* Exit Admin Mode button - ONLY visible when admin is authenticated */}
+              <button 
+                className={`nav-btn ${activeTab === 'withdraw' ? 'active' : ''}`}
+                onClick={() => setActiveTab('withdraw')}
+              >
+                <ArrowDownCircle size={15} /> Payouts
+              </button>
+
+              <button 
+                className={`nav-btn ${activeTab === 'history' ? 'active' : ''}`}
+                onClick={() => setActiveTab('history')}
+              >
+                <History size={15} /> History
+              </button>
+
+              <button 
+                className={`nav-btn ${activeTab === 'mlm' ? 'active' : ''}`}
+                onClick={() => setActiveTab('mlm')}
+              >
+                <GitBranch size={15} /> MLM Network
+              </button>
+            </nav>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#f87171', fontWeight: 700, fontSize: '0.85rem' }}>
+              <ShieldAlert size={16} />
+              <span>ADMINISTRATOR GOVERNANCE PORTAL</span>
+            </div>
+          )}
+
+          {/* Right Header Controls */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexShrink: 0 }}>
+            {/* Quick Wallet Pill (Investor Mode) */}
+            {currentRole === 'investor' && user && (
+              <button 
+                onClick={() => setActiveTab('withdraw')}
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '0.45rem',
+                  padding: '0.35rem 0.75rem',
+                  borderRadius: '20px',
+                  background: 'rgba(16, 185, 129, 0.12)',
+                  border: '1px solid rgba(16, 185, 129, 0.35)',
+                  color: '#34d399',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  fontSize: '0.82rem',
+                  fontWeight: 700
+                }}
+                title="Your Task Reward Wallet — Click to withdraw"
+              >
+                <Wallet size={14} />
+                <span>{formatINR(rewardWallet)}</span>
+              </button>
+            )}
+
+            {/* Exit Admin Mode button */}
             {currentRole === 'admin' && (
               <button
                 onClick={() => {
@@ -174,12 +186,13 @@ export default function Navbar({ activeTab, setActiveTab, onOpenAuth, onOpenPayo
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.4rem',
-                  fontSize: '0.78rem'
+                  fontSize: '0.78rem',
+                  padding: '0.35rem 0.75rem'
                 }}
                 title="Exit administrative mode"
               >
                 <ShieldCheck size={14} />
-                <span>Exit Admin Mode</span>
+                <span>Exit Admin</span>
               </button>
             )}
 
@@ -189,7 +202,7 @@ export default function Navbar({ activeTab, setActiveTab, onOpenAuth, onOpenPayo
                 <button 
                   onClick={onOpenAuth}
                   className="btn btn-secondary btn-sm"
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', padding: '0.35rem 0.65rem' }}
                   title={`Logged in as ${user.name} (${user.email || user.phone})`}
                 >
                   <UserCheck size={14} color="#34d399" />
@@ -201,10 +214,12 @@ export default function Navbar({ activeTab, setActiveTab, onOpenAuth, onOpenPayo
                   style={{ 
                     display: 'flex', 
                     alignItems: 'center', 
-                    gap: '0.35rem',
+                    gap: '0.3rem',
                     color: '#f87171',
                     borderColor: 'rgba(239, 68, 68, 0.3)',
-                    background: 'rgba(239, 68, 68, 0.08)'
+                    background: 'rgba(239, 68, 68, 0.08)',
+                    fontSize: '0.8rem',
+                    padding: '0.35rem 0.65rem'
                   }}
                   title="Log out of TaskCoin Pro"
                 >
@@ -216,87 +231,14 @@ export default function Navbar({ activeTab, setActiveTab, onOpenAuth, onOpenPayo
               <button 
                 onClick={onOpenAuth}
                 className="btn btn-primary btn-sm"
-                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700 }}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700, fontSize: '0.8rem', padding: '0.35rem 0.75rem' }}
               >
                 <UserCheck size={14} />
-                <span>Log In / Register</span>
+                <span>Log In</span>
               </button>
             )}
           </div>
         </div>
-
-        {/* Navigation Tabs (Investor View) */}
-        {currentRole === 'investor' ? (
-          <nav className="nav-links" style={{ marginTop: '1rem', width: 'fit-content' }}>
-            <button 
-              className={`nav-btn ${activeTab === 'dashboard' ? 'active' : ''}`}
-              onClick={() => setActiveTab('dashboard')}
-            >
-              <TrendingUp size={16} /> Dashboard
-            </button>
-
-            <button 
-              className={`nav-btn ${activeTab === 'plans' ? 'active' : ''}`}
-              onClick={() => setActiveTab('plans')}
-            >
-              <Layers size={16} /> Membership Tiers
-            </button>
-
-            <button 
-              className={`nav-btn ${activeTab === 'tasks' ? 'active' : ''}`}
-              onClick={() => setActiveTab('tasks')}
-            >
-              <PlayCircle size={16} /> Task Center
-              <span className="badge badge-gold" style={{ fontSize: '0.62rem', padding: '0.1rem 0.45rem' }}>EARN</span>
-            </button>
-
-            <button 
-              className={`nav-btn ${activeTab === 'withdraw' ? 'active' : ''}`}
-              onClick={() => setActiveTab('withdraw')}
-            >
-              <ArrowDownCircle size={16} /> Withdraw
-            </button>
-
-            <button 
-              className={`nav-btn ${activeTab === 'history' ? 'active' : ''}`}
-              onClick={() => setActiveTab('history')}
-            >
-              <History size={16} /> History
-            </button>
-
-            <button 
-              className={`nav-btn ${activeTab === 'mlm' ? 'active' : ''}`}
-              onClick={() => setActiveTab('mlm')}
-            >
-              <GitBranch size={16} /> 2:1 Binary MLM
-              <span className="badge badge-emerald" style={{ fontSize: '0.62rem', padding: '0.1rem 0.45rem' }}>BONUS</span>
-            </button>
-
-            <button 
-              className={`nav-btn ${activeTab === 'economics' ? 'active' : ''}`}
-              onClick={() => setActiveTab('economics')}
-            >
-              <Info size={16} /> Reward Model
-            </button>
-          </nav>
-        ) : (
-          <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#f87171', fontWeight: 700, fontSize: '0.9rem' }}>
-              <ShieldAlert size={18} />
-              <span>ADMINISTRATOR MODE: Full Control Over Users, Deposits & Withdrawals</span>
-            </div>
-            <button 
-              className="btn btn-secondary btn-sm"
-              onClick={() => {
-                switchRole('investor');
-                setActiveTab('dashboard');
-              }}
-              style={{ fontSize: '0.75rem' }}
-            >
-              Return to Investor Dashboard →
-            </button>
-          </div>
-        )}
       </div>
     </header>
   );

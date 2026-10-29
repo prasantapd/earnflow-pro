@@ -3,7 +3,7 @@ import { X, User, Mail, Phone, Lock, CheckCircle2, ShieldCheck, Sparkles } from 
 import { useApp } from '../context/AppContext';
 
 export default function AuthModal({ isOpen, onClose }) {
-  const { user, registerUser, showToast } = useApp();
+  const { user, registerUser, requestPasswordReset, showToast } = useApp();
   const [isRegisterMode, setIsRegisterMode] = useState(false);
   const [formData, setFormData] = useState({
     name: user?.name || '',
@@ -154,9 +154,32 @@ export default function AuthModal({ isOpen, onClose }) {
 
           {/* Password */}
           <div className="form-group">
-            <label className="form-label">
-              <span>Security Password</span>
-            </label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+              <label className="form-label" style={{ margin: 0 }}>
+                <span>Security Password</span>
+              </label>
+              <button
+                type="button"
+                onClick={() => {
+                  if (formData.phone) {
+                    requestPasswordReset(formData.phone);
+                  } else {
+                    showToast('Please enter mobile number to reset password.', 'error');
+                  }
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#38bdf8',
+                  fontSize: '0.76rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  padding: 0
+                }}
+              >
+                Forgot / Reset Password?
+              </button>
+            </div>
             <div style={{ position: 'relative' }}>
               <Lock size={16} color="#94a3b8" style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)' }} />
               <input

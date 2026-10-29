@@ -13,7 +13,9 @@ import {
   Award,
   KeyRound,
   CheckCircle2,
-  Gift
+  Gift,
+  AlertCircle,
+  UserPlus
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
@@ -41,6 +43,8 @@ export default function AuthView({ onOpenAdminLogin }) {
   const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
   const [forgotPhone, setForgotPhone] = useState('');
   const [forgotSubmitted, setForgotSubmitted] = useState(false);
+  const [unregisteredPhone, setUnregisteredPhone] = useState(null); // When number not registered
+  const [forgotError, setForgotError] = useState('');
 
   const handleRegisterSubmit = (e) => {
     e.preventDefault();
@@ -74,21 +78,45 @@ export default function AuthView({ onOpenAdminLogin }) {
     }
   };
 
-  const [forgotError, setForgotError] = useState('');
-
   const handleForgotSubmit = (e) => {
     e.preventDefault();
     setForgotError('');
-    if (!forgotPhone.trim()) {
+    setUnregisteredPhone(null);
+
+    const cleanInput = forgotPhone.trim();
+    if (!cleanInput) {
       setForgotError('Please enter your mobile number.');
       return;
     }
-    const res = requestPasswordReset(forgotPhone.trim());
-    if (res && res.success) {
+
+    const res = requestPasswordReset(cleanInput);
+
+    if (res && res.success && res.found) {
+      // User found and registered!
       setForgotSubmitted(true);
+      setUnregisteredPhone(null);
+    } else if (res && res.found === false) {
+      // Number NOT registered!
+      setUnregisteredPhone(cleanInput);
+      setForgotSubmitted(false);
     } else {
-      setForgotError('Please enter a valid mobile number.');
+      setForgotError('Please enter a valid 10-digit mobile number.');
     }
+  };
+
+  const handleGoToRegisterWithPhone = (phoneNum) => {
+    // Fill phone into reg form
+    setRegForm((prev) => ({
+      ...prev,
+      phone: phoneNum || prev.phone
+    }));
+    // Close modal
+    setIsForgotModalOpen(false);
+    setUnregisteredPhone(null);
+    setForgotSubmitted(false);
+    // Switch to Registration mode
+    setIsLoginMode(false);
+    showToast(`Mobile number ${phoneNum} pre-filled. Complete registration to start earning!`, 'info');
   };
 
   const handleLoginSubmit = (e) => {
@@ -530,7 +558,51 @@ export default function AuthView({ onOpenAdminLogin }) {
               </button>
             </div>
 
-            {!forgotSubmitted ? (
+            {/* Case 1: Number NOT Registered -> Show message and redirect button */}
+            {unregisteredPhone ? (
+              <div style={{ textAlign: 'center', padding: '0.5rem 0' }}>
+                <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(239, 68, 68, 0.15)', color: '#f87171', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem' }}>
+                  <AlertCircle size={28} />
+                </div>
+                <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#f87171', marginBottom: '0.5rem' }}>
+                  মোবাইল নম্বরটি রেজিস্টার্ড নয়!
+                </h4>
+                <p style={{ fontSize: '0.85rem', color: '#cbd5e1', lineHeight: 1.5, marginBottom: '1.25rem' }}>
+                  আপনার দেওয়া নম্বর (<strong style={{ color: '#38bdf8' }}>{unregisteredPhone}</strong>) দিয়ে কোনো অ্যাকাউন্ট খোলা নেই। পাসওয়ার্ড পাওয়ার আগে আপনাকে প্রথমে একটি অ্যাকাউন্ট তৈরি করতে হবে।
+                </p>
+                <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px dashed rgba(16, 185, 129, 0.3)', borderRadius: '10px', padding: '0.85rem', marginBottom: '1.5rem', textAlign: 'left' }}>
+                  <div style={{ fontSize: '0.78rem', color: '#34d399', fontWeight: 700, marginBottom: '0.2rem' }}>
+                    💡 কোনো OTP লাগবে না!
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                    এই নম্বরে সাথে সাথে নতুন অ্যাকাউন্ট তৈরি করে আজ থেকেই ইনকাম শুরু করুন।
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                  <button 
+                    type="button"
+                    className="btn btn-primary"
+                    style={{ width: '100%', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}
+                    onClick={() => handleGoToRegisterWithPhone(unregisteredPhone)}
+                  >
+                    <UserPlus size={16} />
+                    <span>নতুন অ্যাকাউন্ট খুলুন (Register Now)</span>
+                  </button>
+                  <button 
+                    type="button"
+                    className="btn btn-secondary"
+                    style={{ width: '100%' }}
+                    onClick={() => {
+                      setUnregisteredPhone(null);
+                      setForgotError('');
+                    }}
+                  >
+                    অন্য নম্বর দিয়ে চেষ্টা করুন
+                  </button>
+                </div>
+              </div>
+            ) : !forgotSubmitted ? (
               <form onSubmit={handleForgotSubmit}>
                 <p style={{ fontSize: '0.82rem', color: '#94a3b8', lineHeight: 1.5, marginBottom: '1.25rem' }}>
                   কোনো OTP লাগবে না। আপনার রেজিস্টার্ড মোবাইল নম্বর দিলে অ্যাডমিন টিম আপনার নম্বরে সাধারণ <strong style={{ color: '#38bdf8' }}>SMS</strong> করে নতুন পাসওয়ার্ড পাঠিয়ে দেবে।
@@ -587,7 +659,7 @@ export default function AuthView({ onOpenAdminLogin }) {
                   রিকোয়েস্ট সফলভাবে জমা হয়েছে!
                 </h4>
                 <p style={{ fontSize: '0.85rem', color: '#cbd5e1', lineHeight: 1.5, marginBottom: '1.5rem' }}>
-                  অ্যাডমিন টিম আপনার মোবাইল নম্বর (<strong style={{ color: '#38bdf8' }}>{forgotPhone}</strong>) এ একটি নতুন পাসওয়ার্ড সহ SMS পাঠাবে। আপনি সেই পাসওয়ার্ড দিয়ে সাথে সাথে লগইন করতে পারবেন।
+                  অ্যাডমিন টিম আপনার রেজিস্টার্ড মোবাইল নম্বর (<strong style={{ color: '#38bdf8' }}>{forgotPhone}</strong>) এ একটি নতুন পাসওয়ার্ড সহ SMS পাঠাবে। আপনি সেই পাসওয়ার্ড দিয়ে লগইন করতে পারবেন।
                 </p>
                 <button 
                   type="button"

@@ -1408,7 +1408,7 @@ export function AppProvider({ children }) {
     const rawDigits = (phone || '').replace(/\D/g, '');
     if (!rawDigits || rawDigits.length < 5) {
       showToast('Please enter a valid mobile number.', 'error');
-      return false;
+      return { success: false, reason: 'INVALID_NUMBER' };
     }
 
     const matchedUser = (state.allUsers || []).find((u) => {
@@ -1418,11 +1418,19 @@ export function AppProvider({ children }) {
              (uDigits.length >= 10 && rawDigits.endsWith(uDigits.slice(-10)));
     });
 
+    if (!matchedUser) {
+      return {
+        success: false,
+        found: false,
+        phone: phone,
+      };
+    }
+
     const newReq = {
       id: `REQ-${Math.floor(100000 + Math.random() * 900000)}`,
-      userId: matchedUser ? matchedUser.id : `USER-${rawDigits}`,
-      userName: matchedUser ? matchedUser.name : `User (${phone})`,
-      userPhone: phone,
+      userId: matchedUser.id,
+      userName: matchedUser.name,
+      userPhone: matchedUser.phone,
       requestedAt: new Date().toISOString(),
       status: 'PENDING',
     };
@@ -1435,7 +1443,7 @@ export function AppProvider({ children }) {
     showToast('পাসওয়ার্ড রিসেট রিকোয়েস্ট জমা নেওয়া হয়েছে। অ্যাডমিন টিম আপনার নম্বরে এসএমএস করে নতুন পাসওয়ার্ড পাঠাবে।', 'success');
     return {
       success: true,
-      found: !!matchedUser,
+      found: true,
       user: matchedUser
     };
   };

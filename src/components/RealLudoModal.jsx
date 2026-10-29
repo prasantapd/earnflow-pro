@@ -13,7 +13,8 @@ import {
   Dice5, 
   Users, 
   Bot,
-  AlertCircle
+  AlertCircle,
+  Swords
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useApp } from '../context/AppContext';
@@ -88,13 +89,13 @@ export const YELLOW_RUNWAY = [
   { r: 7, c: 13 }, { r: 7, c: 12 }, { r: 7, c: 11 }, { r: 7, c: 10 }, { r: 7, c: 9 }, { r: 7, c: 8, isHome: true }
 ];
 
-// Base positions inside the 6x6 corners for red and yellow tokens
+// Base positions inside the 6x6 corners aligned exactly to center of white quadrant circles
 export const RED_BASE_POS = [
-  { r: 2, c: 2 }, { r: 2, c: 3 }, { r: 3, c: 2 }, { r: 3, c: 3 }
+  { r: 1.5, c: 1.5 }, { r: 1.5, c: 3.5 }, { r: 3.5, c: 1.5 }, { r: 3.5, c: 3.5 }
 ];
 
 export const YELLOW_BASE_POS = [
-  { r: 11, c: 11 }, { r: 11, c: 12 }, { r: 12, c: 11 }, { r: 12, c: 12 }
+  { r: 10.5, c: 10.5 }, { r: 10.5, c: 12.5 }, { r: 12.5, c: 10.5 }, { r: 12.5, c: 12.5 }
 ];
 
 /* Web Audio Synthesizer for Authentic Game Sounds */
@@ -110,27 +111,27 @@ const playLudoTone = (type, enabled = true) => {
     const now = ctx.currentTime;
     if (type === 'dice') {
       osc.type = 'triangle';
-      osc.frequency.setValueAtTime(400, now);
-      osc.frequency.exponentialRampToValueAtTime(150, now + 0.15);
+      osc.frequency.setValueAtTime(450, now);
+      osc.frequency.exponentialRampToValueAtTime(160, now + 0.15);
       gain.gain.setValueAtTime(0.2, now);
       gain.gain.linearRampToValueAtTime(0, now + 0.15);
       osc.start(now);
       osc.stop(now + 0.15);
     } else if (type === 'step') {
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(520, now);
-      gain.gain.setValueAtTime(0.15, now);
-      gain.gain.linearRampToValueAtTime(0, now + 0.08);
+      osc.frequency.setValueAtTime(540, now);
+      gain.gain.setValueAtTime(0.18, now);
+      gain.gain.linearRampToValueAtTime(0, now + 0.06);
       osc.start(now);
-      osc.stop(now + 0.08);
+      osc.stop(now + 0.06);
     } else if (type === 'cut') {
       osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(650, now);
-      osc.frequency.exponentialRampToValueAtTime(180, now + 0.3);
-      gain.gain.setValueAtTime(0.3, now);
-      gain.gain.linearRampToValueAtTime(0, now + 0.3);
+      osc.frequency.setValueAtTime(700, now);
+      osc.frequency.exponentialRampToValueAtTime(180, now + 0.35);
+      gain.gain.setValueAtTime(0.35, now);
+      gain.gain.linearRampToValueAtTime(0, now + 0.35);
       osc.start(now);
-      osc.stop(now + 0.3);
+      osc.stop(now + 0.35);
     } else if (type === 'home') {
       osc.type = 'sine';
       osc.frequency.setValueAtTime(523.25, now);
@@ -157,24 +158,47 @@ export default function RealLudoModal({ isOpen, onClose }) {
   // Turn: 'red' (You) or 'yellow' (AI Bot)
   const [currentTurn, setCurrentTurn] = useState('red');
   const [diceVal, setDiceVal] = useState(null);
+  const [displayDice, setDisplayDice] = useState(null); // Purely for rolling animation face
   const [isRolling, setIsRolling] = useState(false);
+  const [isMoving, setIsMoving] = useState(false); // Lock during step-by-step movement
   const [statusMsg, setStatusMsg] = useState('Roll the dice to start!');
-  const [hasBonusRoll, setHasBonusRoll] = useState(false);
+  const [captureNotice, setCaptureNotice] = useState(null); // Announcement banner when a token is cut
 
   // Tokens State: steps = -1 (in base), 0..50 (on perimeter), 51..55 (runway), 56 (HOME)
   const [redTokens, setRedTokens] = useState([-1, -1]);
   const [yellowTokens, setYellowTokens] = useState([-1, -1]);
   const [winner, setWinner] = useState(null);
 
+  // Synchronized refs to completely prevent stale closures in async timeouts
+  const redTokensRef = useRef([-1, -1]);
+  const yellowTokensRef = useRef([-1, -1]);
+  const isMovingRef = useRef(false);
+  const currentTurnRef = useRef('red');
+
+  const updateRedTokens = (newTokens) => {
+    redTokensRef.current = newTokens;
+    setRedTokens(newTokens);
+  };
+
+  const updateYellowTokens = (newTokens) => {
+    yellowTokensRef.current = newTokens;
+    setYellowTokens(newTokens);
+  };
+
   // Reset lobby
   useEffect(() => {
     if (!isOpen) {
       setGameState('lobby');
-      setRedTokens([-1, -1]);
-      setYellowTokens([-1, -1]);
+      updateRedTokens([-1, -1]);
+      updateYellowTokens([-1, -1]);
       setDiceVal(null);
+      setDisplayDice(null);
       setWinner(null);
       setCurrentTurn('red');
+      currentTurnRef.current = 'red';
+      setIsMoving(false);
+      isMovingRef.current = false;
+      setCaptureNotice(null);
     }
   }, [isOpen]);
 
@@ -203,12 +227,17 @@ export default function RealLudoModal({ isOpen, onClose }) {
     if (!deducted) return;
 
     const initialTokens = Array(tokensCount).fill(-1);
-    setRedTokens(initialTokens);
-    setYellowTokens(initialTokens);
+    updateRedTokens(initialTokens);
+    updateYellowTokens(initialTokens);
     setGameState('playing');
     setCurrentTurn('red');
+    currentTurnRef.current = 'red';
     setDiceVal(null);
+    setDisplayDice(null);
     setWinner(null);
+    setIsMoving(false);
+    isMovingRef.current = false;
+    setCaptureNotice(null);
     setStatusMsg('Your turn! Tap the Red Dice to roll (Roll 6 to open token).');
   };
 
@@ -238,29 +267,32 @@ export default function RealLudoModal({ isOpen, onClose }) {
     return safeIndices.includes(trackIdx);
   };
 
-  // Roll Dice
+  // Roll Dice for Red (Player)
   const handleRollDice = () => {
-    if (isRolling || currentTurn !== 'red' || diceVal !== null || gameState !== 'playing') return;
+    if (isRolling || isMovingRef.current || currentTurnRef.current !== 'red' || diceVal !== null || gameState !== 'playing') return;
 
     setIsRolling(true);
+    setDiceVal(null); // STRICTLY keep diceVal null while rolling so tokens cannot be tapped mid-roll!
     playLudoTone('dice', soundEnabled);
 
     let rollCount = 0;
     const interval = setInterval(() => {
-      setDiceVal(Math.floor(Math.random() * 6) + 1);
+      setDisplayDice(Math.floor(Math.random() * 6) + 1);
       rollCount++;
       if (rollCount > 6) {
         clearInterval(interval);
         const finalRoll = Math.floor(Math.random() * 6) + 1;
+        setDisplayDice(finalRoll);
         setDiceVal(finalRoll);
         setIsRolling(false);
-        checkValidMoves('red', finalRoll, redTokens);
+        checkValidMoves('red', finalRoll);
       }
-    }, 60);
+    }, 55);
   };
 
   // Check valid moves for active player
-  const checkValidMoves = (color, roll, tokens) => {
+  const checkValidMoves = (color, roll) => {
+    const tokens = color === 'red' ? redTokensRef.current : yellowTokensRef.current;
     const validTokenIndices = [];
 
     tokens.forEach((step, idx) => {
@@ -274,46 +306,60 @@ export default function RealLudoModal({ isOpen, onClose }) {
     });
 
     if (validTokenIndices.length === 0) {
-      setStatusMsg(`${color === 'red' ? 'You' : 'Bot'} rolled ${roll}. No valid moves available!`);
+      setStatusMsg(`${color === 'red' ? 'You' : 'Bot'} rolled ${roll}. No moves possible! Passing turn...`);
       setTimeout(() => {
         passTurn(color === 'red' ? 'yellow' : 'red');
-      }, 1000);
-    } else if (validTokenIndices.length === 1 && color === 'red') {
-      // Auto-move if only 1 choice
-      setTimeout(() => {
-        executeMove('red', validTokenIndices[0], roll);
-      }, 350);
+      }, 900);
     } else {
-      setStatusMsg(color === 'red' ? `You rolled ${roll}! Select a highlighted token to move.` : `Bot rolled ${roll}...`);
+      if (color === 'red') {
+        setStatusMsg(`You rolled ${roll}! Tap your highlighted pawn to advance.`);
+      }
     }
   };
 
-  // Execute Move
-  const executeMove = (color, tokenIdx, roll) => {
+  // Smooth Step-by-Step Movement to make motion 100% visible and prevent teleporting/confusion
+  const executeMove = async (color, tokenIdx, roll) => {
+    if (isMovingRef.current) return;
+    isMovingRef.current = true;
+    setIsMoving(true);
+    setDiceVal(null); // Consume the roll immediately to prevent double execution
+
     const isRed = color === 'red';
-    const currentTokens = isRed ? [...redTokens] : [...yellowTokens];
-    const opponentTokens = isRed ? [...yellowTokens] : [...redTokens];
-    let newStep = currentTokens[tokenIdx];
+    const currentTokens = [...(isRed ? redTokensRef.current : yellowTokensRef.current)];
+    const opponentTokens = [...(isRed ? yellowTokensRef.current : redTokensRef.current)];
+    const startStep = currentTokens[tokenIdx];
     let earnedBonus = roll === 6;
 
-    if (newStep === -1) {
-      newStep = 0; // Open from base to start
+    if (startStep === -1) {
+      // Opening from base onto start cell (step 0)
+      currentTokens[tokenIdx] = 0;
+      if (isRed) updateRedTokens([...currentTokens]);
+      else updateYellowTokens([...currentTokens]);
       playLudoTone('step', soundEnabled);
+      await new Promise(r => setTimeout(r, 200));
     } else {
-      newStep += roll;
-      playLudoTone('step', soundEnabled);
+      // Advance step-by-step
+      const targetStep = startStep + roll;
+      for (let s = startStep + 1; s <= targetStep; s++) {
+        currentTokens[tokenIdx] = s;
+        if (isRed) updateRedTokens([...currentTokens]);
+        else updateYellowTokens([...currentTokens]);
+        playLudoTone('step', soundEnabled);
+        await new Promise(r => setTimeout(r, 110));
+      }
     }
 
-    currentTokens[tokenIdx] = newStep;
+    const finalStep = currentTokens[tokenIdx];
 
-    if (newStep === 56) {
+    if (finalStep === 56) {
       playLudoTone('home', soundEnabled);
-      earnedBonus = true; // Bonus roll for reaching home!
+      earnedBonus = true; // Bonus roll for reaching Home!
+      showToast(`${isRed ? 'You' : 'Bot'} safely landed a pawn in HOME! +Bonus Roll!`, 'success');
     }
 
     // Check cutting opponent (if on perimeter and not safe)
-    if (newStep >= 0 && newStep <= 50) {
-      const myTrackIdx = isRed ? newStep : (26 + newStep) % 52;
+    if (finalStep >= 0 && finalStep <= 50) {
+      const myTrackIdx = isRed ? finalStep : (26 + finalStep) % 52;
       const onSafeSquare = isSquareSafe(myTrackIdx);
 
       if (!onSafeSquare) {
@@ -321,39 +367,58 @@ export default function RealLudoModal({ isOpen, onClose }) {
           if (oppStep >= 0 && oppStep <= 50) {
             const oppTrackIdx = !isRed ? oppStep : (26 + oppStep) % 52;
             if (oppTrackIdx === myTrackIdx) {
-              // CAPTURE!
-              opponentTokens[oppIdx] = -1; // Send back to base
+              // CAPTURE / CUT!
+              opponentTokens[oppIdx] = -1; // Send back to base!
               earnedBonus = true;
               playLudoTone('cut', soundEnabled);
-              showToast(`${isRed ? 'You' : 'Bot'} cut an opponent pawn back to base! +Bonus Roll!`, 'success');
+
+              if (isRed) {
+                setCaptureNotice({
+                  type: 'player_cut',
+                  text: '⚔️ You cut Bot’s pawn back to base! +Bonus Roll awarded!'
+                });
+                showToast('⚔️ You cut Bot’s pawn back to base! +Bonus Roll!', 'success');
+              } else {
+                setCaptureNotice({
+                  type: 'bot_cut',
+                  text: '⚔️ BOT LANDED ON YOUR PAWN! Your pawn was captured & sent back to base!'
+                });
+                showToast('⚠️ Bot cut your Red pawn back to base!', 'error');
+              }
+
+              setTimeout(() => setCaptureNotice(null), 3500);
             }
           }
         });
       }
     }
 
-    // Update tokens state
+    // Final state sync after captures
     if (isRed) {
-      setRedTokens(currentTokens);
-      setYellowTokens(opponentTokens);
+      updateRedTokens([...currentTokens]);
+      updateYellowTokens([...opponentTokens]);
     } else {
-      setYellowTokens(currentTokens);
-      setRedTokens(opponentTokens);
+      updateYellowTokens([...currentTokens]);
+      updateRedTokens([...opponentTokens]);
     }
 
     // Check Victory
     const allHome = currentTokens.every((s) => s === 56);
     if (allHome) {
+      isMovingRef.current = false;
+      setIsMoving(false);
       handleGameOver(color);
       return;
     }
 
+    isMovingRef.current = false;
+    setIsMoving(false);
+
     // Next turn or bonus roll
     if (earnedBonus) {
-      setDiceVal(null);
-      setStatusMsg(isRed ? 'Bonus roll awarded! Roll again.' : 'Bot earned a bonus roll!');
+      setStatusMsg(isRed ? '⭐ Bonus roll awarded! Roll the dice again.' : '⭐ Bot earned a bonus roll!');
       if (!isRed) {
-        setTimeout(handleBotTurn, 1000);
+        setTimeout(handleBotTurn, 900);
       }
     } else {
       passTurn(isRed ? 'yellow' : 'red');
@@ -363,10 +428,13 @@ export default function RealLudoModal({ isOpen, onClose }) {
   // Pass Turn
   const passTurn = (nextTurn) => {
     setCurrentTurn(nextTurn);
+    currentTurnRef.current = nextTurn;
     setDiceVal(null);
+    setDisplayDice(null);
+
     if (nextTurn === 'yellow') {
       setStatusMsg('Bot is thinking...');
-      setTimeout(handleBotTurn, 1000);
+      setTimeout(handleBotTurn, 800);
     } else {
       setStatusMsg('Your turn! Roll the dice.');
     }
@@ -374,67 +442,74 @@ export default function RealLudoModal({ isOpen, onClose }) {
 
   // AI Bot Turn Execution
   const handleBotTurn = () => {
-    if (gameState !== 'playing') return;
+    if (gameState !== 'playing' || isMovingRef.current) return;
 
     setIsRolling(true);
+    setDiceVal(null);
     playLudoTone('dice', soundEnabled);
 
-    setTimeout(() => {
-      const botRoll = Math.floor(Math.random() * 6) + 1;
-      setDiceVal(botRoll);
-      setIsRolling(false);
+    let rollCount = 0;
+    const interval = setInterval(() => {
+      setDisplayDice(Math.floor(Math.random() * 6) + 1);
+      rollCount++;
+      if (rollCount > 6) {
+        clearInterval(interval);
+        const botRoll = Math.floor(Math.random() * 6) + 1;
+        setDisplayDice(botRoll);
+        setIsRolling(false);
 
-      // AI Decision Logic:
-      // Priority 1: Cut player pawn
-      // Priority 2: Move into Home
-      // Priority 3: Open token on 6
-      // Priority 4: Advance furthest active token
-      const validIndices = [];
-      yellowTokens.forEach((step, idx) => {
-        if (step === -1 && botRoll === 6) validIndices.push(idx);
-        else if (step >= 0 && step + botRoll <= 56) validIndices.push(idx);
-      });
+        // AI Decision Logic:
+        const currentBotTokens = yellowTokensRef.current;
+        const currentPlayerTokens = redTokensRef.current;
 
-      if (validIndices.length === 0) {
-        setStatusMsg(`Bot rolled ${botRoll}. No moves possible.`);
-        setTimeout(() => passTurn('red'), 1000);
-        return;
-      }
+        const validIndices = [];
+        currentBotTokens.forEach((step, idx) => {
+          if (step === -1 && botRoll === 6) validIndices.push(idx);
+          else if (step >= 0 && step + botRoll <= 56) validIndices.push(idx);
+        });
 
-      // Check if any move cuts player
-      let chosenIdx = validIndices[0];
-      let foundCut = false;
+        if (validIndices.length === 0) {
+          setStatusMsg(`Bot rolled ${botRoll}. No moves possible!`);
+          setTimeout(() => passTurn('red'), 800);
+          return;
+        }
 
-      for (const idx of validIndices) {
-        const testStep = yellowTokens[idx] === -1 ? 0 : yellowTokens[idx] + botRoll;
-        if (testStep <= 50) {
-          const testTrackIdx = (26 + testStep) % 52;
-          if (!isSquareSafe(testTrackIdx)) {
-            const cutsPlayer = redTokens.some(rStep => rStep >= 0 && rStep <= 50 && rStep === testTrackIdx);
-            if (cutsPlayer) {
-              chosenIdx = idx;
-              foundCut = true;
-              break;
+        // Priority 1: Cut player pawn
+        let chosenIdx = validIndices[0];
+        let foundCut = false;
+
+        for (const idx of validIndices) {
+          const testStep = currentBotTokens[idx] === -1 ? 0 : currentBotTokens[idx] + botRoll;
+          if (testStep <= 50) {
+            const testTrackIdx = (26 + testStep) % 52;
+            if (!isSquareSafe(testTrackIdx)) {
+              const cutsPlayer = currentPlayerTokens.some(rStep => rStep >= 0 && rStep <= 50 && rStep === testTrackIdx);
+              if (cutsPlayer) {
+                chosenIdx = idx;
+                foundCut = true;
+                break;
+              }
             }
           }
         }
-      }
 
-      if (!foundCut) {
-        // Prefer opening a 6
-        const baseIdx = validIndices.find(idx => yellowTokens[idx] === -1);
-        if (baseIdx !== undefined && botRoll === 6) {
-          chosenIdx = baseIdx;
-        } else {
-          // Advance furthest token
-          chosenIdx = validIndices.reduce((best, curr) => (yellowTokens[curr] > yellowTokens[best] ? curr : best), validIndices[0]);
+        if (!foundCut) {
+          // Priority 2: Open a 6 from base
+          const baseIdx = validIndices.find(idx => currentBotTokens[idx] === -1);
+          if (baseIdx !== undefined && botRoll === 6) {
+            chosenIdx = baseIdx;
+          } else {
+            // Priority 3: Advance furthest active pawn
+            chosenIdx = validIndices.reduce((best, curr) => (currentBotTokens[curr] > currentBotTokens[best] ? curr : best), validIndices[0]);
+          }
         }
-      }
 
-      setTimeout(() => {
-        executeMove('yellow', chosenIdx, botRoll);
-      }, 700);
-    }, 500);
+        setStatusMsg(`Bot rolled ${botRoll} and is moving a pawn...`);
+        setTimeout(() => {
+          executeMove('yellow', chosenIdx, botRoll);
+        }, 500);
+      }
+    }, 55);
   };
 
   // Game Over Handler
@@ -560,7 +635,7 @@ export default function RealLudoModal({ isOpen, onClose }) {
           <div>
             {/* Status Command Strip */}
             <div style={{ 
-              marginBottom: '0.75rem', 
+              marginBottom: '0.5rem', 
               padding: '0.6rem 0.85rem', 
               borderRadius: '8px', 
               background: currentTurn === 'red' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(245, 158, 11, 0.15)',
@@ -586,11 +661,33 @@ export default function RealLudoModal({ isOpen, onClose }) {
               </span>
             </div>
 
+            {/* CUT ANNOUNCEMENT BANNER */}
+            {captureNotice && (
+              <div style={{
+                marginBottom: '0.6rem',
+                padding: '0.55rem 0.85rem',
+                borderRadius: '8px',
+                background: captureNotice.type === 'bot_cut' ? 'linear-gradient(90deg, rgba(239, 68, 68, 0.25) 0%, rgba(185, 28, 28, 0.25) 100%)' : 'linear-gradient(90deg, rgba(16, 185, 129, 0.25) 0%, rgba(5, 150, 105, 0.25) 100%)',
+                border: captureNotice.type === 'bot_cut' ? '1px solid #ef4444' : '1px solid #10b981',
+                color: captureNotice.type === 'bot_cut' ? '#fca5a5' : '#6ee7b7',
+                fontSize: '0.8rem',
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.4rem',
+                animation: 'pulse 1.5s infinite'
+              }}>
+                <Swords size={16} />
+                <span>{captureNotice.text}</span>
+              </div>
+            )}
+
             {/* 15x15 SVG GRAPHICAL LUDO BOARD */}
             <div style={{ 
               width: '100%', 
               maxWidth: '380px', 
-              margin: '0 auto 1rem', 
+              margin: '0 auto 0.85rem', 
               aspectRatio: '1/1',
               position: 'relative',
               borderRadius: '12px',
@@ -690,7 +787,7 @@ export default function RealLudoModal({ isOpen, onClose }) {
                 {redTokens.map((step, idx) => {
                   if (step === 56) return null; // In Home
                   const coords = getTokenCoords('red', step, idx);
-                  const canMove = currentTurn === 'red' && diceVal !== null && (
+                  const canMove = currentTurn === 'red' && !isRolling && !isMoving && diceVal !== null && (
                     (step === -1 && diceVal === 6) || (step >= 0 && step + diceVal <= 56)
                   );
 
@@ -712,7 +809,10 @@ export default function RealLudoModal({ isOpen, onClose }) {
                       />
                       <circle cx={coords.c + 0.5} cy={coords.r + 0.5} r="0.18" fill="#ffffff" opacity="0.9" />
                       {canMove && (
-                        <circle cx={coords.c + 0.5} cy={coords.r + 0.5} r="0.5" fill="none" stroke="#fbbf24" strokeWidth="0.06" opacity="0.8" />
+                        <circle cx={coords.c + 0.5} cy={coords.r + 0.5} r="0.54" fill="none" stroke="#fbbf24" strokeWidth="0.07" opacity="0.9">
+                          <animate attributeName="r" values="0.44;0.58;0.44" dur="1.2s" repeatCount="indefinite" />
+                          <animate attributeName="opacity" values="0.9;0.3;0.9" dur="1.2s" repeatCount="indefinite" />
+                        </circle>
                       )}
                     </g>
                   );
@@ -754,31 +854,31 @@ export default function RealLudoModal({ isOpen, onClose }) {
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <button
                   type="button"
-                  disabled={isRolling || currentTurn !== 'red' || diceVal !== null || gameState !== 'playing'}
+                  disabled={isRolling || isMoving || currentTurn !== 'red' || diceVal !== null || gameState !== 'playing'}
                   onClick={handleRollDice}
                   style={{
                     width: 52,
                     height: 52,
                     borderRadius: '12px',
-                    background: currentTurn === 'red' ? 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)' : '#334155',
+                    background: currentTurn === 'red' && diceVal === null && !isMoving ? 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)' : '#334155',
                     border: '2px solid rgba(255, 255, 255, 0.2)',
                     color: '#ffffff',
                     fontSize: '1.4rem',
                     fontWeight: 900,
-                    cursor: (currentTurn === 'red' && diceVal === null) ? 'pointer' : 'not-allowed',
+                    cursor: (currentTurn === 'red' && diceVal === null && !isMoving && !isRolling) ? 'pointer' : 'not-allowed',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    boxShadow: currentTurn === 'red' ? '0 0 16px rgba(239, 68, 68, 0.5)' : 'none',
+                    boxShadow: (currentTurn === 'red' && diceVal === null && !isMoving) ? '0 0 16px rgba(239, 68, 68, 0.5)' : 'none',
                     transform: isRolling ? 'rotate(360deg)' : 'none',
                     transition: 'all 0.2s ease'
                   }}
                 >
-                  {isRolling ? '🎲' : (diceVal !== null ? diceVal : '🎲')}
+                  {isRolling ? displayDice || '🎲' : (diceVal !== null ? diceVal : (displayDice || '🎲'))}
                 </button>
                 <div style={{ textAlign: 'left', fontSize: '0.75rem' }}>
                   <div style={{ fontWeight: 700, color: currentTurn === 'red' ? '#fbbf24' : '#94a3b8' }}>
-                    {currentTurn === 'red' ? (diceVal ? 'Pick Token!' : 'Tap to Roll!') : 'Bot Rolling...'}
+                    {currentTurn === 'red' ? (diceVal ? 'Tap Glowing Pawn!' : 'Tap to Roll!') : 'Bot Rolling...'}
                   </div>
                   <div style={{ fontSize: '0.68rem', color: '#64748b' }}>
                     Roll 6 for Bonus

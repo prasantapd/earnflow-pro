@@ -130,6 +130,8 @@ function MainApp() {
               {activeTab === 'tasks' && (
                 <TaskCenterView
                   onOpenWithdraw={() => setIsWithdrawOpen(true)}
+                  onOpenDeposit={() => setIsDepositOpen(true)}
+                  setActiveTab={setActiveTab}
                 />
               )}
 

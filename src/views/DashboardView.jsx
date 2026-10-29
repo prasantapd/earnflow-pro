@@ -412,7 +412,7 @@ export default function DashboardView({
       </div>
 
       {/* DAILY LOGIN STREAK ATTENDANCE WIDGET */}
-      <DailyStreakWidget />
+      <DailyStreakWidget onOpenDeposit={onOpenDeposit} />
 
       {/* ACTIVE MEMBERSHIP PLAN SECTION */}
       <div style={{ marginBottom: '2rem' }}>

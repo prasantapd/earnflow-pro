@@ -24,7 +24,8 @@ import {
   Flame,
   Award,
   Crown,
-  Globe
+  Globe,
+  Lock
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { formatINR } from '../utils/finance';
@@ -42,14 +43,16 @@ import SixteenGutiModal from '../components/SixteenGutiModal';
 import CustomTaskModal from '../components/CustomTaskModal';
 import { getLocalDateString, formatFullReadableDate, getTimeUntilMidnight } from '../utils/dateUtils';
 
-export default function TaskCenterView({ onOpenWithdraw }) {
+export default function TaskCenterView({ onOpenWithdraw, onOpenDeposit, setActiveTab }) {
   const { 
     rewardWallet, 
     tasksCompletedToday, 
     totalDailyQuota, 
     isWithdrawalAllowed, 
     dailyTaskRoster,
-    userMembershipTier
+    userMembershipTier,
+    activePlan,
+    showToast
   } = useApp();
 
   // Active modals for daily tasks
@@ -180,6 +183,16 @@ export default function TaskCenterView({ onOpenWithdraw }) {
   };
 
   const handleLaunchTask = (task) => {
+    if (!activePlan) {
+      if (onOpenDeposit) {
+        onOpenDeposit();
+      } else if (setActiveTab) {
+        setActiveTab('plans');
+      }
+      showToast('Active membership plan required! Please subscribe to an investment plan (min ₹2,000) to start daily tasks and earn rewards.', 'warning');
+      return;
+    }
+
     switch (task.type) {
       case 'video':
         setActiveVideoTask(task);
@@ -325,7 +338,50 @@ export default function TaskCenterView({ onOpenWithdraw }) {
       </div>
 
       {/* Daily Login Streak Attendance Bonus Widget */}
-      <DailyStreakWidget />
+      <DailyStreakWidget onOpenDeposit={onOpenDeposit} />
+
+      {/* Active Membership Plan Required Warning Banner */}
+      {!activePlan && (
+        <div 
+          className="glass-card" 
+          style={{ 
+            padding: '1.25rem 1.5rem', 
+            marginBottom: '2rem', 
+            background: 'rgba(239, 68, 68, 0.08)', 
+            border: '1.5px solid rgba(239, 68, 68, 0.35)',
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between', 
+            flexWrap: 'wrap', 
+            gap: '1rem' 
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div style={{ width: 42, height: 42, borderRadius: '10px', background: 'rgba(239, 68, 68, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f87171', flexShrink: 0 }}>
+              <Lock size={22} />
+            </div>
+            <div>
+              <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#ffffff', marginBottom: '0.2rem' }}>
+                Subscription Plan Required to Earn
+              </h4>
+              <p style={{ fontSize: '0.82rem', color: '#cbd5e1', margin: 0 }}>
+                You do not have an active membership plan yet. Daily task income and daily streak bonuses require an active plan (Starting from ₹2,000). Principal is 100% refundable at maturity!
+              </p>
+            </div>
+          </div>
+          <button 
+            type="button" 
+            className="btn btn-primary"
+            onClick={() => {
+              if (onOpenDeposit) onOpenDeposit();
+              else if (setActiveTab) setActiveTab('plans');
+            }}
+            style={{ fontWeight: 700 }}
+          >
+            Explore Plans & Subscribe →
+          </button>
+        </div>
+      )}
 
       {/* Section 1: Today's Active Tasks Roster (Dynamic Admin Orchestrated) */}
       <div style={{ marginBottom: '3rem' }}>
@@ -442,6 +498,24 @@ export default function TaskCenterView({ onOpenWithdraw }) {
                       disabled
                     >
                       <CheckCircle2 size={16} /> Completed (+{formatINR(effectiveReward)})
+                    </button>
+                  ) : !activePlan ? (
+                    <button 
+                      className="btn btn-secondary"
+                      style={{ 
+                        width: '100%', 
+                        fontWeight: 700, 
+                        borderColor: 'rgba(239, 68, 68, 0.4)', 
+                        background: 'rgba(239, 68, 68, 0.08)',
+                        color: '#fca5a5',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.4rem'
+                      }}
+                      onClick={() => handleLaunchTask(effectiveTask)}
+                    >
+                      <Lock size={15} /> Subscribe Plan to Earn (+{formatINR(effectiveReward)})
                     </button>
                   ) : (
                     <button 

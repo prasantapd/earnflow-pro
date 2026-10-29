@@ -19,13 +19,14 @@ import { useApp } from '../context/AppContext';
 import { STREAK_SCHEDULE, STREAK_REWARDS, STREAK_WEEKS } from '../context/AppContext';
 import { formatINR } from '../utils/finance';
 
-export default function DailyStreakWidget() {
+export default function DailyStreakWidget({ onOpenDeposit }) {
   const { 
     loginStreak, 
     claimDailyLoginBonus, 
     resetDailyStreak, 
     fastForwardNextDay,
     userMembershipTier,
+    activePlan,
     streakRewards,
     setState,
     showToast
@@ -177,6 +178,39 @@ export default function DailyStreakWidget() {
           </div>
         </div>
       </div>
+
+      {/* No Active Plan Warning Strip */}
+      {!activePlan && (
+        <div 
+          style={{ 
+            marginBottom: '1.25rem', 
+            padding: '0.75rem 1rem', 
+            background: 'rgba(239, 68, 68, 0.1)', 
+            borderRadius: 'var(--radius-md)', 
+            border: '1px solid rgba(239, 68, 68, 0.35)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '0.75rem',
+            flexWrap: 'wrap'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#fca5a5', fontSize: '0.82rem' }}>
+            <Lock size={16} style={{ flexShrink: 0 }} />
+            <span><strong>No Active Subscription Plan:</strong> Daily login streak and task rewards require an active plan (Min ₹2,000). Subscribe to activate your daily payout engine!</span>
+          </div>
+          {onOpenDeposit && (
+            <button 
+              type="button" 
+              className="btn btn-primary btn-sm"
+              onClick={onOpenDeposit}
+              style={{ fontSize: '0.75rem', padding: '0.35rem 0.8rem', fontWeight: 700 }}
+            >
+              Subscribe Plan →
+            </button>
+          )}
+        </div>
+      )}
 
       {/* 30-Day Overall Progress Bar */}
       <div style={{ marginBottom: '1.25rem', background: 'rgba(0, 0, 0, 0.25)', padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
@@ -461,7 +495,33 @@ export default function DailyStreakWidget() {
         </div>
 
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-          {claimedToday ? (
+          {!activePlan ? (
+            <button 
+              type="button"
+              className="btn btn-secondary btn-lg"
+              onClick={() => {
+                if (onOpenDeposit) {
+                  onOpenDeposit();
+                } else {
+                  showToast('Please subscribe to an investment plan (min ₹2,000) first to claim daily bonuses.', 'warning');
+                }
+              }}
+              style={{ 
+                padding: '0.68rem 1.6rem', 
+                fontSize: '0.9rem', 
+                fontWeight: 800,
+                background: 'rgba(239, 68, 68, 0.12)',
+                border: '1.5px solid rgba(239, 68, 68, 0.4)',
+                color: '#fca5a5',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}
+            >
+              <Lock size={16} />
+              <span>Subscribe Plan to Claim (+₹{currentReward}.00)</span>
+            </button>
+          ) : claimedToday ? (
             <div 
               style={{ 
                 padding: '0.6rem 1.25rem', 

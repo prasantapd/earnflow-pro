@@ -921,6 +921,11 @@ export function AppProvider({ children }) {
       return;
     }
 
+    if (!activePlan) {
+      showToast('No active plan! Please subscribe to an investment plan (min ₹2,000) to earn task cash rewards.', 'error');
+      return;
+    }
+
     const numReward = Number(rewardAmount);
 
     const newTxn = {
@@ -1029,6 +1034,11 @@ export function AppProvider({ children }) {
   const claimDailyLoginBonus = () => {
     if (state.user?.status === 'SUSPENDED' || state.user?.status === 'DEACTIVATED') {
       showToast('Account inactive: Cannot claim streak bonus.', 'error');
+      return false;
+    }
+
+    if (!activePlan) {
+      showToast('No active plan! Please subscribe to an investment plan (₹2,000+) first to unlock daily bonus claims.', 'error');
       return false;
     }
 

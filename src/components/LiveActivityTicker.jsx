@@ -18,12 +18,12 @@ const INITIAL_ACTIVITIES = [
     id: 'act_1',
     user: 'xyzz',
     action: 'won',
-    amount: 20.00,
-    target: 'in Call Bridge Game Arena',
+    amount: 16.00,
+    target: 'in 4×4 Slide Puzzle Arena',
     type: 'game_win',
     icon: Gamepad2,
     color: '#34d399',
-    badge: 'Game Win',
+    badge: 'Arena Win',
   },
   {
     id: 'act_2',
@@ -61,24 +61,24 @@ const INITIAL_ACTIVITIES = [
   {
     id: 'act_5',
     user: 'Investor_44',
-    action: 'won',
-    amount: 45.00,
-    target: 'in 29 Cards Game Arena',
+    action: 'solved & won',
+    amount: 16.00,
+    target: 'in 4×4 Slide Puzzle Arena',
     type: 'game_win',
     icon: Trophy,
     color: '#34d399',
-    badge: '1st Rank',
+    badge: 'Skill Win',
   },
   {
     id: 'act_6',
     user: 'Priya_P',
-    action: 'won',
-    amount: 36.00,
-    target: 'in 4-Player Live Ludo Arena',
+    action: 'completed',
+    amount: 40.00,
+    target: 'Daily 3×3 Slide Puzzle Task',
     type: 'game_win',
-    icon: Gamepad2,
+    icon: Zap,
     color: '#a855f7',
-    badge: 'PvP Ludo',
+    badge: 'Daily Task',
   },
   {
     id: 'act_7',
@@ -127,7 +127,7 @@ const INITIAL_ACTIVITIES = [
 ];
 
 const RANDOM_NAMES = ['xyzz', 'yyzz', 'ffssj', 'amit_k', 'neha_r', 'rajesh99', 'pooja_v', 'sneha_b', 'kunal_m', 'suresh_p'];
-const RANDOM_GAMES = ['Call Bridge Arena', '29 Cards Game', '3×3 Slide Puzzle', '4-Player Live Ludo', 'Memory Match Arena'];
+const RANDOM_GAMES = ['4×4 Slide Puzzle Arena', '3×3 Daily Slide Puzzle Task', 'YouTube Video Task', 'Daily Streak Bonus'];
 
 export default function LiveActivityTicker() {
   const [activities, setActivities] = useState(INITIAL_ACTIVITIES);

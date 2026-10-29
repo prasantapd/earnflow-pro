@@ -94,13 +94,15 @@ export default function MusicTaskModal({ isOpen, onClose, task }) {
   if (!isOpen || !task) return null;
 
   const handleClaim = () => {
-    completeTask({
+    const ok = completeTask({
       taskId: task?.id || 'music_1',
       taskTitle: task?.title || 'Music Listening Task',
       rewardAmount: task?.reward || 20,
       meta: `Completed music listening task (${totalDuration}s duration)`,
     });
-    onClose();
+    if (ok) {
+      onClose();
+    }
   };
 
   return (

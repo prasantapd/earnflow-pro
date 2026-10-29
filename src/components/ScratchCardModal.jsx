@@ -124,13 +124,15 @@ export default function ScratchCardModal({ isOpen, onClose, task }) {
   if (!isOpen) return null;
 
   const handleClaim = () => {
-    completeTask({
+    const ok = completeTask({
       taskId: task?.id || 'scratch_1',
       taskTitle: 'Scratch & Win Golden Card',
       rewardAmount: prizeInfo.amount,
       meta: `Scratched card and won ${formatINR(prizeInfo.amount)} (${prizeInfo.tier})`,
     });
-    onClose();
+    if (ok) {
+      onClose();
+    }
   };
 
   return (

@@ -86,13 +86,15 @@ export default function WalkTaskModal({ isOpen, onClose, task }) {
   };
 
   const handleClaim = () => {
-    completeTask({
+    const ok = completeTask({
       taskId: task?.id || 'walk_1',
       taskTitle: task?.title || 'Walk for 10 Minutes Health Challenge',
       rewardAmount: rewardAmount,
       meta: `Completed 10-minute fitness walk (${targetSteps} steps, ${estimatedCalories} kcal burned)`,
     });
-    onClose();
+    if (ok) {
+      onClose();
+    }
   };
 
   return (

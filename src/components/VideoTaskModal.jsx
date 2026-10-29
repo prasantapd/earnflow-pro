@@ -95,13 +95,15 @@ export default function VideoTaskModal({ isOpen, onClose, task }) {
 
   const handleClaim = () => {
     if (!isReadyToClaim) return;
-    completeTask({
+    const ok = completeTask({
       taskId: task.id,
       taskTitle: task.title,
       rewardAmount: task.reward,
       meta: `Completed video watch (${totalDuration}s) & shared to Facebook network`,
     });
-    onClose();
+    if (ok) {
+      onClose();
+    }
   };
 
   return (

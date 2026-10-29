@@ -79,14 +79,16 @@ export default function CustomTaskModal({ task, onClose }) {
 
     setIsVerifying(true);
     setTimeout(() => {
-      completeTask({
+      const ok = completeTask({
         taskId: task.id,
         taskTitle: task.title,
         rewardAmount: effectiveReward,
         meta: `Custom Task: ${task.title} (${task.category || 'Special Task'})`,
       });
       setIsVerifying(false);
-      onClose();
+      if (ok) {
+        onClose();
+      }
     }, 600);
   };
 

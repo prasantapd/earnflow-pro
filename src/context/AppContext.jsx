@@ -914,16 +914,21 @@ export function AppProvider({ children }) {
   const completeTask = ({ taskId, taskTitle, rewardAmount, meta }) => {
     if (state.user?.status === 'SUSPENDED') {
       showToast('Account suspended: Cannot perform tasks or claim rewards. Contact support.', 'error');
-      return;
+      return false;
     }
     if (state.user?.status === 'DEACTIVATED') {
       showToast('Account deactivated: Please reactivate your account in profile.', 'error');
-      return;
+      return false;
     }
 
     if (!activePlan) {
       showToast('No active plan! Please subscribe to an investment plan (min ₹2,000) to earn task cash rewards.', 'error');
-      return;
+      return false;
+    }
+
+    if (taskId && state.tasksCompletedToday?.[taskId]) {
+      showToast('Task already completed today! Each daily task can only be completed once per day.', 'warning');
+      return false;
     }
 
     const numReward = Number(rewardAmount);
@@ -963,6 +968,7 @@ export function AppProvider({ children }) {
 
     showToast(`+${formatINR(numReward)} credited to your Task Wallet!`);
     triggerCelebration();
+    return true;
   };
 
   // 24/7 Anytime Withdrawal Engine
@@ -1142,41 +1148,74 @@ export function AppProvider({ children }) {
   };
 
   // Skill Gaming & PvP Solo Games
-  const playSoloSkillGame = ({ gameType, gameTitle, won, score, rewardAmount }) => {
+  const playSoloSkillGame = ({ gameId, gameTitle, entryFee, rewardAmount, won, score }) => {
     if (state.user?.status === 'SUSPENDED' || state.user?.status === 'DEACTIVATED') {
       showToast('Account suspended/inactive. Cannot play skill games.', 'error');
       return false;
     }
 
-    if (won && rewardAmount > 0) {
-      const reward = Number(rewardAmount);
-      const gameTxn = {
+    const fee = Number(entryFee) || 0;
+    const reward = Number(rewardAmount) || 0;
+
+    // Deduct entry fee when starting match
+    if (fee > 0 && !won) {
+      if (state.rewardWallet < fee) {
+        showToast(`Insufficient Task Wallet! Entry fee is ${formatINR(fee)}. Membership capital is strictly locked and cannot be used.`, 'error');
+        return false;
+      }
+
+      const entryTxn = {
+        id: `TXN-${Math.floor(100000 + Math.random() * 900000)}`,
+        type: 'GAME_ENTRY',
+        title: `${gameTitle || 'Skill Arena'} — Entry Fee`,
+        amount: -fee,
+        timestamp: new Date().toISOString(),
+        status: 'COMPLETED',
+        meta: `Entry fee of ${formatINR(fee)} funded from Task Wallet winnings (Principal locked).`,
+      };
+
+      setState((prev) => ({
+        ...prev,
+        rewardWallet: Math.max(0, +(prev.rewardWallet - fee).toFixed(2)),
+        transactions: [entryTxn, ...prev.transactions],
+        gamingStats: {
+          ...prev.gamingStats,
+          totalMatchesPlayed: (prev.gamingStats?.totalMatchesPlayed || 0) + 1,
+          userMatchesPlayed: (prev.gamingStats?.userMatchesPlayed || 0) + 1,
+        },
+      }));
+
+      return true;
+    }
+
+    // Award winning amount when won
+    if (won && reward > 0) {
+      const winTxn = {
         id: `TXN-${Math.floor(100000 + Math.random() * 900000)}`,
         type: 'TASK_REWARD',
-        title: `${gameTitle} — Skill Victory!`,
+        title: `${gameTitle || 'Skill Game'} — Skill Victory!`,
         amount: reward,
         timestamp: new Date().toISOString(),
         status: 'COMPLETED',
-        meta: `Score: ${score || 'Solved'} • Pure Cognitive Skill Challenge`,
+        meta: `Score: ${score || 'Solved'} • Pure Cognitive Skill Challenge Winnings`,
       };
 
       setState((prev) => ({
         ...prev,
         rewardWallet: +(prev.rewardWallet + reward).toFixed(2),
-        transactions: [gameTxn, ...prev.transactions],
+        transactions: [winTxn, ...prev.transactions],
         gamingStats: {
           ...prev.gamingStats,
-          totalMatchesPlayed: (prev.gamingStats?.totalMatchesPlayed || 0) + 1,
-          userMatchesPlayed: (prev.gamingStats?.userMatchesPlayed || 0) + 1,
           userMatchesWon: (prev.gamingStats?.userMatchesWon || 0) + 1,
         },
       }));
 
       triggerCelebration();
-      showToast(`🎉 Puzzle solved! +${formatINR(reward)} credited to your wallet!`);
+      showToast(`🎉 Puzzle solved! +${formatINR(reward)} credited to your Task Wallet!`);
       return true;
     }
-    return false;
+
+    return true;
   };
 
   // Skill Gaming PvP Match

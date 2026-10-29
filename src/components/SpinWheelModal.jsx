@@ -148,13 +148,15 @@ export default function SpinWheelModal({ isOpen, onClose, task }) {
 
   const handleClaim = () => {
     if (!wonPrize) return;
-    completeTask({
+    const ok = completeTask({
       taskId: task?.id || 'spin_1',
       taskTitle: 'Lucky Spin Wheel Task',
       rewardAmount: wonPrize.value,
       meta: `Won ${wonPrize.text} from Lucky Wealth Spin Wheel (RNG Tier: ${wonPrize.tier})`,
     });
-    onClose();
+    if (ok) {
+      onClose();
+    }
   };
 
   return (

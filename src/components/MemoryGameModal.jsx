@@ -87,13 +87,15 @@ export default function MemoryGameModal({ isOpen, onClose, task }) {
 
   const handleClaim = () => {
     if (!isWon || isTimeUp) return;
-    completeTask({
+    const ok = completeTask({
       taskId: task?.id || 'memory_1',
       taskTitle: task?.title || 'Wealth Icon Memory Match Challenge',
       rewardAmount: rewardAmount,
       meta: `Matched all 6 pairs in ${TIME_LIMIT_SECONDS - timeLeft}s (Skill Verified)`,
     });
-    onClose();
+    if (ok) {
+      onClose();
+    }
   };
 
   return (

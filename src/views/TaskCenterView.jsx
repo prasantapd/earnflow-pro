@@ -565,29 +565,29 @@ export default function TaskCenterView({ onOpenWithdraw, onOpenDeposit, setActiv
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
-          {/* Game 1: 3x3 & 4x4 Slide Puzzle */}
-          <div className="glass-card card-interactive" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', border: '1px solid rgba(99, 102, 241, 0.3)' }}>
+          {/* Game 1: 4x4 Slide Puzzle Arena */}
+          <div className="glass-card card-interactive" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', border: '1px solid rgba(99, 102, 241, 0.35)', background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(15, 23, 42, 0.8) 100%)' }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                 <span className="badge badge-indigo" style={{ fontSize: '0.68rem' }}>
-                  <Clock size={11} /> 60s / 120s Countdown
+                  <Clock size={11} /> 120s Countdown • Pure Skill
                 </span>
                 <span style={{ fontSize: '1.15rem', fontWeight: 800, color: '#818cf8' }}>
-                  Win {formatINR(8)} - {formatINR(16)}
+                  Win {formatINR(16)} (Boot {formatINR(10)})
                 </span>
               </div>
-              <h4 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '0.4rem' }}>
-                3×3 & 4×4 Slide Number Puzzle
+              <h4 style={{ fontSize: '1.15rem', fontWeight: 800, marginBottom: '0.4rem', color: '#ffffff' }}>
+                4×4 Slide Number Puzzle Arena
               </h4>
               <p style={{ fontSize: '0.82rem', color: '#94a3b8', lineHeight: 1.4, marginBottom: '1.25rem' }}>
-                Pure logic skill. Slide numbered tiles into order within the strict countdown timer. 100% mathematically solvable boards.
+                Unlimited skill matches! Use your Task Wallet winnings to arrange numbers 1 to 15 within 120 seconds. Play continuously as long as you have winnings balance. Principal investment is 100% locked & safe.
               </p>
-              <div style={{ fontSize: '0.75rem', color: '#cbd5e1', marginBottom: '1.25rem', padding: '0.5rem', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '6px' }}>
-                🧠 Solo Skill • ₹5 (3×3) or ₹10 (4×4) Entry Fee
+              <div style={{ fontSize: '0.75rem', color: '#cbd5e1', marginBottom: '1.25rem', padding: '0.5rem 0.75rem', background: 'rgba(99, 102, 241, 0.1)', borderRadius: '6px', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
+                ♾️ Unlimited Replays • Boot: ₹10 | Win: ₹16 • 100% Solvable
               </div>
             </div>
             <button className="btn btn-primary" style={{ width: '100%', fontWeight: 700 }} onClick={() => setIsPuzzleOpen(true)}>
-              <Grid size={16} /> Play Slide Puzzle Arena
+              <Grid size={16} /> Enter 4×4 Slide Arena
             </button>
           </div>
 
@@ -743,6 +743,8 @@ export default function TaskCenterView({ onOpenWithdraw, onOpenDeposit, setActiv
         }}
         isDailyTask={Boolean(activeDailyPuzzleTask)}
         task={activeDailyPuzzleTask}
+        onOpenDeposit={onOpenDeposit}
+        setActiveTab={setActiveTab}
       />
 
       {/* Multiplayer PvP Modals */}

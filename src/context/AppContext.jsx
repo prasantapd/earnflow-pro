@@ -604,6 +604,211 @@ const INITIAL_STATE = {
   passwordResetRequests: [],
 };
 
+/* =========================================================================
+   REAL-TIME MULTI-DEVICE & CROSS-TAB SYNCHRONIZATION ENGINE
+   - BroadcastChannel: 0ms instantaneous updates across tabs/windows
+   - Background API polling loop: Real-time updates between User & Admin devices
+   - Smart State Reconciler: Seamlessly merges users, deposits, withdrawals, resets
+   ========================================================================= */
+const REALTIME_CHANNEL = typeof window !== 'undefined' && 'BroadcastChannel' in window
+  ? new BroadcastChannel('earnflow_pro_realtime_sync_v1')
+  : null;
+
+function broadcastState(payload) {
+  if (REALTIME_CHANNEL) {
+    try {
+      REALTIME_CHANNEL.postMessage({ type: 'STATE_SYNC', payload });
+    } catch (e) {
+      console.warn('Broadcast failed:', e);
+    }
+  }
+}
+
+async function dispatchApi(endpoint, data) {
+  try {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (e) {
+    // Offline / fallback to local optimistic state
+  }
+  return null;
+}
+
+function reconcileStates(prev, incoming) {
+  if (!incoming) return prev;
+  let changed = false;
+
+  // 1. Reconcile allUsers
+  const userMap = new Map();
+  (prev.allUsers || []).forEach((u) => userMap.set(u.id, u));
+  (incoming.allUsers || []).forEach((u) => {
+    const existing = userMap.get(u.id);
+    if (!existing) {
+      userMap.set(u.id, u);
+      changed = true;
+    } else if (
+      existing.status !== u.status ||
+      existing.isActivated !== u.isActivated ||
+      existing.password !== u.password ||
+      existing.totalDeposited !== u.totalDeposited ||
+      existing.suspensionReason !== u.suspensionReason
+    ) {
+      userMap.set(u.id, { ...existing, ...u });
+      changed = true;
+    }
+  });
+  const mergedUsers = Array.from(userMap.values());
+
+  // Check if currently logged in user was updated by Admin (activation, suspension, password change)
+  let updatedCurrentUser = prev.user;
+  if (prev.user) {
+    const matched = mergedUsers.find(
+      (u) => u.id === prev.user.id || (u.phone && u.phone === prev.user.phone) || (u.email && u.email === prev.user.email)
+    );
+    if (matched) {
+      if (
+        matched.status !== prev.user.status ||
+        matched.isActivated !== prev.user.isActivated ||
+        matched.password !== prev.user.password ||
+        matched.totalDeposited !== prev.user.totalDeposited ||
+        matched.suspensionReason !== prev.user.suspensionReason
+      ) {
+        updatedCurrentUser = { ...prev.user, ...matched };
+        changed = true;
+      }
+    }
+  }
+
+  // 2. Reconcile depositRequests
+  const depMap = new Map();
+  (prev.depositRequests || []).forEach((d) => depMap.set(d.id, d));
+  (incoming.depositRequests || []).forEach((d) => {
+    const existing = depMap.get(d.id);
+    if (!existing) {
+      depMap.set(d.id, d);
+      changed = true;
+    } else if (existing.status !== d.status || existing.rejectionReason !== d.rejectionReason) {
+      depMap.set(d.id, { ...existing, ...d });
+      changed = true;
+    }
+  });
+  const mergedDeposits = Array.from(depMap.values());
+
+  // 3. Reconcile withdrawalRequests
+  const wdrMap = new Map();
+  (prev.withdrawalRequests || []).forEach((w) => wdrMap.set(w.id, w));
+  (incoming.withdrawalRequests || []).forEach((w) => {
+    const existing = wdrMap.get(w.id);
+    if (!existing) {
+      wdrMap.set(w.id, w);
+      changed = true;
+    } else if (
+      existing.status !== w.status ||
+      existing.disbursedUtr !== w.disbursedUtr ||
+      existing.rejectionReason !== w.rejectionReason
+    ) {
+      wdrMap.set(w.id, { ...existing, ...w });
+      changed = true;
+    }
+  });
+  const mergedWithdrawals = Array.from(wdrMap.values());
+
+  // 4. Reconcile passwordResetRequests
+  const rstMap = new Map();
+  (prev.passwordResetRequests || []).forEach((r) => rstMap.set(r.id, r));
+  (incoming.passwordResetRequests || []).forEach((r) => {
+    const existing = rstMap.get(r.id);
+    if (!existing) {
+      rstMap.set(r.id, r);
+      changed = true;
+    } else if (existing.status !== r.status || existing.tempPassword !== r.tempPassword) {
+      rstMap.set(r.id, { ...existing, ...r });
+      changed = true;
+    }
+  });
+  const mergedResets = Array.from(rstMap.values());
+
+  // 5. Reconcile plans
+  const planMap = new Map();
+  (prev.plans || []).forEach((p) => planMap.set(p.id, p));
+  (incoming.plans || []).forEach((p) => {
+    const existing = planMap.get(p.id);
+    if (!existing) {
+      planMap.set(p.id, p);
+      changed = true;
+    } else if (existing.status !== p.status || existing.earnedSoFar !== p.earnedSoFar) {
+      planMap.set(p.id, { ...existing, ...p });
+      changed = true;
+    }
+  });
+
+  // Ensure user has active plan if an approved deposit exists for them
+  if (updatedCurrentUser) {
+    const hasActivePlan = Array.from(planMap.values()).some((p) => p.status === 'active');
+    if (!hasActivePlan) {
+      const userApprovedDep = mergedDeposits.find(
+        (d) => d.status === 'APPROVED' && (d.userId === updatedCurrentUser.id || d.userName === updatedCurrentUser.name || (d.userPhone && d.userPhone === updatedCurrentUser.phone))
+      );
+      if (userApprovedDep) {
+        const incomingApprovedPlan = (incoming.plans || []).find((p) => p.depositRef === userApprovedDep.id && p.status === 'active');
+        if (incomingApprovedPlan) {
+          planMap.set(incomingApprovedPlan.id, incomingApprovedPlan);
+          changed = true;
+        } else {
+          const calc = calculateEarnings(userApprovedDep.amount, userApprovedDep.planMonths || 1, 1.0);
+          const startDate = new Date();
+          const totalDays = userApprovedDep.planDays || (userApprovedDep.planMonths || 1) * 30;
+          const maturityDate = new Date();
+          maturityDate.setDate(startDate.getDate() + totalDays);
+          const autoPlan = {
+            id: `PLN-${Math.floor(1000 + Math.random() * 9000)}`,
+            title: userApprovedDep.planTitle || 'Membership Plan',
+            amount: userApprovedDep.amount,
+            months: userApprovedDep.planMonths || 1,
+            days: totalDays,
+            startDate: startDate.toISOString(),
+            maturityDate: maturityDate.toISOString(),
+            totalExpectedGain: calc.estimatedTotalIncome,
+            estimatedTotalIncome: calc.estimatedTotalIncome,
+            dailyQuota: calc.estimatedDailyIncome,
+            earnedSoFar: 0,
+            status: 'active',
+            isUpgrade: userApprovedDep.isUpgrade,
+            depositRef: userApprovedDep.id,
+            utr: userApprovedDep.utr,
+          };
+          planMap.set(autoPlan.id, autoPlan);
+          changed = true;
+        }
+      }
+    }
+  }
+
+  const mergedPlans = Array.from(planMap.values());
+
+  if (!changed) return prev;
+
+  return {
+    ...prev,
+    allUsers: mergedUsers,
+    user: updatedCurrentUser,
+    depositRequests: mergedDeposits,
+    withdrawalRequests: mergedWithdrawals,
+    passwordResetRequests: mergedResets,
+    plans: mergedPlans,
+    paymentSettings: incoming.paymentSettings ? { ...prev.paymentSettings, ...incoming.paymentSettings } : prev.paymentSettings,
+    adminAnnouncement: incoming.adminAnnouncement ? { ...prev.adminAnnouncement, ...incoming.adminAnnouncement } : prev.adminAnnouncement,
+    adminPassword: incoming.adminPassword || prev.adminPassword,
+    lastUpdated: Date.now(),
+  };
+}
+
 export function AppProvider({ children }) {
   const [state, setState] = useState(() => {
     try {
@@ -659,6 +864,107 @@ export function AppProvider({ children }) {
       console.error('Failed to save to localStorage:', e);
     }
   }, [state]);
+
+  /* =========================================================================
+     REAL-TIME LISTENERS: BROADCASTCHANNEL + CROSS-TAB STORAGE + POLLING LOOP
+     ========================================================================= */
+  // 1. Instant 0ms Cross-Tab Sync via BroadcastChannel
+  useEffect(() => {
+    if (!REALTIME_CHANNEL) return;
+    const handleBroadcast = (event) => {
+      if (event.data?.type === 'STATE_SYNC' && event.data.payload) {
+        setState((prev) => reconcileStates(prev, event.data.payload));
+      }
+    };
+    REALTIME_CHANNEL.addEventListener('message', handleBroadcast);
+    return () => REALTIME_CHANNEL.removeEventListener('message', handleBroadcast);
+  }, []);
+
+  // 2. Cross-Window Storage Event Backup
+  useEffect(() => {
+    const handleStorage = (event) => {
+      if (event.key === STORAGE_KEY && event.newValue) {
+        try {
+          const parsed = JSON.parse(event.newValue);
+          setState((prev) => reconcileStates(prev, parsed));
+        } catch (e) {
+          console.warn('Storage sync error:', e);
+        }
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
+
+  // 3. Background Real-Time Polling Loop (Multi-Device User <-> Admin Sync)
+  useEffect(() => {
+    let isMounted = true;
+
+    // Initial server handshake: Sync any local data with server DB, and fetch server DB
+    const initialSync = async () => {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        const local = saved ? JSON.parse(saved) : {};
+        const res = await fetch('/api/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            allUsers: local.allUsers || [],
+            depositRequests: local.depositRequests || [],
+            withdrawalRequests: local.withdrawalRequests || [],
+            passwordResetRequests: local.passwordResetRequests || [],
+            plans: local.plans || [],
+          }),
+        });
+        if (res.ok) {
+          const serverData = await res.json();
+          if (isMounted && serverData) {
+            setState((prev) => reconcileStates(prev, serverData));
+          }
+        }
+      } catch (e) {
+        // Fallback to local state if offline or static
+      }
+    };
+
+    initialSync();
+
+    // 1.5s real-time heartbeat polling
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await fetch('/api/sync');
+        if (res.ok) {
+          const serverData = await res.json();
+          if (isMounted && serverData) {
+            setState((prev) => reconcileStates(prev, serverData));
+          }
+        }
+      } catch (e) {
+        // Disconnected or offline
+      }
+    }, 1500);
+
+    return () => {
+      isMounted = false;
+      clearInterval(pollInterval);
+    };
+  }, []);
+
+  // 4. Real-Time Admin Activation / Suspension Celebration Watcher
+  const prevUserRef = React.useRef(state.user);
+  useEffect(() => {
+    const prev = prevUserRef.current;
+    const cur = state.user;
+    if (prev && cur && prev.id === cur.id) {
+      if (prev.status === 'PENDING_ACTIVATION' && cur.status === 'ACTIVE') {
+        showToast('🎉 Congratulations! Your account has been ACTIVATED by Admin! You can now earn task rewards and daily bonuses.', 'success');
+        triggerCelebration();
+      } else if (prev.status !== 'SUSPENDED' && cur.status === 'SUSPENDED') {
+        showToast(`⚠️ Account suspended by Admin: ${cur.suspensionReason || 'Contact Support'}`, 'error');
+      }
+    }
+    prevUserRef.current = cur;
+  }, [state.user]);
 
   /* =========================================================================
      AUTOMATIC 00:00 MIDNIGHT WATCHER
@@ -760,11 +1066,16 @@ export function AppProvider({ children }) {
       walletBalance: 0.00,
     };
 
+    const updatedUsers = [newUser, ...(state.allUsers || [])];
     setState((prev) => ({
       ...prev,
       user: newUser,
-      allUsers: [newUser, ...(prev.allUsers || [])],
+      allUsers: updatedUsers,
     }));
+
+    // Real-Time Cross-Tab & Cross-Device broadcast
+    broadcastState({ allUsers: updatedUsers });
+    dispatchApi('/api/register', newUser);
 
     showToast(`Registration successful! Account created. Please select an Investment Plan and submit payment for Admin activation.`, 'info');
     triggerCelebration();
@@ -914,14 +1225,19 @@ export function AppProvider({ children }) {
       meta: `${lockinPeriod.label} Tier (${newPlan.id}) - UTR: ${utr} [Awaiting Admin Payment Verification]`,
     };
 
-    setState((prev) => {
-      return {
-        ...prev,
-        plans: [newPlan, ...(prev.plans || [])],
-        depositRequests: [newDepositRequest, ...prev.depositRequests],
-        transactions: [newTxn, ...prev.transactions],
-      };
-    });
+    const updatedPlans = [newPlan, ...(state.plans || [])];
+    const updatedDeposits = [newDepositRequest, ...(state.depositRequests || [])];
+
+    setState((prev) => ({
+      ...prev,
+      plans: updatedPlans,
+      depositRequests: updatedDeposits,
+      transactions: [newTxn, ...prev.transactions],
+    }));
+
+    // Real-Time Cross-Tab & Cross-Device broadcast
+    broadcastState({ depositRequests: updatedDeposits, plans: updatedPlans });
+    dispatchApi('/api/deposit/submit', newDepositRequest);
 
     showToast(`Payment receipt submitted! UTR: ${utr}. Admin verification takes 5–15 minutes. Plan will activate upon approval.`, 'info');
     return newPlan;
@@ -1058,14 +1374,20 @@ export function AppProvider({ children }) {
       payoutMethod: effectivePayout,
     };
 
+    const updatedWdrs = [newWithdrawalRequest, ...(state.withdrawalRequests || [])];
+
     setState((prev) => ({
       ...prev,
       rewardWallet: +(prev.rewardWallet - amount).toFixed(2),
       totalWithdrawn: +(prev.totalWithdrawn + amount).toFixed(2),
       lastWithdrawalTime: new Date().toISOString(),
-      withdrawalRequests: [newWithdrawalRequest, ...prev.withdrawalRequests],
+      withdrawalRequests: updatedWdrs,
       transactions: [newTxn, ...prev.transactions],
     }));
+
+    // Real-Time Cross-Tab & Cross-Device broadcast
+    broadcastState({ withdrawalRequests: updatedWdrs });
+    dispatchApi('/api/withdrawal/submit', newWithdrawalRequest);
 
     showToast(`Withdrawal of ₹${amount.toLocaleString()} submitted! Verification within 5–15 mins.`);
     triggerCelebration();
@@ -1458,72 +1780,93 @@ export function AppProvider({ children }) {
   };
 
   /* =========================================================================
-     ADMIN USER & REQUEST CONTROLS
+     ADMIN USER & REQUEST CONTROLS (REAL-TIME USER <-> ADMIN SYNC)
      ========================================================================= */
   const activateUser = (userId) => {
-    setState((prev) => {
-      const targetUser = (prev.allUsers || []).find((u) => u.id === userId);
-      const updatedUsers = (prev.allUsers || []).map((u) =>
-        u.id === userId ? { ...u, status: 'ACTIVE', isActivated: true, suspensionReason: '' } : u
-      );
-      const isCur = prev.user?.id === userId || (targetUser && prev.user?.email === targetUser.email);
-      const updatedCurUser = isCur 
-        ? { ...prev.user, status: 'ACTIVE', isActivated: true, suspensionReason: '' } 
-        : prev.user;
+    let updatedCurUser = state.user;
+    const targetUser = (state.allUsers || []).find((u) => u.id === userId);
+    const updatedUsers = (state.allUsers || []).map((u) =>
+      u.id === userId ? { ...u, status: 'ACTIVE', isActivated: true, suspensionReason: '' } : u
+    );
+    const isCur = state.user?.id === userId || (targetUser && state.user?.email === targetUser.email);
+    if (isCur) {
+      updatedCurUser = { ...state.user, status: 'ACTIVE', isActivated: true, suspensionReason: '' };
+    }
 
-      // Also activate any pending plan for this user
-      const updatedPlans = (prev.plans || []).map((p) => {
-        if (p.status === 'pending_approval' && (isCur || p.depositRef)) {
-          return { ...p, status: 'active' };
-        }
-        return p;
-      });
-
-      return { ...prev, allUsers: updatedUsers, user: updatedCurUser, plans: updatedPlans };
+    // Also activate any pending plan for this user
+    const updatedPlans = (state.plans || []).map((p) => {
+      if (p.status === 'pending_approval' && (isCur || p.depositRef)) {
+        return { ...p, status: 'active' };
+      }
+      return p;
     });
+
+    setState((prev) => ({
+      ...prev,
+      allUsers: updatedUsers,
+      user: updatedCurUser,
+      plans: updatedPlans,
+    }));
+
+    // Real-Time Broadcast & Backend Sync
+    broadcastState({ allUsers: updatedUsers, plans: updatedPlans });
+    dispatchApi('/api/user/status', { userId, status: 'ACTIVE' });
+
     showToast(`User ${userId} successfully ACTIVATED by Admin!`);
     triggerCelebration();
   };
 
   const deactivateUser = (userId) => {
-    setState((prev) => {
-      const updatedUsers = prev.allUsers.map((u) =>
-        u.id === userId ? { ...u, status: 'DEACTIVATED', suspensionReason: 'Deactivated by Administrator' } : u
-      );
-      const updatedCurUser = prev.user?.id === userId ? { ...prev.user, status: 'DEACTIVATED', suspensionReason: 'Deactivated by Administrator' } : prev.user;
-      return { ...prev, allUsers: updatedUsers, user: updatedCurUser };
-    });
+    const updatedUsers = (state.allUsers || []).map((u) =>
+      u.id === userId ? { ...u, status: 'DEACTIVATED', suspensionReason: 'Deactivated by Administrator' } : u
+    );
+    const updatedCurUser = state.user?.id === userId ? { ...state.user, status: 'DEACTIVATED', suspensionReason: 'Deactivated by Administrator' } : state.user;
+
+    setState((prev) => ({ ...prev, allUsers: updatedUsers, user: updatedCurUser }));
+
+    broadcastState({ allUsers: updatedUsers });
+    dispatchApi('/api/user/status', { userId, status: 'DEACTIVATED', reason: 'Deactivated by Administrator' });
+
     showToast(`User ${userId} DEACTIVATED.`);
   };
 
   const suspendUser = (userId, reason) => {
     const r = reason || 'Suspended by Administrator';
-    setState((prev) => {
-      const updatedUsers = prev.allUsers.map((u) =>
-        u.id === userId ? { ...u, status: 'SUSPENDED', suspensionReason: r } : u
-      );
-      const updatedCurUser = prev.user?.id === userId ? { ...prev.user, status: 'SUSPENDED', suspensionReason: r } : prev.user;
-      return { ...prev, allUsers: updatedUsers, user: updatedCurUser };
-    });
+    const updatedUsers = (state.allUsers || []).map((u) =>
+      u.id === userId ? { ...u, status: 'SUSPENDED', suspensionReason: r } : u
+    );
+    const updatedCurUser = state.user?.id === userId ? { ...state.user, status: 'SUSPENDED', suspensionReason: r } : state.user;
+
+    setState((prev) => ({ ...prev, allUsers: updatedUsers, user: updatedCurUser }));
+
+    broadcastState({ allUsers: updatedUsers });
+    dispatchApi('/api/user/status', { userId, status: 'SUSPENDED', reason: r });
+
     showToast(`User ${userId} has been SUSPENDED.`);
   };
 
   const deleteUser = (userId) => {
-    setState((prev) => {
-      const updatedUsers = prev.allUsers.filter((u) => u.id !== userId);
-      const updatedCurUser = prev.user?.id === userId ? null : prev.user;
-      return { ...prev, allUsers: updatedUsers, user: updatedCurUser };
-    });
+    const updatedUsers = (state.allUsers || []).filter((u) => u.id !== userId);
+    const updatedCurUser = state.user?.id === userId ? null : state.user;
+
+    setState((prev) => ({ ...prev, allUsers: updatedUsers, user: updatedCurUser }));
+
+    broadcastState({ allUsers: updatedUsers });
+    dispatchApi('/api/user/delete', { userId });
+
     showToast(`User ${userId} deleted permanently.`, 'warning');
   };
 
   const resetUserPassword = (userId, newPassword) => {
-    setState((prev) => {
-      const updatedUsers = prev.allUsers.map((u) =>
-        u.id === userId ? { ...u, password: newPassword } : u
-      );
-      return { ...prev, allUsers: updatedUsers };
-    });
+    const updatedUsers = (state.allUsers || []).map((u) =>
+      u.id === userId ? { ...u, password: newPassword } : u
+    );
+
+    setState((prev) => ({ ...prev, allUsers: updatedUsers }));
+
+    broadcastState({ allUsers: updatedUsers });
+    dispatchApi('/api/user/status', { userId, status: 'PASSWORD_RESET', password: newPassword });
+
     showToast(`Password for user ${userId} reset successfully!`);
   };
 
@@ -1544,7 +1887,6 @@ export function AppProvider({ children }) {
 
     const inputLower = rawInput.toLowerCase();
     const inputDigits = rawInput.replace(/\D/g, '');
-
     const userList = state.allUsers || [];
 
     const matchedUser = userList.find((u) => {
@@ -1566,6 +1908,15 @@ export function AppProvider({ children }) {
     });
 
     if (!matchedUser) {
+      // Check server asynchronously in case user was registered on another device
+      dispatchApi('/api/password-reset/request', { identifier: rawInput }).then((res) => {
+        if (res && res.success && res.request) {
+          setState((prev) => reconcileStates(prev, {
+            allUsers: res.user ? [res.user, ...(prev.allUsers || [])] : prev.allUsers,
+            passwordResetRequests: [res.request, ...(prev.passwordResetRequests || [])],
+          }));
+        }
+      });
       return {
         success: false,
         found: false,
@@ -1582,10 +1933,15 @@ export function AppProvider({ children }) {
       status: 'PENDING',
     };
 
+    const updatedResets = [newReq, ...(state.passwordResetRequests || [])];
     setState((prev) => ({
       ...prev,
-      passwordResetRequests: [newReq, ...(prev.passwordResetRequests || [])],
+      passwordResetRequests: updatedResets,
     }));
+
+    // Broadcast immediately across tabs & send to server
+    broadcastState({ passwordResetRequests: updatedResets });
+    dispatchApi('/api/password-reset/request', { identifier: rawInput });
 
     showToast('পাসওয়ার্ড রিসেট রিকোয়েস্ট জমা নেওয়া হয়েছে। অ্যাডমিন টিম আপনার নম্বরে এসএমএস করে নতুন পাসওয়ার্ড পাঠাবে।', 'success');
     return {
@@ -1600,18 +1956,25 @@ export function AppProvider({ children }) {
     if (!req) return null;
     const tempPass = customTempPassword || `Task@${Math.floor(1000 + Math.random() * 9000)}`;
 
-    // Reset user password
-    resetUserPassword(req.userId, tempPass);
+    const updatedUsers = (state.allUsers || []).map((u) =>
+      u.id === req.userId ? { ...u, password: tempPass } : u
+    );
 
-    // Update request state
+    const updatedResets = (state.passwordResetRequests || []).map((r) =>
+      r.id === requestId
+        ? { ...r, status: 'RESOLVED', resolvedAt: new Date().toISOString(), tempPassword: tempPass }
+        : r
+    );
+
     setState((prev) => ({
       ...prev,
-      passwordResetRequests: (prev.passwordResetRequests || []).map((r) =>
-        r.id === requestId
-          ? { ...r, status: 'RESOLVED', resolvedAt: new Date().toISOString(), tempPassword: tempPass }
-          : r
-      ),
+      allUsers: updatedUsers,
+      passwordResetRequests: updatedResets,
     }));
+
+    // Real-Time Broadcast & Backend Sync
+    broadcastState({ allUsers: updatedUsers, passwordResetRequests: updatedResets });
+    dispatchApi('/api/password-reset/resolve', { requestId, tempPassword: tempPass });
 
     return {
       success: true,
@@ -1622,138 +1985,162 @@ export function AppProvider({ children }) {
   };
 
   const approveDeposit = (depositId) => {
-    setState((prev) => {
-      const req = prev.depositRequests.find((d) => d.id === depositId);
-      if (!req) return prev;
+    const req = (state.depositRequests || []).find((d) => d.id === depositId);
+    if (!req) return;
 
-      const calc = calculateEarnings(req.amount, req.planMonths, 1.0);
-      const startDate = new Date();
-      const totalDays = req.planDays || req.planMonths * 30;
-      const maturityDate = new Date();
-      maturityDate.setDate(startDate.getDate() + totalDays);
+    const calc = calculateEarnings(req.amount, req.planMonths, 1.0);
+    const startDate = new Date();
+    const totalDays = req.planDays || req.planMonths * 30;
+    const maturityDate = new Date();
+    maturityDate.setDate(startDate.getDate() + totalDays);
 
-      const approvedPlan = {
-        id: `PLN-${Math.floor(1000 + Math.random() * 9000)}`,
-        title: req.planTitle,
-        amount: req.amount,
-        months: req.planMonths,
-        days: totalDays,
-        startDate: startDate.toISOString(),
-        maturityDate: maturityDate.toISOString(),
-        totalExpectedGain: calc.estimatedTotalIncome,
-        estimatedTotalIncome: calc.estimatedTotalIncome,
-        dailyQuota: calc.estimatedDailyIncome,
-        earnedSoFar: 0,
-        status: 'active',
-        isUpgrade: req.isUpgrade,
-        depositRef: req.id,
-        utr: req.utr,
-      };
+    const approvedPlan = {
+      id: `PLN-${Math.floor(1000 + Math.random() * 9000)}`,
+      title: req.planTitle,
+      amount: req.amount,
+      months: req.planMonths,
+      days: totalDays,
+      startDate: startDate.toISOString(),
+      maturityDate: maturityDate.toISOString(),
+      totalExpectedGain: calc.estimatedTotalIncome,
+      estimatedTotalIncome: calc.estimatedTotalIncome,
+      dailyQuota: calc.estimatedDailyIncome,
+      earnedSoFar: 0,
+      status: 'active',
+      isUpgrade: req.isUpgrade,
+      depositRef: req.id,
+      utr: req.utr,
+    };
 
-      // Filter out any pending plan that was linked to this deposit
-      const nonMatchingPlans = (prev.plans || []).filter((p) => p.depositRef !== req.id);
-      const updatedPlans = nonMatchingPlans.map((p) =>
+    // Filter out any pending plan that was linked to this deposit
+    const nonMatchingPlans = (state.plans || []).filter((p) => p.depositRef !== req.id);
+    const updatedPlans = [
+      approvedPlan,
+      ...nonMatchingPlans.map((p) =>
         req.isUpgrade && p.status === 'active' ? { ...p, status: 'superseded_upgrade' } : p
-      );
+      ),
+    ];
 
-      // Activate User in allUsers and current user!
-      const updatedUsers = (prev.allUsers || []).map((u) => {
-        if (u.id === req.userId || u.name === req.userName || (u.phone && req.userPhone && u.phone === req.userPhone)) {
-          return {
-            ...u,
-            status: 'ACTIVE',
-            isActivated: true,
-            isVerified: true,
-            suspensionReason: '',
-            totalDeposited: (u.totalDeposited || 0) + req.amount,
-          };
-        }
-        return u;
-      });
-
-      const isCurrent = prev.user && (
-        prev.user.id === req.userId ||
-        prev.user.name === req.userName ||
-        (prev.user.phone && req.userPhone && prev.user.phone === req.userPhone)
-      );
-      const updatedCurUser = isCurrent
-        ? {
-            ...prev.user,
-            status: 'ACTIVE',
-            isActivated: true,
-            isVerified: true,
-            suspensionReason: '',
-            totalDeposited: (prev.user.totalDeposited || 0) + req.amount,
-          }
-        : prev.user;
-
-      // Update matching transactions
-      const updatedTxns = (prev.transactions || []).map((t) => {
-        if (t.type === 'DEPOSIT' && (t.meta?.includes(req.utr) || t.title?.includes('Pending'))) {
-          return { ...t, status: 'COMPLETED', title: req.isUpgrade ? 'Membership Plan Upgrade' : 'Membership Tier Subscription' };
-        }
-        return t;
-      });
-
-      return {
-        ...prev,
-        plans: [approvedPlan, ...updatedPlans],
-        depositRequests: prev.depositRequests.map((d) =>
-          d.id === depositId ? { ...d, status: 'APPROVED' } : d
-        ),
-        allUsers: updatedUsers,
-        user: updatedCurUser,
-        transactions: updatedTxns,
-      };
+    // Activate User in allUsers and current user!
+    const updatedUsers = (state.allUsers || []).map((u) => {
+      if (u.id === req.userId || u.name === req.userName || (u.phone && req.userPhone && u.phone === req.userPhone)) {
+        return {
+          ...u,
+          status: 'ACTIVE',
+          isActivated: true,
+          isVerified: true,
+          suspensionReason: '',
+          totalDeposited: (u.totalDeposited || 0) + req.amount,
+        };
+      }
+      return u;
     });
+
+    const isCurrent = state.user && (
+      state.user.id === req.userId ||
+      state.user.name === req.userName ||
+      (state.user.phone && req.userPhone && state.user.phone === req.userPhone)
+    );
+    const updatedCurUser = isCurrent
+      ? {
+          ...state.user,
+          status: 'ACTIVE',
+          isActivated: true,
+          isVerified: true,
+          suspensionReason: '',
+          totalDeposited: (state.user.totalDeposited || 0) + req.amount,
+        }
+      : state.user;
+
+    const updatedDeposits = (state.depositRequests || []).map((d) =>
+      d.id === depositId ? { ...d, status: 'APPROVED' } : d
+    );
+
+    // Update matching transactions
+    const updatedTxns = (state.transactions || []).map((t) => {
+      if (t.type === 'DEPOSIT' && (t.meta?.includes(req.utr) || t.title?.includes('Pending'))) {
+        return { ...t, status: 'COMPLETED', title: req.isUpgrade ? 'Membership Plan Upgrade' : 'Membership Tier Subscription' };
+      }
+      return t;
+    });
+
+    setState((prev) => ({
+      ...prev,
+      plans: updatedPlans,
+      depositRequests: updatedDeposits,
+      allUsers: updatedUsers,
+      user: updatedCurUser,
+      transactions: updatedTxns,
+    }));
+
+    // Real-Time Cross-Tab & Cross-Device broadcast
+    broadcastState({ depositRequests: updatedDeposits, plans: updatedPlans, allUsers: updatedUsers });
+    dispatchApi('/api/deposit/review', { depositId, action: 'APPROVE' });
+
     showToast(`Deposit ${depositId} APPROVED! User account and membership plan activated.`);
     triggerCelebration();
   };
 
   const rejectDeposit = (depositId, reason) => {
     const rejReason = reason || 'Invalid UTR / Payment not received in bank account';
-    setState((prev) => {
-      // Remove or mark pending plan as rejected
-      const updatedPlans = (prev.plans || []).filter((p) => p.depositRef !== depositId);
-      return {
-        ...prev,
-        plans: updatedPlans,
-        depositRequests: prev.depositRequests.map((d) =>
-          d.id === depositId ? { ...d, status: 'REJECTED', rejectionReason: rejReason } : d
-        ),
-      };
-    });
+    const updatedPlans = (state.plans || []).filter((p) => p.depositRef !== depositId);
+    const updatedDeposits = (state.depositRequests || []).map((d) =>
+      d.id === depositId ? { ...d, status: 'REJECTED', rejectionReason: rejReason } : d
+    );
+
+    setState((prev) => ({
+      ...prev,
+      plans: updatedPlans,
+      depositRequests: updatedDeposits,
+    }));
+
+    // Real-Time Cross-Tab & Cross-Device broadcast
+    broadcastState({ depositRequests: updatedDeposits, plans: updatedPlans });
+    dispatchApi('/api/deposit/review', { depositId, action: 'REJECT', reason: rejReason });
+
     showToast(`Deposit ${depositId} REJECTED. Reason: ${rejReason}`, 'error');
   };
 
   const approveWithdrawal = (withdrawalId, customUtr) => {
     const utr = customUtr || `IMPS${Date.now().toString().slice(-9)}`;
+    const updatedWdrs = (state.withdrawalRequests || []).map((w) =>
+      w.id === withdrawalId ? { ...w, status: 'APPROVED', disbursedUtr: utr } : w
+    );
+
     setState((prev) => ({
       ...prev,
-      withdrawalRequests: prev.withdrawalRequests.map((w) =>
-        w.id === withdrawalId ? { ...w, status: 'APPROVED', disbursedUtr: utr } : w
-      ),
+      withdrawalRequests: updatedWdrs,
     }));
+
+    // Real-Time Cross-Tab & Cross-Device broadcast
+    broadcastState({ withdrawalRequests: updatedWdrs });
+    dispatchApi('/api/withdrawal/review', { withdrawalId, action: 'APPROVE', utr });
+
     showToast(`Withdrawal ${withdrawalId} APPROVED & Disbursed! IMPS UTR: ${utr}`);
     triggerCelebration();
   };
 
   const rejectWithdrawal = (withdrawalId, reason) => {
     const rejReason = reason || 'Invalid UPI / Bank Account details provided';
-    setState((prev) => {
-      const req = prev.withdrawalRequests.find((w) => w.id === withdrawalId);
-      if (!req) return prev;
+    const req = (state.withdrawalRequests || []).find((w) => w.id === withdrawalId);
+    if (!req) return;
 
-      const refundAmount = req.amount;
-      return {
-        ...prev,
-        rewardWallet: +(prev.rewardWallet + refundAmount).toFixed(2),
-        totalWithdrawn: Math.max(0, +(prev.totalWithdrawn - refundAmount).toFixed(2)),
-        withdrawalRequests: prev.withdrawalRequests.map((w) =>
-          w.id === withdrawalId ? { ...w, status: 'REJECTED', rejectionReason: rejReason } : w
-        ),
-      };
-    });
+    const refundAmount = req.amount;
+    const updatedWdrs = (state.withdrawalRequests || []).map((w) =>
+      w.id === withdrawalId ? { ...w, status: 'REJECTED', rejectionReason: rejReason } : w
+    );
+
+    setState((prev) => ({
+      ...prev,
+      rewardWallet: +(prev.rewardWallet + refundAmount).toFixed(2),
+      totalWithdrawn: Math.max(0, +(prev.totalWithdrawn - refundAmount).toFixed(2)),
+      withdrawalRequests: updatedWdrs,
+    }));
+
+    // Real-Time Cross-Tab & Cross-Device broadcast
+    broadcastState({ withdrawalRequests: updatedWdrs });
+    dispatchApi('/api/withdrawal/review', { withdrawalId, action: 'REJECT', reason: rejReason });
+
     showToast(`Withdrawal ${withdrawalId} REJECTED. Funds reverted to user wallet.`, 'error');
   };
 

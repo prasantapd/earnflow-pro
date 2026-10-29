@@ -1,0 +1,195 @@
+{
+  "allUsers": [
+    {
+      "id": "USR-9060",
+      "name": "Test Realtime User",
+      "email": "realtime@test.com",
+      "phone": "9998887776",
+      "password": "NewPassword@2026",
+      "referralCode": "TEST781",
+      "joinedDate": "2026-10-29T14:51:11.782Z",
+      "status": "ACTIVE",
+      "isActivated": true,
+      "suspensionReason": "",
+      "isVerified": true,
+      "totalDeposited": 2000,
+      "walletBalance": 0
+    },
+    {
+      "id": "USR-5730",
+      "name": "Rahul Roy",
+      "email": "9876543999@earnflow.app",
+      "phone": "9876543999",
+      "password": "pass123",
+      "referralCode": "RAHU397",
+      "joinedDate": "2026-10-29T10:15:10.840Z",
+      "status": "ACTIVE",
+      "isActivated": true,
+      "suspensionReason": "",
+      "isVerified": false,
+      "totalDeposited": 0,
+      "walletBalance": 0
+    },
+    {
+      "id": "USR-9963",
+      "name": "Test User",
+      "email": "9876543210@earnflow.app",
+      "phone": "9876543210",
+      "password": "password123",
+      "referralCode": "TEST907",
+      "joinedDate": "2026-10-29T06:35:07.690Z",
+      "status": "ACTIVE",
+      "suspensionReason": "",
+      "isVerified": true,
+      "totalDeposited": 5000,
+      "walletBalance": 0,
+      "payoutMethod": {
+        "type": "upi_id",
+        "upiId": "prasanta@okhdfcbank",
+        "holderName": "Test User",
+        "savedAt": "2026-10-29T08:12:24.523Z"
+      },
+      "isActivated": true
+    }
+  ],
+  "depositRequests": [
+    {
+      "id": "DEP-2279",
+      "userId": "USR-9060",
+      "userName": "Test Realtime User",
+      "userPhone": "9998887776",
+      "amount": 2000,
+      "planMonths": 1,
+      "planDays": 30,
+      "planTitle": "1 Month Basic Plan",
+      "isUpgrade": false,
+      "previousPlanId": null,
+      "utr": "123456789012",
+      "submittedAt": "2026-10-29T14:51:19.030Z",
+      "status": "APPROVED",
+      "rejectionReason": ""
+    },
+    {
+      "id": "DEP-9238",
+      "userId": "USR-9963",
+      "userName": "Test User",
+      "amount": 5000,
+      "planMonths": 3,
+      "planDays": 90,
+      "planTitle": "90 Days Membership Tier",
+      "isUpgrade": false,
+      "previousPlanId": null,
+      "utr": "UTR3262507483",
+      "submittedAt": "2026-10-29T08:28:27.483Z",
+      "status": "APPROVED",
+      "rejectionReason": ""
+    }
+  ],
+  "withdrawalRequests": [
+    {
+      "id": "WDR-5918",
+      "userId": "USR-9060",
+      "userName": "Test Realtime User",
+      "userPhone": "9998887776",
+      "userEmail": "",
+      "amount": 500,
+      "type": "TASK_REWARD",
+      "payoutDetails": {
+        "type": "upi_id",
+        "upiId": "test@okaxis"
+      },
+      "submittedAt": "2026-10-29T14:52:08.873Z",
+      "status": "APPROVED",
+      "rejectionReason": "",
+      "disbursedUtr": "IMPS9988776655"
+    },
+    {
+      "id": "WR-869",
+      "userId": "USR-9963",
+      "userName": "Test User",
+      "amount": 200,
+      "method": "UPI VPA",
+      "destination": "prasanta@okhdfcbank",
+      "status": "APPROVED",
+      "date": "2026-10-29T08:15:17.446Z",
+      "disbursedUtr": "IMPS261827268"
+    }
+  ],
+  "passwordResetRequests": [
+    {
+      "id": "REQ-101892",
+      "userId": "USR-9060",
+      "userName": "Test Realtime User",
+      "userPhone": "9998887776",
+      "requestedAt": "2026-10-29T14:51:40.251Z",
+      "status": "RESOLVED",
+      "resolvedAt": "2026-10-29T14:51:47.172Z",
+      "tempPassword": "NewPassword@2026"
+    },
+    {
+      "id": "REQ-100482",
+      "userId": "usr_rohan",
+      "userName": "Rohan Sharma",
+      "userPhone": "+91 98765 43210",
+      "requestedAt": "2026-10-29T05:34:57.487Z",
+      "status": "PENDING"
+    }
+  ],
+  "plans": [
+    {
+      "id": "PLN-3480",
+      "title": "1 Month Basic Plan",
+      "amount": 2000,
+      "months": 1,
+      "days": 30,
+      "startDate": "2026-10-29T14:51:25.245Z",
+      "maturityDate": "2026-11-28T14:51:25.245Z",
+      "totalExpectedGain": 2300,
+      "dailyQuota": 10,
+      "earnedSoFar": 0,
+      "status": "active",
+      "isUpgrade": false,
+      "depositRef": "DEP-2279",
+      "utr": "123456789012"
+    },
+    {
+      "id": "PLN-3794",
+      "title": "90 Days Membership Tier",
+      "amount": 5000,
+      "months": 3,
+      "days": 90,
+      "startDate": "2026-10-29T10:20:46.388Z",
+      "maturityDate": "2027-01-27T10:20:46.388Z",
+      "totalExpectedGain": 35000,
+      "estimatedTotalIncome": 35000,
+      "dailyQuota": 388.89,
+      "earnedSoFar": 126,
+      "status": "active",
+      "isUpgrade": false,
+      "depositRef": "DEP-9238",
+      "utr": "UTR3262507483"
+    }
+  ],
+  "transactions": [],
+  "paymentSettings": {
+    "upiId": "taskcoin@ybl",
+    "upiPhone": "9876543210",
+    "upiName": "TaskCoin Corporate Treasury",
+    "upiQrUrl": "",
+    "bankName": "HDFC Bank Ltd",
+    "accountNumber": "50200089123456",
+    "ifsc": "HDFC0000123",
+    "accountHolder": "TaskCoin Technologies Pvt Ltd",
+    "instructions": "1. Transfer exact amount via PhonePe/GPay/Paytm/IMPS.\n2. Note 12-digit UTR/Ref No.\n3. Submit with receipt for instant Admin activation.",
+    "depositQrNote": "Scan & Pay via any UPI App. Minimum deposit ₹2,000."
+  },
+  "adminAnnouncement": {
+    "active": true,
+    "message": "⚡ Welcome to EarnFlow Pro! 24/7 instant withdrawals & daily task earning active.",
+    "type": "gold",
+    "updatedAt": "2026-10-29T14:46:14.068Z"
+  },
+  "adminPassword": "admin123",
+  "version": 1,
+  "lastUpdated": 1793285631403
+}

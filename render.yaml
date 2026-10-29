@@ -1,14 +1,13 @@
 services:
-  # Render Static Site Configuration (100% Free Forever, Fast Global CDN, Automatic HTTPS)
   - type: web
     name: earnflow-pro
-    runtime: static
+    runtime: node
+    plan: free
     buildCommand: npm install && npm run build
-    staticPublishPath: ./dist
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
     headers:
       - path: /*
         name: X-Frame-Options

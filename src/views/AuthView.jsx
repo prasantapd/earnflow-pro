@@ -78,7 +78,7 @@ export default function AuthView({ onOpenAdminLogin }) {
     }
   };
 
-  const handleForgotSubmit = (e) => {
+  const handleForgotSubmit = async (e) => {
     e.preventDefault();
     setForgotError('');
     setUnregisteredPhone(null);
@@ -89,7 +89,26 @@ export default function AuthView({ onOpenAdminLogin }) {
       return;
     }
 
-    const res = requestPasswordReset(cleanInput);
+    let res = requestPasswordReset(cleanInput);
+
+    if (!res || !res.found) {
+      // Check live server directly in case user registered on another device/browser
+      try {
+        const apiRes = await fetch('/api/password-reset/request', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ identifier: cleanInput }),
+        });
+        if (apiRes.ok) {
+          const apiData = await apiRes.json();
+          if (apiData && apiData.success) {
+            res = { success: true, found: true, user: apiData.user };
+          }
+        }
+      } catch (err) {
+        // Fallback
+      }
+    }
 
     if (res && res.success && res.found) {
       // User found and registered!

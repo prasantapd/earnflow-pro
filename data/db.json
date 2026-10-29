@@ -1,6 +1,21 @@
 {
   "allUsers": [
     {
+      "id": "USR-8725",
+      "name": "Prasanta User",
+      "email": "9811223344@earnflow.app",
+      "phone": "9811223344",
+      "password": "Password@123",
+      "referralCode": "PRAS858",
+      "joinedDate": "2026-10-29T15:40:44.430Z",
+      "status": "ACTIVE",
+      "isActivated": true,
+      "suspensionReason": "",
+      "isVerified": true,
+      "totalDeposited": 2000,
+      "walletBalance": 0
+    },
+    {
       "id": "USR-9060",
       "name": "Test Realtime User",
       "email": "realtime@test.com",
@@ -50,9 +65,86 @@
         "savedAt": "2026-10-29T08:12:24.523Z"
       },
       "isActivated": true
+    },
+    {
+      "id": "USR-6124",
+      "name": "Sunil Das",
+      "email": "sunildas@gmail.com",
+      "phone": "9830112233",
+      "password": "password123",
+      "referralCode": "SUNI102",
+      "joinedDate": "2026-10-29T15:05:57.700Z",
+      "status": "ACTIVE",
+      "isActivated": true,
+      "suspensionReason": "",
+      "isVerified": true,
+      "totalDeposited": 2000,
+      "walletBalance": 0
+    },
+    {
+      "id": "USR-7525",
+      "name": "p",
+      "email": "8900001292@earnflow.app",
+      "phone": "8900001292",
+      "password": "Task@9037",
+      "referralCode": "P778",
+      "joinedDate": "2026-10-29T06:37:47.297Z",
+      "status": "ACTIVE",
+      "suspensionReason": "",
+      "isVerified": true,
+      "totalDeposited": 0,
+      "walletBalance": 0
     }
   ],
   "depositRequests": [
+    {
+      "id": "DEP-2207",
+      "userId": "USR-7155",
+      "userName": "Prasanta User",
+      "userPhone": "9811223344",
+      "amount": 2000,
+      "planMonths": 1,
+      "planDays": 30,
+      "planTitle": "30 Days Membership Tier",
+      "isUpgrade": false,
+      "previousPlanId": null,
+      "utr": "UTR9811223344",
+      "submittedAt": "2026-10-29T15:42:17.495Z",
+      "status": "APPROVED",
+      "rejectionReason": ""
+    },
+    {
+      "id": "DEP-7268",
+      "userId": "USR-7155",
+      "userName": "Prasanta User",
+      "userPhone": "9811223344",
+      "amount": 2000,
+      "planMonths": 3,
+      "planDays": 90,
+      "planTitle": "90 Days Membership Tier",
+      "isUpgrade": false,
+      "previousPlanId": null,
+      "utr": "UTR3288487688",
+      "submittedAt": "2026-10-29T15:41:27.713Z",
+      "status": "PENDING",
+      "rejectionReason": ""
+    },
+    {
+      "id": "DEP-2178",
+      "userId": "USR-7155",
+      "userName": "Prasanta User",
+      "userPhone": "9811223344",
+      "amount": 2000,
+      "planMonths": 3,
+      "planDays": 90,
+      "planTitle": "90 Days Membership Tier",
+      "isUpgrade": false,
+      "previousPlanId": null,
+      "utr": "UTR3288465005",
+      "submittedAt": "2026-10-29T15:41:05.009Z",
+      "status": "PENDING",
+      "rejectionReason": ""
+    },
     {
       "id": "DEP-2279",
       "userId": "USR-9060",
@@ -83,6 +175,20 @@
       "submittedAt": "2026-10-29T08:28:27.483Z",
       "status": "APPROVED",
       "rejectionReason": ""
+    },
+    {
+      "id": "DEP-7731",
+      "userId": "USR-6124",
+      "userName": "Sunil Das",
+      "userPhone": "9830112233",
+      "amount": 2000,
+      "planMonths": 1,
+      "planDays": 30,
+      "planTitle": "1 Month Basic Plan",
+      "isUpgrade": false,
+      "utr": "UTR4455667788",
+      "submittedAt": "2026-10-29T15:05:57.702Z",
+      "status": "APPROVED"
     }
   ],
   "withdrawalRequests": [
@@ -113,6 +219,24 @@
       "status": "APPROVED",
       "date": "2026-10-29T08:15:17.446Z",
       "disbursedUtr": "IMPS261827268"
+    },
+    {
+      "id": "WDR-5389",
+      "userId": "USR-7525",
+      "userName": "p",
+      "amount": 206,
+      "type": "TASK_REWARD",
+      "payoutDetails": {
+        "type": "upi_phone",
+        "upiPhone": "7878787878",
+        "upiApp": "Google Pay / Paytm",
+        "holderName": "p",
+        "savedAt": "2026-10-29T06:40:38.971Z"
+      },
+      "submittedAt": "2026-10-29T06:50:25.351Z",
+      "status": "APPROVED",
+      "rejectionReason": "",
+      "disbursedUtr": "IMPS256649834"
     }
   ],
   "passwordResetRequests": [
@@ -133,9 +257,86 @@
       "userPhone": "+91 98765 43210",
       "requestedAt": "2026-10-29T05:34:57.487Z",
       "status": "PENDING"
+    },
+    {
+      "id": "REQ-889911",
+      "userId": "USR-6124",
+      "userName": "Sunil Das",
+      "userPhone": "9830112233",
+      "requestedAt": "2026-10-29T15:05:57.702Z",
+      "status": "PENDING"
+    },
+    {
+      "id": "REQ-209169",
+      "userId": "USR-7525",
+      "userName": "p",
+      "userPhone": "8900001292",
+      "requestedAt": "2026-10-29T14:10:37.233Z",
+      "status": "RESOLVED",
+      "resolvedAt": "2026-10-29T14:32:33.324Z",
+      "tempPassword": "Task@9037"
+    },
+    {
+      "id": "REQ-469057",
+      "userId": "USR-7525",
+      "userName": "p",
+      "userPhone": "8900001292",
+      "requestedAt": "2026-10-29T14:02:46.857Z",
+      "status": "RESOLVED",
+      "resolvedAt": "2026-10-29T14:04:18.971Z",
+      "tempPassword": "Task@2106"
+    },
+    {
+      "id": "REQ-784353",
+      "userId": "USER-7777777777",
+      "userName": "User (7777777777)",
+      "userPhone": "7777777777",
+      "requestedAt": "2026-10-29T05:46:17.086Z",
+      "status": "RESOLVED",
+      "resolvedAt": "2026-10-29T06:54:39.839Z",
+      "tempPassword": "Task@6434"
+    },
+    {
+      "id": "REQ-907496",
+      "userId": "USER-8888888888",
+      "userName": "User (8888888888)",
+      "userPhone": "8888888888",
+      "requestedAt": "2026-10-29T05:37:56.318Z",
+      "status": "RESOLVED",
+      "resolvedAt": "2026-10-29T06:54:48.434Z",
+      "tempPassword": "Task@5251"
+    },
+    {
+      "id": "REQ-417761",
+      "userId": "USER-8900001292",
+      "userName": "User (8900001292)",
+      "userPhone": "8900001292",
+      "requestedAt": "2026-10-29T05:37:49.423Z",
+      "status": "RESOLVED",
+      "resolvedAt": "2026-10-29T06:55:06.555Z",
+      "tempPassword": "Task@8394"
     }
   ],
   "plans": [
+    {
+      "id": "PLN-6660",
+      "userId": "USR-7155",
+      "userName": "Prasanta User",
+      "userPhone": "9811223344",
+      "title": "30 Days Membership Tier",
+      "amount": 2000,
+      "months": 1,
+      "days": 30,
+      "startDate": "2026-10-29T15:43:04.656Z",
+      "maturityDate": "2026-11-28T15:43:04.656Z",
+      "totalExpectedGain": 2300,
+      "dailyQuota": 10,
+      "earnedSoFar": 0,
+      "status": "active",
+      "isUpgrade": false,
+      "depositRef": "DEP-2207",
+      "utr": "UTR9811223344"
+    },
     {
       "id": "PLN-3480",
       "title": "1 Month Basic Plan",
@@ -168,6 +369,23 @@
       "isUpgrade": false,
       "depositRef": "DEP-9238",
       "utr": "UTR3262507483"
+    },
+    {
+      "id": "PLN-1800",
+      "title": "1 Month Basic Plan",
+      "amount": 2000,
+      "months": 1,
+      "days": 30,
+      "startDate": "2026-10-29T15:09:04.545Z",
+      "maturityDate": "2026-11-28T15:09:04.545Z",
+      "totalExpectedGain": 2000,
+      "estimatedTotalIncome": 2000,
+      "dailyQuota": 66.67,
+      "earnedSoFar": 0,
+      "status": "active",
+      "isUpgrade": false,
+      "depositRef": "DEP-7731",
+      "utr": "UTR4455667788"
     }
   ],
   "transactions": [],
@@ -191,5 +409,5 @@
   },
   "adminPassword": "admin123",
   "version": 1,
-  "lastUpdated": 1793286267634
+  "lastUpdated": 1793288584658
 }

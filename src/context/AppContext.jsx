@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import confetti from 'canvas-confetti';
 import { calculateEarnings, getNextSundayStatus, extractYoutubeId, getMembershipTier, formatINR } from '../utils/finance';
 import { getLocalDateString, getUpcoming7Days } from '../utils/dateUtils';
@@ -617,6 +617,7 @@ const REALTIME_CHANNEL = typeof window !== 'undefined' && 'BroadcastChannel' in 
 const CLOUD_SYNC_TOPIC = 'earnflow_pro_live_sync_9f536854';
 
 function broadcastState(payload) {
+  if (!payload) return;
   // 1. Cross-Tab local broadcast (0ms instant)
   if (REALTIME_CHANNEL) {
     try {
@@ -628,13 +629,23 @@ function broadcastState(payload) {
 
   // 2. Global Cloud Real-Time Broadcast (Sub-100ms across all devices on the internet)
   try {
+    const compact = {};
+    if (payload.allUsers) compact.allUsers = payload.allUsers.slice(0, 15);
+    if (payload.depositRequests) compact.depositRequests = payload.depositRequests.slice(0, 15);
+    if (payload.withdrawalRequests) compact.withdrawalRequests = payload.withdrawalRequests.slice(0, 15);
+    if (payload.passwordResetRequests) compact.passwordResetRequests = payload.passwordResetRequests.slice(0, 15);
+    if (payload.plans) compact.plans = payload.plans.slice(0, 15);
+    if (payload.paymentSettings) compact.paymentSettings = payload.paymentSettings;
+    if (payload.adminAnnouncement) compact.adminAnnouncement = payload.adminAnnouncement;
+    if (payload.adminPassword) compact.adminPassword = payload.adminPassword;
+
     fetch(`https://ntfy.sh/${CLOUD_SYNC_TOPIC}`, {
       method: 'POST',
       headers: {
         'Title': 'EarnFlowLiveSync',
         'Priority': 'default',
       },
-      body: JSON.stringify({ type: 'STATE_SYNC', payload, timestamp: Date.now() }),
+      body: JSON.stringify({ type: 'STATE_SYNC', payload: compact, timestamp: Date.now() }),
     }).catch(() => {});
   } catch (e) {
     // Offline or network error
@@ -767,13 +778,30 @@ function reconcileStates(prev, incoming) {
 
   // Ensure user has active plan if an approved deposit exists for them
   if (updatedCurrentUser) {
-    const hasActivePlan = Array.from(planMap.values()).some((p) => p.status === 'active');
+    const hasActivePlan = Array.from(planMap.values()).some(
+      (p) =>
+        p.status === 'active' &&
+        (p.userId === updatedCurrentUser.id ||
+          (updatedCurrentUser.phone && p.userPhone === updatedCurrentUser.phone) ||
+          p.userName === updatedCurrentUser.name)
+    );
     if (!hasActivePlan) {
       const userApprovedDep = mergedDeposits.find(
-        (d) => d.status === 'APPROVED' && (d.userId === updatedCurrentUser.id || d.userName === updatedCurrentUser.name || (d.userPhone && d.userPhone === updatedCurrentUser.phone))
+        (d) =>
+          d.status === 'APPROVED' &&
+          (d.userId === updatedCurrentUser.id ||
+            d.userName === updatedCurrentUser.name ||
+            (d.userPhone && d.userPhone === updatedCurrentUser.phone))
       );
       if (userApprovedDep) {
-        const incomingApprovedPlan = (incoming.plans || []).find((p) => p.depositRef === userApprovedDep.id && p.status === 'active');
+        const incomingApprovedPlan = (incoming.plans || []).find(
+          (p) =>
+            p.depositRef === userApprovedDep.id &&
+            p.status === 'active' &&
+            (p.userId === updatedCurrentUser.id ||
+              p.userName === updatedCurrentUser.name ||
+              (userApprovedDep.userPhone && p.userPhone === userApprovedDep.userPhone))
+        );
         if (incomingApprovedPlan) {
           planMap.set(incomingApprovedPlan.id, incomingApprovedPlan);
           changed = true;
@@ -785,6 +813,9 @@ function reconcileStates(prev, incoming) {
           maturityDate.setDate(startDate.getDate() + totalDays);
           const autoPlan = {
             id: `PLN-${Math.floor(1000 + Math.random() * 9000)}`,
+            userId: updatedCurrentUser.id,
+            userName: updatedCurrentUser.name,
+            userPhone: updatedCurrentUser.phone || '',
             title: userApprovedDep.planTitle || 'Membership Plan',
             amount: userApprovedDep.amount,
             months: userApprovedDep.planMonths || 1,
@@ -863,12 +894,48 @@ export function AppProvider({ children }) {
 
   const [toastMessage, setToastMessage] = useState(null);
 
-  // Derive active membership plan and tiered earning multipliers
-  const activePlan = (state.plans || []).find((p) => p.status === 'active');
-  const pendingPlan = (state.plans || []).find((p) => p.status === 'pending_approval');
-  const pendingDeposit = (state.depositRequests || []).find(
-    (d) => d.status === 'PENDING' && (d.userId === state.user?.id || d.userName === state.user?.name)
-  );
+  // Derive current user's personal plans strictly isolated by user ID or phone/name
+  const userPlans = useMemo(() => {
+    if (!state.user) return [];
+    return (state.plans || []).filter(
+      (p) =>
+        p.userId === state.user.id ||
+        (state.user.phone && p.userPhone === state.user.phone) ||
+        (state.user.name && p.userName === state.user.name)
+    );
+  }, [state.plans, state.user]);
+
+  const activePlan = useMemo(() => {
+    return userPlans.find((p) => p.status === 'active') || null;
+  }, [userPlans]);
+
+  const pendingPlan = useMemo(() => {
+    return userPlans.find((p) => p.status === 'pending_approval') || null;
+  }, [userPlans]);
+
+  const pendingDeposit = useMemo(() => {
+    if (!state.user) return null;
+    return (
+      (state.depositRequests || []).find(
+        (d) =>
+          d.status === 'PENDING' &&
+          (d.userId === state.user.id ||
+            (state.user.phone && d.userPhone === state.user.phone) ||
+            (state.user.name && d.userName === state.user.name))
+      ) || null
+    );
+  }, [state.depositRequests, state.user]);
+
+  const userTransactions = useMemo(() => {
+    if (!state.user) return [];
+    return (state.transactions || []).filter(
+      (t) =>
+        t.userId === state.user.id ||
+        (state.user.phone && t.meta && t.meta.includes(state.user.phone)) ||
+        !t.userId
+    );
+  }, [state.transactions, state.user]);
+
   const userMembershipTier = getMembershipTier(activePlan);
   const isUserActivated = state.user?.status === 'ACTIVE';
   const canUserEarn = isUserActivated && Boolean(activePlan) && activePlan.status === 'active';
@@ -982,17 +1049,33 @@ export function AppProvider({ children }) {
         if (res.ok && isMounted) {
           const text = await res.text();
           const lines = text.trim().split('\n').filter(Boolean);
-          lines.forEach((l) => {
+          for (const l of lines) {
             try {
               const item = JSON.parse(l);
-              if (item.event === 'message' && item.message) {
-                const msg = JSON.parse(item.message);
-                if (msg.payload) {
-                  setState((prev) => reconcileStates(prev, msg.payload));
+              if (item.event === 'message') {
+                if (item.attachment && item.attachment.url) {
+                  try {
+                    const attRes = await fetch(item.attachment.url);
+                    if (attRes.ok) {
+                      const attJson = await attRes.json();
+                      const payload = attJson.payload || attJson;
+                      if (payload && isMounted) {
+                        setState((prev) => reconcileStates(prev, payload));
+                      }
+                    }
+                  } catch (e) {}
+                } else if (item.message && typeof item.message === 'string') {
+                  const trimmed = item.message.trim();
+                  if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+                    const msg = JSON.parse(trimmed);
+                    if (msg.payload && isMounted) {
+                      setState((prev) => reconcileStates(prev, msg.payload));
+                    }
+                  }
                 }
               }
             } catch (err) {}
-          });
+          }
         }
       } catch (e) {
         // Fallback
@@ -1004,14 +1087,30 @@ export function AppProvider({ children }) {
     // 2. Open live Server-Sent Events stream (<100ms real-time delivery worldwide)
     try {
       eventSource = new EventSource(`https://ntfy.sh/${CLOUD_SYNC_TOPIC}/sse`);
-      eventSource.onmessage = (event) => {
+      eventSource.onmessage = async (event) => {
         if (!isMounted) return;
         try {
           const data = JSON.parse(event.data);
-          if (data.event === 'message' && data.message) {
-            const msg = JSON.parse(data.message);
-            if (msg.payload) {
-              setState((prev) => reconcileStates(prev, msg.payload));
+          if (data.event === 'message') {
+            if (data.attachment && data.attachment.url) {
+              try {
+                const attRes = await fetch(data.attachment.url);
+                if (attRes.ok) {
+                  const attJson = await attRes.json();
+                  const payload = attJson.payload || attJson;
+                  if (payload && isMounted) {
+                    setState((prev) => reconcileStates(prev, payload));
+                  }
+                }
+              } catch (e) {}
+            } else if (data.message && typeof data.message === 'string') {
+              const trimmed = data.message.trim();
+              if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+                const msg = JSON.parse(trimmed);
+                if (msg.payload && isMounted) {
+                  setState((prev) => reconcileStates(prev, msg.payload));
+                }
+              }
             }
           }
         } catch (err) {}
@@ -1160,6 +1259,10 @@ export function AppProvider({ children }) {
       ...prev,
       user: newUser,
       allUsers: updatedUsers,
+      rewardWallet: 0.00,
+      totalWithdrawn: 0.00,
+      tasksCompletedToday: {},
+      payoutMethod: null,
     }));
 
     // Real-Time Cross-Tab & Cross-Device broadcast
@@ -1205,7 +1308,10 @@ export function AppProvider({ children }) {
     setState((prev) => ({
       ...prev,
       user: matched,
-      payoutMethod: matched.payoutMethod || prev.payoutMethod || null,
+      payoutMethod: matched.payoutMethod || null,
+      rewardWallet: matched.walletBalance || 0.00,
+      totalWithdrawn: 0.00,
+      tasksCompletedToday: {},
       loginStreak: missedDay ? {
         ...(prev.loginStreak || {}),
         currentDay: 1,
@@ -1225,6 +1331,10 @@ export function AppProvider({ children }) {
     setState((prev) => ({
       ...prev,
       user: null,
+      rewardWallet: 0.00,
+      totalWithdrawn: 0.00,
+      tasksCompletedToday: {},
+      payoutMethod: null,
       currentRole: 'investor',
     }));
     showToast('Logged out successfully.');
@@ -1250,7 +1360,7 @@ export function AppProvider({ children }) {
   // Subscribe to or Upgrade membership tier (User can hold only 1 active plan; can upgrade, cannot downgrade)
   const subscribePlan = ({ amount, lockinPeriod, title, utrNumber }) => {
     const numAmount = Number(amount);
-    const existingActivePlan = (state.plans || []).find((p) => p.status === 'active');
+    const existingActivePlan = userPlans.find((p) => p.status === 'active') || null;
 
     if (existingActivePlan) {
       if (numAmount <= existingActivePlan.amount) {
@@ -1267,6 +1377,8 @@ export function AppProvider({ children }) {
       id: depositRef,
       userId: state.user?.id || 'USR-GUEST',
       userName: state.user?.name || 'Member',
+      userPhone: state.user?.phone || '',
+      userEmail: state.user?.email || '',
       amount: numAmount,
       planMonths: lockinPeriod.months,
       planDays: lockinPeriod.days || lockinPeriod.months * 30,
@@ -1287,6 +1399,9 @@ export function AppProvider({ children }) {
 
     const newPlan = {
       id: `PLN-${Math.floor(1000 + Math.random() * 9000)}`,
+      userId: state.user?.id || 'USR-GUEST',
+      userName: state.user?.name || 'Member',
+      userPhone: state.user?.phone || '',
       title: title || `${lockinPeriod.label} Tier Plan`,
       amount: numAmount,
       months: lockinPeriod.months,
@@ -1306,6 +1421,7 @@ export function AppProvider({ children }) {
 
     const newTxn = {
       id: `TXN-${Math.floor(100000 + Math.random() * 900000)}`,
+      userId: state.user?.id || 'USR-GUEST',
       type: 'DEPOSIT',
       title: isUpgrade ? 'Plan Upgrade (Pending Admin Approval)' : 'Plan Deposit (Pending Admin Approval)',
       amount: numAmount,
@@ -2085,6 +2201,9 @@ export function AppProvider({ children }) {
 
     const approvedPlan = {
       id: `PLN-${Math.floor(1000 + Math.random() * 9000)}`,
+      userId: req.userId,
+      userName: req.userName,
+      userPhone: req.userPhone || '',
       title: req.planTitle,
       amount: req.amount,
       months: req.planMonths,
@@ -2106,7 +2225,9 @@ export function AppProvider({ children }) {
     const updatedPlans = [
       approvedPlan,
       ...nonMatchingPlans.map((p) =>
-        req.isUpgrade && p.status === 'active' ? { ...p, status: 'superseded_upgrade' } : p
+        req.isUpgrade && p.status === 'active' && (p.userId === req.userId || p.userName === req.userName)
+          ? { ...p, status: 'superseded_upgrade' }
+          : p
       ),
     ];
 
@@ -2417,13 +2538,13 @@ export function AppProvider({ children }) {
   const sundayStatus = getNextSundayStatus();
   const isWithdrawalAllowed = true;
 
-  const totalLockedPrincipal = (state.plans || [])
+  const totalLockedPrincipal = userPlans
     .filter((p) => p.status === 'active' || p.status === 'matured')
-    .reduce((sum, p) => sum + p.amount, 0);
+    .reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
 
-  const totalDailyQuota = (state.plans || [])
+  const totalDailyQuota = userPlans
     .filter((p) => p.status === 'active')
-    .reduce((sum, p) => sum + p.dailyQuota, 0);
+    .reduce((sum, p) => sum + (Number(p.dailyQuota) || 0), 0);
 
   const updatePaymentSettings = (newSettings) => {
     setState((prev) => ({
@@ -2473,6 +2594,10 @@ export function AppProvider({ children }) {
     <AppContext.Provider
       value={{
         ...state,
+        plans: userPlans,
+        allPlans: state.plans || [],
+        transactions: userTransactions,
+        allTransactions: state.transactions || [],
         adminPassword: state.adminPassword || 'admin123',
         updateAdminPassword,
         dailyVideoTasks: state.dailyVideoTasks || INITIAL_VIDEO_TASKS,

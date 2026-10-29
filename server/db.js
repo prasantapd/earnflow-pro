@@ -288,6 +288,9 @@ export const db = {
 
       const approvedPlan = {
         id: `PLN-${Math.floor(1000 + Math.random() * 9000)}`,
+        userId: req.userId,
+        userName: req.userName,
+        userPhone: req.userPhone || '',
         title: req.planTitle,
         amount: req.amount,
         months: req.planMonths,

@@ -20,12 +20,12 @@ import { DEPOSIT_PRESETS, LOCKIN_PERIODS, calculateEarnings, formatINR } from '.
 import PlanCard from '../components/PlanCard';
 
 export default function PlansView({ onOpenDeposit, onWithdrawPrincipal }) {
-  const { plans, subscribePlan, showToast, pendingDeposit, pendingPlan, isUserActivated, canUserEarn } = useApp();
+  const { plans, activePlan: contextActivePlan, subscribePlan, showToast, pendingDeposit, pendingPlan, isUserActivated, canUserEarn } = useApp();
 
-  const activePlan = (plans || []).find((p) => p.status === 'active');
+  const activePlan = contextActivePlan !== undefined ? contextActivePlan : (plans || []).find((p) => p.status === 'active');
 
   const defaultAmount = useMemo(() => {
-    if (!activePlan) return 10000;
+    if (!activePlan) return 2000;
     const higher = DEPOSIT_PRESETS.find((amt) => amt > activePlan.amount);
     return higher || activePlan.amount + 5000;
   }, [activePlan]);
@@ -36,8 +36,14 @@ export default function PlansView({ onOpenDeposit, onWithdrawPrincipal }) {
   const [selectedLockin, setSelectedLockin] = useState(LOCKIN_PERIODS[1]); // Default 90 Days
   const [planTitle, setPlanTitle] = useState('');
 
+  // Automatically keep simulator in sync whenever activePlan or defaultAmount changes
+  React.useEffect(() => {
+    setSelectedAmount(defaultAmount);
+    setCustomAmount(defaultAmount.toString());
+  }, [defaultAmount]);
+
   const numAmount = Number(customAmount) || 0;
-  const isDowngradeAttempt = activePlan && numAmount <= activePlan.amount;
+  const isDowngradeAttempt = Boolean(activePlan && numAmount <= activePlan.amount);
 
   const calculation = useMemo(() => {
     const amount = Number(customAmount) || selectedAmount;
@@ -210,9 +216,9 @@ export default function PlansView({ onOpenDeposit, onWithdrawPrincipal }) {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '0.5rem', marginBottom: '0.75rem' }}>
                   {DEPOSIT_PRESETS.map((amt) => {
                     const isSelected = selectedAmount === amt;
-                    const isCurrentActive = activePlan && activePlan.amount === amt;
-                    const isLowerThanActive = activePlan && amt < activePlan.amount;
-                    const isDisabled = isCurrentActive || isLowerThanActive;
+                    const isCurrentActive = Boolean(activePlan && activePlan.amount === amt);
+                    const isLowerThanActive = Boolean(activePlan && amt < activePlan.amount);
+                    const isDisabled = Boolean(isCurrentActive || isLowerThanActive);
 
                     return (
                       <button

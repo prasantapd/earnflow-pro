@@ -49,7 +49,9 @@ import {
   Flame,
   CalendarCheck,
   MessageSquare,
-  PhoneCall
+  PhoneCall,
+  Coins,
+  RotateCcw
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { formatINR, formatDate } from '../utils/finance';
@@ -112,6 +114,7 @@ export default function AdminPanelView() {
 
   // Daily Streak Rewards Editor Local State
   const [editableStreak, setEditableStreak] = useState(() => ({ ...(streakRewards || {}) }));
+  const [streakPreviewTier, setStreakPreviewTier] = useState(2000); // 2000 (1.0x Base), 5000 (2.5x), 10000 (5.0x), etc.
 
   // Keep in sync when streakRewards changes from context
   React.useEffect(() => {
@@ -2041,13 +2044,14 @@ export default function AdminPanelView() {
                   <span className="badge badge-gold">
                     <Flame size={12} /> Daily Login Bonus Rates
                   </span>
+                  <span className="badge badge-cyan">Basic Plan (₹2,000) Base Rates</span>
                   <span className="badge badge-emerald">30-Day Calendar</span>
                 </div>
                 <h3 style={{ fontSize: '1.35rem', fontWeight: 800, margin: 0 }}>
-                  ডেইলি লগইন বোনাস কন্ট্রোলার (Day 1 – Day 30)
+                  ডেইলি লগইন বোনাস কন্ট্রোলার (Basic Plan ₹2,000 এর জন্য)
                 </h3>
                 <p style={{ fontSize: '0.82rem', color: '#94a3b8', margin: '0.25rem 0 0' }}>
-                  প্রতিদিন ইউজার অ্যাপে ঢুকলে কত টাকা লগইন বোনাস পাবে তা আপনি নিজে এখান থেকে নির্ধারণ করতে পারবেন।
+                  প্রতিদিন ইউজার অ্যাপে ঢুকলে কত টাকা লগইন বোনাস পাবে তা আপনি এখানে Basic ₹2,000 ইউজারের জন্য নির্ধারণ করতে পারেন। ডিপোজিট অনুযায়ী এই রেট অটোমেটিক গুণিতক (Multiplier) হবে (যেমন ₹5,000 এর জন্য 2.5×, ₹10,000 এর জন্য 5.0×)।
                 </p>
               </div>
 
@@ -2076,53 +2080,150 @@ export default function AdminPanelView() {
               </div>
             </div>
 
+            {/* Deposit Multiplier Option & Live Tier Preview Bar */}
+            <div style={{ marginBottom: '1.25rem', padding: '1rem', background: 'rgba(15, 23, 42, 0.75)', border: '1px solid rgba(245, 158, 11, 0.35)', borderRadius: 'var(--radius-md)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontWeight: 800, fontSize: '0.92rem', color: '#fbbf24' }}>
+                    <Coins size={17} /> ডিপোজিট ভিত্তিক মাল্টিপ্লায়ার প্রিভিউ (Deposit-Based Multiplier Preview)
+                  </div>
+                  <p style={{ fontSize: '0.76rem', color: '#cbd5e1', margin: '0.2rem 0 0 0' }}>
+                    ইউজারের অ্যাক্টিভ প্ল্যান ডিপোজিট অনুপাত অনুযায়ী ডেইলি বোনাস বাড়ে: <strong>₹5,000 = 2.5×</strong> | <strong>₹10,000 = 5.0×</strong> | <strong>₹25,000 = 12.5×</strong>
+                  </p>
+                </div>
+
+                {/* Live Tier Selector Buttons */}
+                <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                  {[
+                    { amount: 2000, label: '₹2,000 Basic (1.0× Edit)', color: '#06b6d4' },
+                    { amount: 5000, label: '₹5,000 Plan (2.5×)', color: '#38bdf8' },
+                    { amount: 10000, label: '₹10,000 Plan (5.0×)', color: '#f59e0b' },
+                    { amount: 25000, label: '₹25,000 Plan (12.5×)', color: '#8b5cf6' },
+                    { amount: 50000, label: '₹50,000 Plan (25.0×)', color: '#10b981' }
+                  ].map((tier) => {
+                    const isSelected = streakPreviewTier === tier.amount;
+                    return (
+                      <button
+                        key={tier.amount}
+                        type="button"
+                        className="btn btn-sm"
+                        onClick={() => setStreakPreviewTier(tier.amount)}
+                        style={{
+                          fontSize: '0.75rem',
+                          fontWeight: 800,
+                          padding: '0.35rem 0.75rem',
+                          background: isSelected ? tier.color : 'rgba(255, 255, 255, 0.05)',
+                          color: isSelected ? '#0f172a' : '#cbd5e1',
+                          border: `1px solid ${isSelected ? tier.color : 'rgba(255, 255, 255, 0.1)'}`
+                        }}
+                      >
+                        {tier.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Active Tier Info Notice */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', padding: '0.5rem 0.75rem', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '6px', fontSize: '0.78rem' }}>
+                <span style={{ color: '#94a3b8' }}>
+                  বর্তমানে প্রিভিউ করছেন: <strong style={{ color: '#ffffff' }}>₹{streakPreviewTier.toLocaleString()} Plan</strong> • Multiplier: <strong style={{ color: '#34d399' }}>{(streakPreviewTier / 2000).toFixed(1)}×</strong>
+                  {streakPreviewTier === 2000 ? ' (বেস রেট সরাসরি এডিট করুন)' : ' (অটোমেটিক ক্যালকুলেটেড পেআউট)'}
+                </span>
+                <span style={{ color: '#fbbf24', fontWeight: 600 }}>
+                  {streakPreviewTier === 2000 ? '✏️ ইনপুট বক্সে মান লিখে Save করুন' : `💡 Day 1 পেআউট: ₹${((Number(editableStreak[1]) || 1) * (streakPreviewTier / 2000)).toFixed(1)}`}
+                </span>
+              </div>
+            </div>
+
             <form onSubmit={handleSaveStreakRewards}>
               {/* 4 Weeks Grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem', marginBottom: '1.25rem' }}>
                 {[
                   { title: 'Week 1 (Days 1–7)', start: 1, end: 7, color: '#38bdf8' },
                   { title: 'Week 2 (Days 8–14)', start: 8, end: 14, color: '#34d399' },
                   { title: 'Week 3 (Days 15–21)', start: 15, end: 21, color: '#fbbf24' },
                   { title: 'Week 4 (Days 22–30)', start: 22, end: 30, color: '#c084fc' }
-                ].map((wk, wIdx) => (
-                  <div key={wIdx} className="glass-card" style={{ padding: '1rem', borderLeft: `3px solid ${wk.color}` }}>
-                    <div style={{ fontSize: '0.82rem', fontWeight: 800, color: wk.color, marginBottom: '0.75rem' }}>
-                      {wk.title}
+                ].map((wk, wIdx) => {
+                  const mult = streakPreviewTier / 2000;
+                  return (
+                    <div key={wIdx} className="glass-card" style={{ padding: '1rem', borderLeft: `3px solid ${wk.color}` }}>
+                      <div style={{ fontSize: '0.82rem', fontWeight: 800, color: wk.color, marginBottom: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span>{wk.title}</span>
+                        {mult !== 1 && (
+                          <span className="badge badge-emerald" style={{ fontSize: '0.62rem' }}>
+                            {mult}× Boosted
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(68px, 1fr))', gap: '0.5rem' }}>
+                        {Array.from({ length: wk.end - wk.start + 1 }, (_, i) => wk.start + i).map((day) => {
+                          const baseVal = Number(editableStreak[day]) || 0;
+                          const multipliedVal = +(baseVal * mult).toFixed(1);
+
+                          return (
+                            <div key={day} style={{ textAlign: 'center' }}>
+                              <label style={{ fontSize: '0.68rem', color: '#94a3b8', display: 'block', marginBottom: '0.2rem', fontWeight: 600 }}>
+                                Day {day}
+                              </label>
+                              {streakPreviewTier === 2000 ? (
+                                <div style={{ position: 'relative' }}>
+                                  <span style={{ position: 'absolute', left: '0.4rem', top: '50%', transform: 'translateY(-50%)', fontSize: '0.75rem', color: '#64748b' }}>
+                                    ₹
+                                  </span>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    step="0.5"
+                                    value={editableStreak[day] ?? ''}
+                                    onChange={(e) => setEditableStreak({ ...editableStreak, [day]: Number(e.target.value) })}
+                                    className="input-field"
+                                    style={{ paddingLeft: '1.1rem', paddingRight: '0.25rem', textAlign: 'center', fontSize: '0.82rem', fontWeight: 800, height: '34px' }}
+                                  />
+                                </div>
+                              ) : (
+                                <div style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.35)', borderRadius: '6px', padding: '0.3rem 0.15rem' }}>
+                                  <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#34d399' }}>
+                                    ₹{multipliedVal}
+                                  </div>
+                                  <div style={{ fontSize: '0.58rem', color: '#94a3b8', marginTop: '1px' }}>
+                                    (₹{baseVal} × {mult})
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(68px, 1fr))', gap: '0.5rem' }}>
-                      {Array.from({ length: wk.end - wk.start + 1 }, (_, i) => wk.start + i).map((day) => (
-                        <div key={day} style={{ textAlign: 'center' }}>
-                          <label style={{ fontSize: '0.68rem', color: '#94a3b8', display: 'block', marginBottom: '0.2rem', fontWeight: 600 }}>
-                            Day {day}
-                          </label>
-                          <div style={{ position: 'relative' }}>
-                            <span style={{ position: 'absolute', left: '0.4rem', top: '50%', transform: 'translateY(-50%)', fontSize: '0.75rem', color: '#64748b' }}>
-                              ₹
-                            </span>
-                            <input
-                              type="number"
-                              min="0"
-                              step="0.5"
-                              value={editableStreak[day] ?? ''}
-                              onChange={(e) => setEditableStreak({ ...editableStreak, [day]: Number(e.target.value) })}
-                              className="input-field"
-                              style={{ paddingLeft: '1.1rem', paddingRight: '0.25rem', textAlign: 'center', fontSize: '0.82rem', fontWeight: 800, height: '34px' }}
-                            />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+              {/* Streak Continuity Rule Alert */}
+              <div style={{ padding: '0.85rem 1rem', background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.25)', borderRadius: 'var(--radius-md)', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <RotateCcw size={18} color="#60a5fa" style={{ flexShrink: 0 }} />
+                <div style={{ fontSize: '0.8rem', color: '#cbd5e1' }}>
+                  <strong style={{ color: '#60a5fa' }}>স্ট্রিক নিয়ম (Streak Continuity Rule):</strong> ইউজার কোনো দিন লগইন বা ক্লেইম মিস করলে স্ট্রিক তৎক্ষণাৎ ভেঙে যাবে এবং পরবর্তী লগইনে সরাসরি <strong>Day 1</strong> থেকে আবার শুরু হবে। ৩০ দিন সম্পূর্ণ হলে সাইকেল নতুন করে শুরু হয়।
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', alignItems: 'center' }}>
+                {streakPreviewTier !== 2000 && (
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-md"
+                    onClick={() => setStreakPreviewTier(2000)}
+                  >
+                    ✏️ Switch to Basic ₹2,000 (Edit Mode)
+                  </button>
+                )}
                 <button
                   type="submit"
                   className="btn btn-primary btn-lg"
                   style={{ fontWeight: 800, background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', boxShadow: '0 4px 15px rgba(245, 158, 11, 0.4)' }}
                 >
-                  <Save size={18} /> Save Daily Login Rewards (সব ইউজারের জন্য কার্যকর করুন)
+                  <Save size={18} /> Save Daily Login Rewards (বেস রেট সংরক্ষণ করুন)
                 </button>
               </div>
             </form>

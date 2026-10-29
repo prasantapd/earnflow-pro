@@ -18,6 +18,7 @@ import {
 import { useApp } from '../context/AppContext';
 import { STREAK_SCHEDULE, STREAK_REWARDS, STREAK_WEEKS } from '../context/AppContext';
 import { formatINR } from '../utils/finance';
+import { getLocalDateString } from '../utils/dateUtils';
 
 export default function DailyStreakWidget({ onOpenDeposit }) {
   const { 
@@ -40,12 +41,17 @@ export default function DailyStreakWidget({ onOpenDeposit }) {
     history: Array(30).fill(false),
   };
 
+  const todayStr = getLocalDateString(0);
+  const yesterdayStr = getLocalDateString(-1);
+  const lastClaimed = streak.lastClaimedDate ? streak.lastClaimedDate.slice(0, 10) : null;
+  const isMissed = Boolean(lastClaimed && lastClaimed !== yesterdayStr && lastClaimed !== todayStr);
+
   const activeRewards = streakRewards || STREAK_REWARDS;
   const loginMultiplier = userMembershipTier?.loginMultiplier || 1.0;
-  const currentDay = Math.min(30, Math.max(1, streak.currentDay || 1));
-  const claimedToday = streak.claimedToday;
-  const baseReward = activeRewards[currentDay] || (currentDay >= 30 ? 12 : 1);
-  const currentReward = Math.round(baseReward * loginMultiplier);
+  const currentDay = isMissed ? 1 : Math.min(30, Math.max(1, streak.currentDay || 1));
+  const claimedToday = !isMissed && Boolean(streak.claimedToday || lastClaimed === todayStr);
+  const baseReward = Number(activeRewards[currentDay]) || (currentDay >= 30 ? 12 : 1);
+  const currentReward = +(baseReward * loginMultiplier).toFixed(2);
 
   // Dynamic schedule derived from active admin-configured streak rewards
   const dynamicSchedule = Array.from({ length: 30 }, (_, i) => {
@@ -149,11 +155,11 @@ export default function DailyStreakWidget({ onOpenDeposit }) {
                 🔥 Day {claimedToday ? (currentDay > 1 ? currentDay - 1 : 30) : currentDay} of 30
               </span>
               <span className={`badge ${userMembershipTier?.badgeClass || 'badge-cyan'}`} style={{ fontSize: '0.7rem' }}>
-                {userMembershipTier?.tierBadge || 'Starter'} • {loginMultiplier}× Boost
+                {userMembershipTier?.tierBadge || 'Starter'} • {loginMultiplier}× Deposit Multiplier
               </span>
             </div>
             <p style={{ fontSize: '0.82rem', color: '#cbd5e1', marginTop: '0.2rem' }}>
-              Basic ₹2,000 Plan: <strong>W1</strong> (1→7) • <strong>W2</strong> (2→8) • <strong>W3</strong> (3→9) • <strong>W4</strong> (4→12 for 30 Days). Miss 1 day and streak resets to Day 1! Complete Day 30 to restart fresh.
+              Basic Plan (₹2,000) base rates are scaled by your active deposit ({loginMultiplier}× for ₹{(activePlan?.amount || 2000).toLocaleString()}). Miss 1 day and streak strictly restarts from Day 1 on next login!
             </p>
           </div>
         </div>
@@ -209,6 +215,27 @@ export default function DailyStreakWidget({ onOpenDeposit }) {
               Subscribe Plan →
             </button>
           )}
+        </div>
+      )}
+
+      {/* Missed Day Reset Warning Strip */}
+      {isMissed && (
+        <div 
+          style={{ 
+            marginBottom: '1.25rem', 
+            padding: '0.75rem 1rem', 
+            background: 'rgba(239, 68, 68, 0.1)', 
+            borderRadius: 'var(--radius-md)', 
+            border: '1px solid rgba(239, 68, 68, 0.35)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.65rem'
+          }}
+        >
+          <AlertCircle size={18} color="#f87171" style={{ flexShrink: 0 }} />
+          <div style={{ fontSize: '0.82rem', color: '#fca5a5' }}>
+            <strong>Streak Restarted from Day 1:</strong> You missed yesterday's daily login claim. In accordance with platform streak rules, your streak has restarted from Day 1. Claim today to begin rebuilding your 30-day streak!
+          </div>
         </div>
       )}
 

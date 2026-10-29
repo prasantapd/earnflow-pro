@@ -158,63 +158,60 @@ export function getMembershipTier(activePlan) {
   if (!activePlan || activePlan.status !== 'active') {
     return {
       tierKey: 'starter',
-      tierName: 'Starter Member',
-      tierBadge: 'Starter Member',
+      tierName: 'Free Visitor (No Plan)',
+      tierBadge: 'No Active Plan',
+      depositAmount: 0,
       loginMultiplier: 1.0,
       taskMultiplier: 1.0,
-      color: '#06b6d4',
-      badgeClass: 'badge-cyan',
-      description: '1.0× baseline daily login and task rewards.',
+      color: '#94a3b8',
+      badgeClass: 'badge-zinc',
+      description: 'Subscribe to a plan (min ₹2,000) to activate daily login streak and task rewards.',
     };
   }
 
-  const amount = Number(activePlan.amount) || 0;
-  const days = Number(activePlan.days) || (Number(activePlan.months) || 1) * 30;
+  const amount = Number(activePlan.amount) || 2000;
+  // Multiplier directly scales from basic deposit (₹2,000 = 1.0x, ₹5,000 = 2.5x, etc.)
+  const rawMultiplier = +(amount / 2000).toFixed(2);
+  const loginMultiplier = Math.max(1.0, rawMultiplier);
+  const taskMultiplier = Math.max(1.0, +(Math.min(4.0, rawMultiplier)).toFixed(2));
 
-  if (amount >= 50000 || days >= 360) {
-    return {
-      tierKey: 'diamond_vip',
-      tierName: 'Diamond VIP Tier (360 Days)',
-      tierBadge: '💎 Diamond VIP',
-      loginMultiplier: 4.0, // Multiplier for 30-day streak
-      taskMultiplier: 4.0, // 4.0x Task Earnings
-      color: '#10b981',
-      badgeClass: 'badge-emerald',
-      description: '4.0× Premium Task & 30-Day Attendance Streak Multiplier.',
-    };
-  } else if (amount >= 20000 || days >= 180) {
-    return {
-      tierKey: 'alpha_vip',
-      tierName: 'Alpha Executive Tier (180 Days)',
-      tierBadge: '⚡ Alpha VIP',
-      loginMultiplier: 2.8,
-      taskMultiplier: 2.8,
-      color: '#8b5cf6',
-      badgeClass: 'badge-indigo',
-      description: '2.8× High-Yield Task & 30-Day Streak Multiplier.',
-    };
-  } else if (amount >= 7500 || days >= 90) {
-    return {
-      tierKey: 'growth_alpha',
-      tierName: 'Growth Alpha Tier (90 Days)',
-      tierBadge: '🚀 Growth Alpha',
-      loginMultiplier: 1.8,
-      taskMultiplier: 1.8,
-      color: '#3b82f6',
-      badgeClass: 'badge-indigo',
-      description: '1.8× Growth Task & 30-Day Streak Multiplier.',
-    };
-  } else {
-    return {
-      tierKey: 'starter_sprint',
-      tierName: 'Starter Sprint Tier (30 Days)',
-      tierBadge: '🥉 Starter Sprint',
-      loginMultiplier: 1.0,
-      taskMultiplier: 1.0,
-      color: '#06b6d4',
-      badgeClass: 'badge-cyan',
-      description: '1.0× Baseline Task & 30-Day Streak Multiplier.',
-    };
+  let tierKey = 'basic_2000';
+  let tierBadge = '🥉 Basic Member (₹2k)';
+  let badgeClass = 'badge-cyan';
+  let color = '#06b6d4';
+
+  if (amount >= 50000) {
+    tierKey = 'vip_50000';
+    tierBadge = '👑 Diamond VIP (₹50k)';
+    badgeClass = 'badge-emerald';
+    color = '#10b981';
+  } else if (amount >= 25000) {
+    tierKey = 'vip_25000';
+    tierBadge = '💎 Elite VIP (₹25k)';
+    badgeClass = 'badge-indigo';
+    color = '#8b5cf6';
+  } else if (amount >= 10000) {
+    tierKey = 'alpha_10000';
+    tierBadge = '⚡ Alpha Executive (₹10k)';
+    badgeClass = 'badge-gold';
+    color = '#f59e0b';
+  } else if (amount >= 5000) {
+    tierKey = 'growth_5000';
+    tierBadge = '🚀 Growth Tier (₹5k)';
+    badgeClass = 'badge-cyan';
+    color = '#38bdf8';
   }
+
+  return {
+    tierKey,
+    tierName: `${tierBadge} • ${loginMultiplier}× Multiplier`,
+    tierBadge,
+    depositAmount: amount,
+    loginMultiplier,
+    taskMultiplier,
+    color,
+    badgeClass,
+    description: `${loginMultiplier}× Deposit Multiplier based on ₹${amount.toLocaleString()} active deposit (Base: ₹2,000).`,
+  };
 }
 

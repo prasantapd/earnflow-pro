@@ -674,11 +674,16 @@ export function AppProvider({ children }) {
   useEffect(() => {
     const checkMidnight = () => {
       const todayStr = getLocalDateString(0);
+      const yesterdayStr = getLocalDateString(-1);
       setState((prev) => {
         if (prev.lastActiveDate && prev.lastActiveDate !== todayStr) {
           const newSchedule = prev.scheduledTasksByDate || DEFAULT_7DAY_SCHEDULE;
           const newTodayTasks = newSchedule[todayStr] || newSchedule[getLocalDateString(0)] || [];
           
+          const lastClaimed = prev.loginStreak?.lastClaimedDate ? prev.loginStreak.lastClaimedDate.slice(0, 10) : null;
+          // Streak Rule: If yesterday was missed, streak strictly restarts from Day 1
+          const missedDay = lastClaimed && lastClaimed !== yesterdayStr;
+
           return {
             ...prev,
             lastActiveDate: todayStr,
@@ -686,6 +691,8 @@ export function AppProvider({ children }) {
             dailyTaskRoster: newTodayTasks,
             loginStreak: {
               ...(prev.loginStreak || {}),
+              currentDay: missedDay ? 1 : (prev.loginStreak?.currentDay || 1),
+              history: missedDay ? Array(30).fill(false) : (prev.loginStreak?.history || Array(30).fill(false)),
               claimedToday: false, // Unlock new day's streak bonus!
             },
           };
@@ -792,9 +799,23 @@ export function AppProvider({ children }) {
       return false;
     }
 
+    const todayStr = getLocalDateString(0);
+    const yesterdayStr = getLocalDateString(-1);
+    const lastClaimed = state.loginStreak?.lastClaimedDate ? state.loginStreak.lastClaimedDate.slice(0, 10) : null;
+    const missedDay = lastClaimed && lastClaimed !== yesterdayStr && lastClaimed !== todayStr;
+
     setState((prev) => ({
       ...prev,
       user: matched,
+      loginStreak: missedDay ? {
+        ...(prev.loginStreak || {}),
+        currentDay: 1,
+        claimedToday: false,
+        history: Array(30).fill(false),
+      } : {
+        ...(prev.loginStreak || {}),
+        claimedToday: lastClaimed === todayStr,
+      },
     }));
 
     showToast(`Welcome back, ${matched.name}! Logged in successfully.`);
@@ -1056,17 +1077,31 @@ export function AppProvider({ children }) {
       history: Array(30).fill(false),
     };
 
-    if (streak.claimedToday) {
+    const todayStr = getLocalDateString(0);
+    const yesterdayStr = getLocalDateString(-1);
+    const lastClaimed = streak.lastClaimedDate ? streak.lastClaimedDate.slice(0, 10) : null;
+
+    let activeDay = streak.currentDay || 1;
+    let activeHistory = streak.history || Array(30).fill(false);
+
+    // Rule: Miss a day -> strictly restart from Day 1 on next login
+    if (lastClaimed && lastClaimed !== yesterdayStr && lastClaimed !== todayStr) {
+      activeDay = 1;
+      activeHistory = Array(30).fill(false);
+    }
+
+    if (lastClaimed === todayStr || streak.claimedToday) {
       showToast("Today's bonus has already been claimed! Next reward unlocks tomorrow at 00:00 hrs.", 'warning');
       return false;
     }
 
-    const currentDay = Math.min(30, Math.max(1, streak.currentDay || 1));
+    const currentDay = Math.min(30, Math.max(1, activeDay));
     const activeStreakRewards = state.streakRewards || STREAK_REWARDS;
-    const baseReward = activeStreakRewards[currentDay] || (currentDay >= 30 ? 12 : 1);
-    const reward = Math.round(baseReward * userMembershipTier.loginMultiplier);
+    const baseReward = Number(activeStreakRewards[currentDay]) || (currentDay >= 30 ? 12 : 1);
+    const multiplier = Number(userMembershipTier?.loginMultiplier) || 1.0;
+    const reward = +(baseReward * multiplier).toFixed(2);
 
-    const newHistory = [...(streak.history || Array(30).fill(false))];
+    const newHistory = [...activeHistory];
     newHistory[currentDay - 1] = true;
 
     const isCompletedMonth = currentDay >= 30;
@@ -1079,7 +1114,7 @@ export function AppProvider({ children }) {
       amount: reward,
       timestamp: new Date().toISOString(),
       status: 'COMPLETED',
-      meta: `Attendance bonus: ₹${reward.toFixed(2)} (${userMembershipTier.tierBadge}) credited!`,
+      meta: `Attendance bonus: ₹${reward.toFixed(2)} (${userMembershipTier?.tierBadge} • ${multiplier}× Deposit Multiplier) credited!`,
     };
 
     setState((prev) => ({
@@ -1095,7 +1130,7 @@ export function AppProvider({ children }) {
       },
     }));
 
-    showToast(`🎉 Day ${currentDay} Bonus Claimed! +₹${reward.toFixed(2)} added to your Task Wallet.`);
+    showToast(`🎉 Day ${currentDay} Bonus Claimed! +₹${reward.toFixed(2)} (${multiplier}× Multiplier) added to your Task Wallet.`);
     triggerCelebration();
     return true;
   };

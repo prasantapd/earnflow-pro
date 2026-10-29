@@ -193,7 +193,7 @@ export default function SpinWheelModal({ isOpen, onClose, task }) {
         {/* Weighted RNG Transparency Badge */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', padding: '0.35rem 0.75rem', background: 'rgba(16, 185, 129, 0.08)', borderRadius: 'var(--radius-full)', border: '1px solid rgba(16, 185, 129, 0.25)', fontSize: '0.72rem', color: '#34d399', margin: '0 auto 0.5rem', width: 'fit-content' }}>
           <ShieldCheck size={13} />
-          <span>Balanced Odds: High probability for ₹15–₹25, rare jackpot on ₹200</span>
+          <span>Balanced Odds: Win between ₹{Math.round(15 * taskMultiplier)} and jackpot ₹{Math.round(200 * taskMultiplier)}</span>
         </div>
 
         {/* Wheel Container with Pointer */}

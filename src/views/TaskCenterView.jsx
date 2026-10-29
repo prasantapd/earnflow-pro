@@ -159,24 +159,30 @@ export default function TaskCenterView({ onOpenWithdraw, onOpenDeposit, setActiv
           bgGlow: 'rgba(16, 185, 129, 0.15)',
           buttonLabel: `Start 10-Min Walk (+${formatINR(rewardVal)})`,
         };
-      case 'spin':
+      case 'spin': {
+        const minSpin = Math.round(15 * taskMultiplier);
+        const maxSpin = Math.round(200 * taskMultiplier);
         return {
           icon: <RotateCw size={20} />,
           badgeClass: 'badge-gold',
-          badgeText: 'Instant Spin',
+          badgeText: `Lucky Wheel (₹${minSpin}–₹${maxSpin})`,
           accentColor: '#fbbf24',
           bgGlow: 'rgba(245, 158, 11, 0.12)',
-          buttonLabel: `Spin Wheel (+${formatINR(rewardVal)})`,
+          buttonLabel: `🎲 Spin Wheel & Win (Up to ₹${maxSpin})`,
         };
-      case 'scratch':
+      }
+      case 'scratch': {
+        const minScratch = Math.round(15 * taskMultiplier);
+        const maxScratch = Math.round(150 * taskMultiplier);
         return {
           icon: <Gift size={20} />,
           badgeClass: 'badge-gold',
-          badgeText: 'Instant Scratch',
+          badgeText: `Scratch Card (₹${minScratch}–₹${maxScratch})`,
           accentColor: '#f59e0b',
           bgGlow: 'rgba(245, 158, 11, 0.12)',
-          buttonLabel: `Scratch Card (+${formatINR(rewardVal)})`,
+          buttonLabel: `🎁 Scratch Card & Win (Up to ₹${maxScratch})`,
         };
+      }
       default:
         return {
           icon: <Sparkles size={20} />,
@@ -504,9 +510,27 @@ export default function TaskCenterView({ onOpenWithdraw, onOpenDeposit, setActiv
                         )}
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                        <span style={{ fontSize: '1.15rem', fontWeight: 800, color: '#34d399' }}>
-                          +{formatINR(effectiveReward)}
-                        </span>
+                        {isDone ? (
+                          <span style={{ fontSize: '1.15rem', fontWeight: 800, color: '#34d399' }}>
+                            +{formatINR(typeof safeCompletedTasks[task.id] === 'number' ? safeCompletedTasks[task.id] : effectiveReward)}
+                          </span>
+                        ) : (task.type === 'spin' || task.type === 'scratch') ? (
+                          <span style={{ 
+                            fontSize: '0.85rem', 
+                            fontWeight: 800, 
+                            color: '#fbbf24',
+                            background: 'rgba(245, 158, 11, 0.12)',
+                            padding: '0.2rem 0.55rem',
+                            borderRadius: '8px',
+                            border: '1px solid rgba(245, 158, 11, 0.3)'
+                          }}>
+                            🎁 Win ₹{Math.round(15 * taskMultiplier)}–₹{Math.round((task.type === 'spin' ? 200 : 150) * taskMultiplier)}
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: '1.15rem', fontWeight: 800, color: '#34d399' }}>
+                            +{formatINR(effectiveReward)}
+                          </span>
+                        )}
                         {taskMultiplier > 1 && (
                           <span className="badge badge-indigo" style={{ fontSize: '0.62rem' }}>
                             {taskMultiplier}×
@@ -533,7 +557,11 @@ export default function TaskCenterView({ onOpenWithdraw, onOpenDeposit, setActiv
                     <span style={{ color: '#94a3b8' }}>Payout Status:</span>
                     {isDone ? (
                       <span style={{ color: '#34d399', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                        <CheckCircle2 size={12} /> Counted in Wallet (+{formatINR(effectiveReward)})
+                        <CheckCircle2 size={12} /> Counted in Wallet (+{formatINR(typeof safeCompletedTasks[task.id] === 'number' ? safeCompletedTasks[task.id] : effectiveReward)})
+                      </span>
+                    ) : (task.type === 'spin' || task.type === 'scratch') ? (
+                      <span style={{ color: '#fbbf24', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                        <Sparkles size={12} /> Mystery Lucky Reward • Spin Wheel to Win
                       </span>
                     ) : (
                       <span style={{ color: '#f87171', fontWeight: 700 }}>
@@ -548,7 +576,7 @@ export default function TaskCenterView({ onOpenWithdraw, onOpenDeposit, setActiv
                       style={{ width: '100%', color: '#34d399', cursor: 'default' }}
                       disabled
                     >
-                      <CheckCircle2 size={16} /> Completed (+{formatINR(effectiveReward)})
+                      <CheckCircle2 size={16} /> Completed (+{formatINR(typeof safeCompletedTasks[task.id] === 'number' ? safeCompletedTasks[task.id] : effectiveReward)})
                     </button>
                   ) : !canUserEarn ? (
                     <button 
@@ -570,7 +598,7 @@ export default function TaskCenterView({ onOpenWithdraw, onOpenDeposit, setActiv
                         setActiveTab('plans');
                       }}
                     >
-                      <Lock size={15} /> {pendingDeposit ? 'Payment Pending Approval' : 'Activate Plan to Earn'} (+{formatINR(effectiveReward)})
+                      <Lock size={15} /> {pendingDeposit ? 'Payment Pending Approval' : 'Activate Plan to Earn'}
                     </button>
                   ) : (
                     <button 

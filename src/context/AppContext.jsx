@@ -984,7 +984,7 @@ export function AppProvider({ children }) {
         rewardWallet: +(prev.rewardWallet + numReward).toFixed(2),
         tasksCompletedToday: {
           ...prev.tasksCompletedToday,
-          [taskId]: true,
+          [taskId]: numReward,
         },
         transactions: [newTxn, ...prev.transactions],
         plans: updatedPlans,

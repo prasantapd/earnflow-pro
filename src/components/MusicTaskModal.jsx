@@ -95,9 +95,9 @@ export default function MusicTaskModal({ isOpen, onClose, task }) {
 
   const handleClaim = () => {
     completeTask({
-      taskId: task.id,
-      taskTitle: task.title,
-      rewardAmount: task.reward,
+      taskId: task?.id || 'music_1',
+      taskTitle: task?.title || 'Music Listening Task',
+      rewardAmount: task?.reward || 20,
       meta: `Completed music listening task (${totalDuration}s duration)`,
     });
     onClose();
@@ -112,7 +112,7 @@ export default function MusicTaskModal({ isOpen, onClose, task }) {
               <Music size={22} />
             </div>
             <div>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>{task.title}</h2>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>{task?.title || 'Focus Audio Track'}</h2>
               <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
                 Listen to the focus track for {totalDuration}s to unlock your reward
               </p>
@@ -254,7 +254,7 @@ export default function MusicTaskModal({ isOpen, onClose, task }) {
           <div>
             <div style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>Task Cash Reward</div>
             <div style={{ fontSize: '1.15rem', fontWeight: 800, color: isCompleted ? '#34d399' : '#818cf8' }}>
-              +{formatINR(task.reward)}
+              +{formatINR(task?.reward || 20)}
             </div>
           </div>
 
@@ -271,7 +271,7 @@ export default function MusicTaskModal({ isOpen, onClose, task }) {
             disabled={!isCompleted}
             onClick={handleClaim}
           >
-            <Sparkles size={18} /> {isCompleted ? `Claim ${formatINR(task.reward)} Reward` : `Listen to Unlock (${secondsRemaining}s)`}
+            <Sparkles size={18} /> {isCompleted ? `Claim ${formatINR(task?.reward || 20)} Reward` : `Listen to Unlock (${secondsRemaining}s)`}
           </button>
           <button type="button" className="btn btn-secondary" onClick={onClose}>
             Close

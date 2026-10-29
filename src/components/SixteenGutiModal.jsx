@@ -417,7 +417,7 @@ export default function SixteenGutiModal({ isOpen, onClose }) {
 
   // Bot AI Turn execution
   useEffect(() => {
-    if (gameMode !== 'ai' || currentTurn !== 'P1' || winner) return;
+    if (!isOpen || gameMode !== 'ai' || currentTurn !== 'P1' || winner) return;
 
     setIsBotThinking(true);
     const botTimer = setTimeout(() => {

@@ -14,27 +14,59 @@ export function getLocalDateString(offsetDays = 0) {
   return `${year}-${month}-${day}`;
 }
 
-export function formatReadableDate(dateStr) {
-  if (!dateStr) return '';
-  const [year, month, day] = dateStr.split('-').map(Number);
-  const d = new Date(year, month - 1, day);
-  return d.toLocaleDateString('en-IN', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-  });
+export function formatReadableDate(dateInput) {
+  if (!dateInput) return '';
+  try {
+    let d;
+    if (dateInput instanceof Date) {
+      d = dateInput;
+    } else if (typeof dateInput === 'string' && dateInput.includes('-')) {
+      const parts = dateInput.split('T')[0].split('-').map(Number);
+      if (parts.length === 3) {
+        d = new Date(parts[0], parts[1] - 1, parts[2]);
+      } else {
+        d = new Date(dateInput);
+      }
+    } else {
+      d = new Date(dateInput);
+    }
+    if (isNaN(d.getTime())) return String(dateInput);
+    return d.toLocaleDateString('en-IN', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+    });
+  } catch (e) {
+    return String(dateInput || '');
+  }
 }
 
-export function formatFullReadableDate(dateStr) {
-  if (!dateStr) return '';
-  const [year, month, day] = dateStr.split('-').map(Number);
-  const d = new Date(year, month - 1, day);
-  return d.toLocaleDateString('en-IN', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric'
-  });
+export function formatFullReadableDate(dateInput) {
+  if (!dateInput) return '';
+  try {
+    let d;
+    if (dateInput instanceof Date) {
+      d = dateInput;
+    } else if (typeof dateInput === 'string' && dateInput.includes('-')) {
+      const parts = dateInput.split('T')[0].split('-').map(Number);
+      if (parts.length === 3) {
+        d = new Date(parts[0], parts[1] - 1, parts[2]);
+      } else {
+        d = new Date(dateInput);
+      }
+    } else {
+      d = new Date(dateInput);
+    }
+    if (isNaN(d.getTime())) return String(dateInput);
+    return d.toLocaleDateString('en-IN', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+  } catch (e) {
+    return String(dateInput || '');
+  }
 }
 
 /**

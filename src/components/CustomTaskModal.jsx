@@ -16,15 +16,15 @@ import { formatINR } from '../utils/finance';
 export default function CustomTaskModal({ task, onClose }) {
   const { completeTask, showToast, userMembershipTier } = useApp();
 
-  const duration = Number(task.duration) || 20;
+  const duration = Number(task?.duration) || 20;
   const [secondsLeft, setSecondsLeft] = useState(duration);
   const [timerRunning, setTimerRunning] = useState(false);
   const [hasVisitedLink, setHasVisitedLink] = useState(false);
-  const [hasShared, setHasShared] = useState(!task.shareRequired);
+  const [hasShared, setHasShared] = useState(Boolean(!task?.shareRequired));
   const [isVerifying, setIsVerifying] = useState(false);
 
   const taskMultiplier = userMembershipTier?.taskMultiplier || 1.0;
-  const effectiveReward = Math.round((Number(task.reward) || 25) * taskMultiplier);
+  const effectiveReward = Math.round((Number(task?.reward) || 25) * taskMultiplier);
 
   // Timer countdown effect
   useEffect(() => {
@@ -42,6 +42,8 @@ export default function CustomTaskModal({ task, onClose }) {
     }
     return () => clearInterval(timer);
   }, [timerRunning, secondsLeft]);
+
+  if (!task) return null;
 
   const handleOpenLink = () => {
     setHasVisitedLink(true);

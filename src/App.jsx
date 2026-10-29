@@ -23,6 +23,7 @@ import AuthView from './views/AuthView';
 
 import { ShieldCheck, CheckCircle2, TrendingUp, AlertCircle } from 'lucide-react';
 import { formatINR } from './utils/finance';
+import ErrorBoundary from './components/ErrorBoundary';
 
 function MainApp() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -97,63 +98,65 @@ function MainApp() {
 
       {/* Main Content Area */}
       <main className="app-container" style={{ flex: 1 }}>
-        {currentRole === 'admin' ? (
-          <AdminPanelView />
-        ) : !user ? (
-          /* Mandatory User Login & Registration Screen */
-          <AuthView onOpenAdminLogin={() => setIsAdminLoginOpen(true)} />
-        ) : (
-          <>
-            {/* Live Activity Stream (Scrolls with page content, does not block header) */}
-            <LiveActivityTicker />
+        <ErrorBoundary>
+          {currentRole === 'admin' ? (
+            <AdminPanelView />
+          ) : !user ? (
+            /* Mandatory User Login & Registration Screen */
+            <AuthView onOpenAdminLogin={() => setIsAdminLoginOpen(true)} />
+          ) : (
+            <>
+              {/* Live Activity Stream (Scrolls with page content, does not block header) */}
+              <LiveActivityTicker />
 
-            {activeTab === 'dashboard' && (
-              <DashboardView
-                setActiveTab={setActiveTab}
-                onOpenDeposit={() => setIsDepositOpen(true)}
-                onOpenWithdraw={() => setIsWithdrawOpen(true)}
-                onOpenPayout={() => setIsPayoutOpen(true)}
-                onOpenReceipt={(txn) => setReceiptTxn(txn)}
-                onWithdrawPrincipal={handleWithdrawPrincipal}
-              />
-            )}
+              {activeTab === 'dashboard' && (
+                <DashboardView
+                  setActiveTab={setActiveTab}
+                  onOpenDeposit={() => setIsDepositOpen(true)}
+                  onOpenWithdraw={() => setIsWithdrawOpen(true)}
+                  onOpenPayout={() => setIsPayoutOpen(true)}
+                  onOpenReceipt={(txn) => setReceiptTxn(txn)}
+                  onWithdrawPrincipal={handleWithdrawPrincipal}
+                />
+              )}
 
-            {activeTab === 'plans' && (
-              <PlansView
-                onOpenDeposit={() => setIsDepositOpen(true)}
-                onWithdrawPrincipal={handleWithdrawPrincipal}
-              />
-            )}
+              {activeTab === 'plans' && (
+                <PlansView
+                  onOpenDeposit={() => setIsDepositOpen(true)}
+                  onWithdrawPrincipal={handleWithdrawPrincipal}
+                />
+              )}
 
-            {activeTab === 'tasks' && (
-              <TaskCenterView
-                onOpenWithdraw={() => setIsWithdrawOpen(true)}
-              />
-            )}
+              {activeTab === 'tasks' && (
+                <TaskCenterView
+                  onOpenWithdraw={() => setIsWithdrawOpen(true)}
+                />
+              )}
 
-            {activeTab === 'withdraw' && (
-              <WithdrawView
-                onOpenWithdraw={() => setIsWithdrawOpen(true)}
-                onOpenPayout={() => setIsPayoutOpen(true)}
-                onWithdrawPrincipal={handleWithdrawPrincipal}
-              />
-            )}
+              {activeTab === 'withdraw' && (
+                <WithdrawView
+                  onOpenWithdraw={() => setIsWithdrawOpen(true)}
+                  onOpenPayout={() => setIsPayoutOpen(true)}
+                  onWithdrawPrincipal={handleWithdrawPrincipal}
+                />
+              )}
 
-            {activeTab === 'history' && (
-              <HistoryView
-                onOpenReceipt={(txn) => setReceiptTxn(txn)}
-              />
-            )}
+              {activeTab === 'history' && (
+                <HistoryView
+                  onOpenReceipt={(txn) => setReceiptTxn(txn)}
+                />
+              )}
 
-            {activeTab === 'mlm' && (
-              <MlmNetworkView />
-            )}
+              {activeTab === 'mlm' && (
+                <MlmNetworkView />
+              )}
 
-            {activeTab === 'economics' && (
-              <FundEconomicsView />
-            )}
-          </>
-        )}
+              {activeTab === 'economics' && (
+                <FundEconomicsView />
+              )}
+            </>
+          )}
+        </ErrorBoundary>
       </main>
 
       {/* Mobile Android Bottom Navigation Bar */}
@@ -261,8 +264,10 @@ function MainApp() {
 
 export default function App() {
   return (
-    <AppProvider>
-      <MainApp />
-    </AppProvider>
+    <ErrorBoundary>
+      <AppProvider>
+        <MainApp />
+      </AppProvider>
+    </ErrorBoundary>
   );
 }

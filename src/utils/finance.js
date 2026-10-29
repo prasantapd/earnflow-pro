@@ -89,14 +89,19 @@ export function formatINR(val) {
   }).format(num);
 }
 
-export function formatDate(dateStr) {
-  if (!dateStr) return 'N/A';
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('en-IN', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
+export function formatDate(dateInput) {
+  if (!dateInput) return 'N/A';
+  try {
+    const d = dateInput instanceof Date ? dateInput : new Date(dateInput);
+    if (isNaN(d.getTime())) return String(dateInput);
+    return d.toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+  } catch (e) {
+    return String(dateInput || 'N/A');
+  }
 }
 
 /**

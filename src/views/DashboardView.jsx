@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { formatINR, formatDate } from '../utils/finance';
-import { getTimeUntilMidnight, formatFullReadableDate } from '../utils/dateUtils';
+import { getTimeUntilMidnight, formatFullReadableDate, getLocalDateString } from '../utils/dateUtils';
 import PlanCard from '../components/PlanCard';
 import DailyStreakWidget from '../components/DailyStreakWidget';
 import AdminAnnouncementBanner from '../components/AdminAnnouncementBanner';
@@ -134,7 +134,7 @@ export default function DashboardView({
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', fontSize: '0.78rem', color: '#94a3b8' }}>
                 <span style={{ color: '#34d399', fontWeight: 600 }}>🟢 24/7 Instant Payouts Active (Min ₹100)</span>
                 <span>•</span>
-                <span>{formatFullReadableDate(new Date())}</span>
+                <span>{formatFullReadableDate(getLocalDateString(0))}</span>
               </div>
             </div>
           </div>

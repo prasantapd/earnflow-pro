@@ -203,10 +203,10 @@ export default function Navbar({ activeTab, setActiveTab, onOpenAuth, onOpenPayo
                   onClick={onOpenAuth}
                   className="btn btn-secondary btn-sm"
                   style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', padding: '0.35rem 0.65rem' }}
-                  title={`Logged in as ${user.name} (${user.email || user.phone})`}
+                  title={`Logged in as ${user?.name || 'Member'} (${user?.email || user?.phone || 'Verified'})`}
                 >
                   <UserCheck size={14} color="#34d399" />
-                  <span>{user.name.split(' ')[0]}</span>
+                  <span>{(user?.name || 'Member').split(' ')[0]}</span>
                 </button>
                 <button
                   onClick={logoutUser}

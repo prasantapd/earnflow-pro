@@ -63,10 +63,10 @@ export default function TaskCenterView({ onOpenWithdraw }) {
   const [activeCustomTask, setActiveCustomTask] = useState(null);
 
   // Time remaining until 00:00 midnight auto-switch
-  const [timeUntilMidnight, setTimeUntilMidnight] = useState(getTimeUntilMidnight());
+  const [timeUntilMidnight, setTimeUntilMidnight] = useState(() => getTimeUntilMidnight() || { hours: '00', minutes: '00', seconds: '00', formatted: '00h 00m 00s' });
   useEffect(() => {
     const timer = setInterval(() => {
-      setTimeUntilMidnight(getTimeUntilMidnight());
+      setTimeUntilMidnight(getTimeUntilMidnight() || { hours: '00', minutes: '00', seconds: '00', formatted: '00h 00m 00s' });
     }, 1000);
     return () => clearInterval(timer);
   }, []);
@@ -80,19 +80,29 @@ export default function TaskCenterView({ onOpenWithdraw }) {
   const taskMultiplier = userMembershipTier?.taskMultiplier || 1.0;
 
   // Active tasks for today dynamically controlled by Admin Roster
-  const activeRosterTasks = (dailyTaskRoster && dailyTaskRoster.length > 0)
-    ? dailyTaskRoster.filter((t) => t.status === 'ACTIVE')
+  const activeRosterTasks = Array.isArray(dailyTaskRoster)
+    ? dailyTaskRoster.filter((t) => t && t.status === 'ACTIVE')
     : [];
 
   const safeCompletedTasks = tasksCompletedToday || {};
-  const completedCount = activeRosterTasks.filter((t) => safeCompletedTasks[t.id]).length;
+  const completedCount = activeRosterTasks.filter((t) => t && safeCompletedTasks[t.id]).length;
   const totalCount = activeRosterTasks.length;
   const progressPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
-  const totalPotentialIncentive = activeRosterTasks.reduce((sum, t) => sum + Math.round((Number(t.reward) || 0) * taskMultiplier), 0);
+  const totalPotentialIncentive = activeRosterTasks.reduce((sum, t) => sum + Math.round((Number(t?.reward) || 0) * taskMultiplier), 0);
 
   // Helper for task type badges and icons
   const getTaskVisuals = (task, effectiveReward) => {
-    const rewardVal = effectiveReward !== undefined ? effectiveReward : task.reward;
+    if (!task) {
+      return {
+        icon: <Sparkles size={20} />,
+        badgeClass: 'badge-indigo',
+        badgeText: 'Task',
+        accentColor: '#a78bfa',
+        bgGlow: 'rgba(139, 92, 246, 0.12)',
+        buttonLabel: 'Complete Task',
+      };
+    }
+    const rewardVal = effectiveReward !== undefined ? effectiveReward : (task.reward || 0);
     switch (task.type) {
       case 'video':
         return {
@@ -224,7 +234,7 @@ export default function TaskCenterView({ onOpenWithdraw }) {
               <span className="badge badge-emerald">⚡ 24/7 Payouts</span>
               <span className="badge badge-cyan">📅 {formatFullReadableDate(getLocalDateString(0))}</span>
               <span className="badge badge-indigo" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                <Clock size={12} /> Auto-Switch at 00:00 hrs: {timeUntilMidnight.formatted}
+                <Clock size={12} /> Auto-Switch at 00:00 hrs: {timeUntilMidnight?.formatted || '00h 00m 00s'}
               </span>
             </div>
             <h2 style={{ fontSize: '1.9rem', fontWeight: 800 }}>Task Earning Center</h2>

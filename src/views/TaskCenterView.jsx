@@ -37,6 +37,10 @@ import MemoryGameModal from '../components/MemoryGameModal';
 import WalkTaskModal from '../components/WalkTaskModal';
 import DailyStreakWidget from '../components/DailyStreakWidget';
 import SlidePuzzleModal from '../components/SlidePuzzleModal';
+import RealLudoModal from '../components/RealLudoModal';
+import Real29CardsModal from '../components/Real29CardsModal';
+import RealCallBridgeModal from '../components/RealCallBridgeModal';
+import Real16GutiModal from '../components/Real16GutiModal';
 import CustomTaskModal from '../components/CustomTaskModal';
 import { getLocalDateString, formatFullReadableDate, getTimeUntilMidnight } from '../utils/dateUtils';
 
@@ -76,8 +80,12 @@ export default function TaskCenterView({ onOpenWithdraw, onOpenDeposit, setActiv
     return () => clearInterval(timer);
   }, []);
 
-  // 4x4 Slide Puzzle Arena Modal (Unlimited matches using winnings)
+  // Real Skill Gaming Modals
   const [isPuzzleOpen, setIsPuzzleOpen] = useState(false);
+  const [isLudoOpen, setIsLudoOpen] = useState(false);
+  const [is29CardsOpen, setIs29CardsOpen] = useState(false);
+  const [isCallBridgeOpen, setIsCallBridgeOpen] = useState(false);
+  const [is16GutiOpen, setIs16GutiOpen] = useState(false);
 
   const taskMultiplier = userMembershipTier?.taskMultiplier || 1.0;
 
@@ -580,16 +588,16 @@ export default function TaskCenterView({ onOpenWithdraw, onOpenDeposit, setActiv
         )}
       </div>
 
-      {/* Section 2: 4×4 Slide Puzzle Arena (Unlimited Play with Winnings Balance) */}
+      {/* Section 2: Real Skill Gaming & Tournament Arena (Task Wallet Only) */}
       <div style={{ marginBottom: '2.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.35rem' }}>
-          <div style={{ width: 36, height: 36, borderRadius: '10px', background: 'rgba(99, 102, 241, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#818cf8' }}>
-            <Grid size={20} />
+          <div style={{ width: 36, height: 36, borderRadius: '10px', background: 'rgba(236, 72, 153, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f472b6' }}>
+            <Gamepad2 size={20} />
           </div>
           <div>
-            <h3 style={{ fontSize: '1.3rem', fontWeight: 800 }}>4×4 Number Slide Puzzle Arena (Unlimited Matches)</h3>
+            <h3 style={{ fontSize: '1.3rem', fontWeight: 800 }}>Real Skill Gaming & Tournament Arena</h3>
             <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
-              Stake your Task Wallet winnings to play the 4×4 number slide arena as many times as you like. Membership principal deposit remains 100% locked & safe.
+              Authentic traditional games with real board rules (Real Ludo, 29 Cards, Call Bridge, 16 Guti & 4×4 Slide Puzzle). 10% platform commission deducted automatically.
             </p>
           </div>
         </div>
@@ -599,20 +607,21 @@ export default function TaskCenterView({ onOpenWithdraw, onOpenDeposit, setActiv
           <div style={{ padding: '0.75rem 1rem', background: 'rgba(16, 185, 129, 0.08)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(16, 185, 129, 0.25)', display: 'flex', alignItems: 'center', gap: '0.65rem', fontSize: '0.82rem', color: '#cbd5e1' }}>
             <ShieldCheck size={18} color="#34d399" style={{ flexShrink: 0 }} />
             <span>
-              <strong style={{ color: '#34d399' }}>Task Wallet Only:</strong> Boot fee (₹10) is deducted strictly from earned winnings in your Task Wallet. Under no circumstances can membership principal be used.
+              <strong style={{ color: '#34d399' }}>Task Wallet Only:</strong> Boot fees are deducted strictly from earned winnings in your Task Wallet. Under no circumstances can membership principal be wagered.
             </span>
           </div>
 
           <div style={{ padding: '0.75rem 1rem', background: 'rgba(99, 102, 241, 0.08)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(99, 102, 241, 0.25)', display: 'flex', alignItems: 'center', gap: '0.65rem', fontSize: '0.82rem', color: '#cbd5e1' }}>
             <Sparkles size={18} color="#818cf8" style={{ flexShrink: 0 }} />
             <span>
-              <strong style={{ color: '#818cf8' }}>Unlimited Replays:</strong> Play continuously as long as you have winnings balance. Solve the 4×4 puzzle within 120s to win ₹16 instant credit.
+              <strong style={{ color: '#818cf8' }}>Unlimited Matches:</strong> Play continuously as long as you have winnings balance. 100% authentic real-life game rules!
             </span>
           </div>
         </div>
 
-        {/* 4x4 Slide Puzzle Card */}
-        <div style={{ maxWidth: '640px' }}>
+        {/* 5 Real Games Grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
+          {/* Game 1: 4x4 Slide Puzzle Arena */}
           <div className="glass-card card-interactive" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', border: '1px solid rgba(99, 102, 241, 0.35)', background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(15, 23, 42, 0.8) 100%)' }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
@@ -627,14 +636,118 @@ export default function TaskCenterView({ onOpenWithdraw, onOpenDeposit, setActiv
                 4×4 Slide Number Puzzle Arena
               </h4>
               <p style={{ fontSize: '0.82rem', color: '#94a3b8', lineHeight: 1.4, marginBottom: '1.25rem' }}>
-                Arrange numbers 1 to 15 within 120 seconds. Use your Task Wallet earnings to play as many matches as you want. 100% solvable mathematical board.
+                Unlimited skill matches! Arrange numbers 1 to 15 within 120 seconds. 100% solvable board. Play continuously with winnings balance.
               </p>
               <div style={{ fontSize: '0.75rem', color: '#cbd5e1', marginBottom: '1.25rem', padding: '0.5rem 0.75rem', background: 'rgba(99, 102, 241, 0.1)', borderRadius: '6px', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
-                ♾️ Unlimited Replays • Boot: ₹10 | Win: ₹16 • 100% Solvable • Winnings Balance Only
+                ♾️ Unlimited Replays • Boot: ₹10 | Win: ₹16 • Winnings Wallet Only
               </div>
             </div>
             <button className="btn btn-primary" style={{ width: '100%', fontWeight: 700 }} onClick={() => setIsPuzzleOpen(true)}>
               <Grid size={16} /> Enter 4×4 Slide Arena
+            </button>
+          </div>
+
+          {/* Game 2: Real Ludo PvP Arena */}
+          <div className="glass-card card-interactive" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', border: '1px solid rgba(239, 68, 68, 0.35)', background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.05) 0%, rgba(15, 23, 42, 0.8) 100%)' }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                <span className="badge badge-gold" style={{ fontSize: '0.68rem' }}>
+                  <Users size={11} /> 15×15 Real Board • Roll 6 To Open
+                </span>
+                <span style={{ fontSize: '1.15rem', fontWeight: 800, color: '#fbbf24' }}>
+                  Win {formatINR(18)} (Boot {formatINR(10)})
+                </span>
+              </div>
+              <h4 style={{ fontSize: '1.15rem', fontWeight: 800, marginBottom: '0.4rem', color: '#ffffff' }}>
+                Real Ludo PvP Arena
+              </h4>
+              <p style={{ fontSize: '0.82rem', color: '#94a3b8', lineHeight: 1.4, marginBottom: '1.25rem' }}>
+                Genuine Ludo with 15×15 board, pawns, safe star squares, cutting opponent pawns back to base, bonus rolls, and home runway finish!
+              </p>
+              <div style={{ fontSize: '0.75rem', color: '#cbd5e1', marginBottom: '1.25rem', padding: '0.5rem 0.75rem', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '6px', border: '1px solid rgba(239, 68, 68, 0.25)' }}>
+                🎲 Real Pawns • Cut Opponent • 10% House Rake • Win: ₹18
+              </div>
+            </div>
+            <button className="btn btn-gold" style={{ width: '100%', fontWeight: 700 }} onClick={() => setIsLudoOpen(true)}>
+              <Dice5 size={16} /> Play Real Ludo
+            </button>
+          </div>
+
+          {/* Game 3: 29 Cards Championship */}
+          <div className="glass-card card-interactive" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', border: '1px solid rgba(16, 185, 129, 0.35)', background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(15, 23, 42, 0.8) 100%)' }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                <span className="badge badge-emerald" style={{ fontSize: '0.68rem' }}>
+                  <Trophy size={11} /> 32 Cards (J=3, 9=2, A=1, 10=1)
+                </span>
+                <span style={{ fontSize: '1.15rem', fontWeight: 800, color: '#34d399' }}>
+                  Win {formatINR(36)} (Boot {formatINR(10)})
+                </span>
+              </div>
+              <h4 style={{ fontSize: '1.15rem', fontWeight: 800, marginBottom: '0.4rem', color: '#ffffff' }}>
+                29 Cards Championship
+              </h4>
+              <p style={{ fontSize: '0.82rem', color: '#94a3b8', lineHeight: 1.4, marginBottom: '1.25rem' }}>
+                Traditional South Asian 29 trick-taking game. Bidding 16 to 28, secret trump placed face down, ask to reveal trump, and 28+1 pt total!
+              </p>
+              <div style={{ fontSize: '0.75rem', color: '#cbd5e1', marginBottom: '1.25rem', padding: '0.5rem 0.75rem', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '6px', border: '1px solid rgba(16, 185, 129, 0.25)' }}>
+                ♠️ Bidding 16-28 • Hidden Trump • 10% Platform Rake • 4 Players
+              </div>
+            </div>
+            <button className="btn btn-primary" style={{ width: '100%', fontWeight: 700, background: 'linear-gradient(135deg, #059669 0%, #047857 100%)' }} onClick={() => setIs29CardsOpen(true)}>
+              <Trophy size={16} /> Play 29 Cards
+            </button>
+          </div>
+
+          {/* Game 4: Call Bridge Masters */}
+          <div className="glass-card card-interactive" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', border: '1px solid rgba(139, 92, 246, 0.35)', background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.05) 0%, rgba(15, 23, 42, 0.8) 100%)' }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                <span className="badge badge-indigo" style={{ fontSize: '0.68rem' }}>
+                  <Spade size={11} /> 13 Hands • Spades Trump
+                </span>
+                <span style={{ fontSize: '1.15rem', fontWeight: 800, color: '#c084fc' }}>
+                  Win {formatINR(36)} (Boot {formatINR(10)})
+                </span>
+              </div>
+              <h4 style={{ fontSize: '1.15rem', fontWeight: 800, marginBottom: '0.4rem', color: '#ffffff' }}>
+                Call Bridge Masters Arena
+              </h4>
+              <p style={{ fontSize: '0.82rem', color: '#94a3b8', lineHeight: 1.4, marginBottom: '1.25rem' }}>
+                52 cards dealt (13 cards each). Call bidding (1-8), Spades are permanent trump, must follow suit, cut tricks with Spades, authentic scoring!
+              </p>
+              <div style={{ fontSize: '0.75rem', color: '#cbd5e1', marginBottom: '1.25rem', padding: '0.5rem 0.75rem', background: 'rgba(139, 92, 246, 0.1)', borderRadius: '6px', border: '1px solid rgba(139, 92, 246, 0.25)' }}>
+                ♣️ 13 Hands • Call Bidding 1-8 • Rank 1 Net Pot: 90%
+              </div>
+            </div>
+            <button className="btn btn-primary" style={{ width: '100%', fontWeight: 700, background: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)' }} onClick={() => setIsCallBridgeOpen(true)}>
+              <Spade size={16} /> Play Call Bridge
+            </button>
+          </div>
+
+          {/* Game 5: 16 Guti (Sholo Guti) Championship */}
+          <div className="glass-card card-interactive" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', border: '1px solid rgba(245, 158, 11, 0.35)', background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.05) 0%, rgba(15, 23, 42, 0.8) 100%)' }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                <span className="badge badge-gold" style={{ fontSize: '0.68rem' }}>
+                  <Award size={11} /> 37-Node Wooden Board
+                </span>
+                <span style={{ fontSize: '1.15rem', fontWeight: 800, color: '#fbbf24' }}>
+                  Win {formatINR(18)} (Boot {formatINR(10)})
+                </span>
+              </div>
+              <h4 style={{ fontSize: '1.15rem', fontWeight: 800, marginBottom: '0.4rem', color: '#ffffff' }}>
+                ১৬ গুটি (16 Guti / Sholo Guti)
+              </h4>
+              <p style={{ fontSize: '0.82rem', color: '#94a3b8', lineHeight: 1.4, marginBottom: '1.25rem' }}>
+                Traditional South Asian strategic bead game. 16 beads each, move 1 step along board lines, jump over opponent to capture, eliminate all 16 to win!
+              </p>
+              <div style={{ fontSize: '0.75rem', color: '#cbd5e1', marginBottom: '1.25rem', padding: '0.5rem 0.75rem', background: 'rgba(245, 158, 11, 0.1)', borderRadius: '6px', border: '1px solid rgba(245, 158, 11, 0.25)' }}>
+                🔴 16 Beads • Jump Captures • 10% Platform Cut • Real AI Bot
+              </div>
+            </div>
+            <button className="btn btn-gold" style={{ width: '100%', fontWeight: 700 }} onClick={() => setIs16GutiOpen(true)}>
+              <Award size={16} /> Play ১৬ গুটি (Sholo Guti)
             </button>
           </div>
         </div>
@@ -688,6 +801,27 @@ export default function TaskCenterView({ onOpenWithdraw, onOpenDeposit, setActiv
         task={activeDailyPuzzleTask}
         onOpenDeposit={onOpenDeposit}
         setActiveTab={setActiveTab}
+      />
+
+      {/* Real Skill Games Modals */}
+      <RealLudoModal
+        isOpen={isLudoOpen}
+        onClose={() => setIsLudoOpen(false)}
+      />
+
+      <Real29CardsModal
+        isOpen={is29CardsOpen}
+        onClose={() => setIs29CardsOpen(false)}
+      />
+
+      <RealCallBridgeModal
+        isOpen={isCallBridgeOpen}
+        onClose={() => setIsCallBridgeOpen(false)}
+      />
+
+      <Real16GutiModal
+        isOpen={is16GutiOpen}
+        onClose={() => setIs16GutiOpen(false)}
       />
 
       {/* Custom Task Execution Modal */}

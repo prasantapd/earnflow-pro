@@ -386,6 +386,8 @@ export default function AuthView({ onOpenAdminLogin }) {
                   onClick={() => {
                     setForgotPhone(regForm.phone || '');
                     setForgotSubmitted(false);
+                    setUnregisteredPhone(null);
+                    setForgotError('');
                     setIsForgotModalOpen(true);
                   }}
                   style={{
@@ -450,6 +452,8 @@ export default function AuthView({ onOpenAdminLogin }) {
                 onClick={() => {
                   setForgotPhone(loginForm.identifier || '');
                   setForgotSubmitted(false);
+                  setUnregisteredPhone(null);
+                  setForgotError('');
                   setIsForgotModalOpen(true);
                 }}
                 style={{

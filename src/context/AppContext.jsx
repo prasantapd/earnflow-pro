@@ -1404,25 +1404,41 @@ export function AppProvider({ children }) {
     showToast('Daily login streak rewards successfully updated by Admin!', 'success');
   };
 
-  const requestPasswordReset = (phone) => {
-    const rawDigits = (phone || '').replace(/\D/g, '');
-    if (!rawDigits || rawDigits.length < 5) {
-      showToast('Please enter a valid mobile number.', 'error');
-      return { success: false, reason: 'INVALID_NUMBER' };
+  const requestPasswordReset = (identifier) => {
+    const rawInput = (identifier || '').trim();
+    if (!rawInput) {
+      showToast('Please enter your registered mobile number or email.', 'error');
+      return { success: false, reason: 'EMPTY_INPUT' };
     }
 
-    const matchedUser = (state.allUsers || []).find((u) => {
+    const inputLower = rawInput.toLowerCase();
+    const inputDigits = rawInput.replace(/\D/g, '');
+
+    const userList = state.allUsers || [];
+
+    const matchedUser = userList.find((u) => {
+      // 1. Email match
+      if (u.email && u.email.toLowerCase() === inputLower) return true;
+
+      // 2. Exact phone match
+      if (u.phone && u.phone.trim() === rawInput) return true;
+
+      // 3. Digit-based phone match (handles +91, spaces, dashes)
       const uDigits = (u.phone || '').replace(/\D/g, '');
-      return uDigits === rawDigits || 
-             (rawDigits.length >= 10 && uDigits.endsWith(rawDigits.slice(-10))) ||
-             (uDigits.length >= 10 && rawDigits.endsWith(uDigits.slice(-10)));
+      if (inputDigits && uDigits) {
+        if (inputDigits === uDigits) return true;
+        if (inputDigits.length >= 10 && uDigits.endsWith(inputDigits.slice(-10))) return true;
+        if (uDigits.length >= 10 && inputDigits.endsWith(uDigits.slice(-10))) return true;
+      }
+
+      return false;
     });
 
     if (!matchedUser) {
       return {
         success: false,
         found: false,
-        phone: phone,
+        phone: rawInput,
       };
     }
 

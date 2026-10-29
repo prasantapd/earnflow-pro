@@ -13,14 +13,23 @@ import {
   ArrowDownCircle,
   ArrowUpCircle,
   AlertTriangle,
-  Clock
+  Clock,
+  QrCode,
+  Copy,
+  Check,
+  Building2,
+  Smartphone,
+  ArrowLeft,
+  ArrowRight,
+  HelpCircle,
+  CheckCircle,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { DEPOSIT_PRESETS, LOCKIN_PERIODS, calculateEarnings, formatINR } from '../utils/finance';
 import PlanCard from '../components/PlanCard';
 
 export default function PlansView({ onOpenDeposit, onWithdrawPrincipal }) {
-  const { plans, activePlan: contextActivePlan, subscribePlan, showToast, pendingDeposit, pendingPlan, isUserActivated, canUserEarn } = useApp();
+  const { plans, activePlan: contextActivePlan, subscribePlan, showToast, pendingDeposit, pendingPlan, isUserActivated, canUserEarn, paymentSettings } = useApp();
 
   const activePlan = contextActivePlan !== undefined ? contextActivePlan : (plans || []).find((p) => p.status === 'active');
 
@@ -30,11 +39,35 @@ export default function PlansView({ onOpenDeposit, onWithdrawPrincipal }) {
     return higher || activePlan.amount + 5000;
   }, [activePlan]);
 
+  // Step 1 (Plan Selection) vs Step 2 (UPI Payment Gateway & UTR Entry)
+  const [step, setStep] = useState(1);
+  const [activePaymentTab, setActivePaymentTab] = useState('upi'); // 'upi' or 'bank'
+  const [userUtr, setUserUtr] = useState('');
+  const [copiedField, setCopiedField] = useState(null);
+
   // Inline simulator state
   const [selectedAmount, setSelectedAmount] = useState(defaultAmount);
   const [customAmount, setCustomAmount] = useState(defaultAmount.toString());
   const [selectedLockin, setSelectedLockin] = useState(LOCKIN_PERIODS[1]); // Default 90 Days
   const [planTitle, setPlanTitle] = useState('');
+
+  // Fallback payment settings
+  const settings = paymentSettings || {
+    upiId: 'taskcoin@ybl',
+    upiPhone: '9876543210',
+    upiName: 'TaskCoin Corporate Treasury',
+    bankName: 'HDFC Bank Ltd',
+    accountNumber: '50200089123456',
+    ifsc: 'HDFC0000123',
+    accountHolder: 'TaskCoin Technologies Pvt Ltd',
+  };
+
+  const handleCopy = (text, fieldName) => {
+    navigator.clipboard?.writeText(text);
+    setCopiedField(fieldName);
+    showToast(`Copied ${fieldName} to clipboard!`, 'info');
+    setTimeout(() => setCopiedField(null), 2500);
+  };
 
   // Automatically keep simulator in sync whenever activePlan or defaultAmount changes
   React.useEffect(() => {
@@ -59,8 +92,9 @@ export default function PlansView({ onOpenDeposit, onWithdrawPrincipal }) {
     setCustomAmount(amt.toString());
   };
 
-  const handleDepositSubmit = (e) => {
-    e.preventDefault();
+  // Step 1 Submit -> Transitions directly to Step 2 (UPI Payment Gateway & UTR Entry)
+  const handleProceedToPayment = (e) => {
+    if (e && e.preventDefault) e.preventDefault();
     const amount = Number(customAmount);
     if (!amount || amount < 2000) {
       showToast('Minimum membership deposit is ₹2,000', 'error');
@@ -72,11 +106,32 @@ export default function PlansView({ onOpenDeposit, onWithdrawPrincipal }) {
       return;
     }
 
+    setStep(2);
+    const terminalEl = document.getElementById('subscription-terminal');
+    if (terminalEl) {
+      terminalEl.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  // Step 2 Submit -> Submits UTR for Admin Verification
+  const handleFinalUtrSubmit = (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    const cleanUtr = (userUtr || '').trim();
+    if (!cleanUtr || cleanUtr.length < 6) {
+      showToast('Please enter the 12-digit UTR / UPI Reference Number from your payment receipt.', 'error');
+      return;
+    }
+
+    const amount = Number(customAmount);
     subscribePlan({
       amount,
       lockinPeriod: selectedLockin,
       title: planTitle.trim() || `${selectedLockin.label} Membership Tier`,
+      utrNumber: cleanUtr,
     });
+
+    setUserUtr('');
+    setStep(1);
     setPlanTitle('');
   };
 
@@ -176,6 +231,7 @@ export default function PlansView({ onOpenDeposit, onWithdrawPrincipal }) {
 
       {/* Interactive Simulator & Subscription Terminal */}
       <div
+        id="subscription-terminal"
         className="glass-card"
         style={{
           padding: '2rem',
@@ -184,25 +240,33 @@ export default function PlansView({ onOpenDeposit, onWithdrawPrincipal }) {
           borderColor: 'rgba(16, 185, 129, 0.3)'
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '1.5rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border-subtle)' }}>
-          <div style={{ width: 40, height: 40, borderRadius: '12px', background: 'rgba(16, 185, 129, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#34d399' }}>
-            <Calculator size={22} />
-          </div>
+        {/* STEP 1: PLAN & DURATION SELECTION */}
+        {step === 1 && (
           <div>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 700 }}>
-              {activePlan ? 'Membership Tier Upgrade Terminal' : 'Interactive Plan Simulator & Terminal'}
-            </h3>
-            <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
-              {activePlan
-                ? `Current tier: ${formatINR(activePlan.amount)}. Select a higher amount to upgrade.`
-                : 'Select your subscription amount and duration to preview estimated task income.'}
-            </p>
-          </div>
-        </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border-subtle)', flexWrap: 'wrap', gap: '0.75rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <div style={{ width: 40, height: 40, borderRadius: '12px', background: 'rgba(16, 185, 129, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#34d399' }}>
+                  <Calculator size={22} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 700 }}>
+                    {activePlan ? 'Membership Tier Upgrade Terminal' : 'Interactive Plan Simulator & Terminal'}
+                  </h3>
+                  <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+                    {activePlan
+                      ? `Current tier: ${formatINR(activePlan.amount)}. Select a higher amount to upgrade.`
+                      : 'Select your subscription amount and duration to preview estimated task income.'}
+                  </p>
+                </div>
+              </div>
+              <span className="badge badge-emerald" style={{ fontSize: '0.72rem', padding: '0.35rem 0.75rem' }}>
+                Step 1 of 2: Select Plan
+              </span>
+            </div>
 
-        <form onSubmit={handleDepositSubmit}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
-            {/* Left Column: Amount & Lock-in Selection */}
+            <form onSubmit={handleProceedToPayment}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
+                {/* Left Column: Amount & Lock-in Selection */}
             <div>
               {/* Presets */}
               <div style={{ marginBottom: '1.25rem' }}>
@@ -418,16 +482,16 @@ export default function PlansView({ onOpenDeposit, onWithdrawPrincipal }) {
               <button
                 type="submit"
                 className="btn btn-primary btn-lg"
-                style={{ width: '100%' }}
+                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
                 disabled={isDowngradeAttempt || numAmount < 2000}
               >
                 {activePlan ? (
                   <>
-                    <ArrowUpCircle size={18} /> Confirm & Upgrade to This Plan ({formatINR(numAmount)})
+                    <ArrowRight size={18} /> Proceed to Upgrade Payment ({formatINR(numAmount)})
                   </>
                 ) : (
                   <>
-                    <Lock size={18} /> Confirm & Activate This Plan ({formatINR(numAmount)})
+                    <ArrowRight size={18} /> Confirm Plan & Proceed to UPI Payment ({formatINR(numAmount)})
                   </>
                 )}
               </button>
@@ -435,6 +499,299 @@ export default function PlansView({ onOpenDeposit, onWithdrawPrincipal }) {
           </div>
         </form>
       </div>
+    )}
+
+    {/* STEP 2: UPI PAYMENT GATEWAY & 12-DIGIT UTR SUBMISSION */}
+    {step === 2 && (
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border-subtle)', flexWrap: 'wrap', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+            <button
+              type="button"
+              onClick={() => setStep(1)}
+              className="btn btn-secondary btn-sm"
+              style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.45rem 0.85rem' }}
+            >
+              <ArrowLeft size={16} /> Back / Change Plan
+            </button>
+            <div>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#f8fafc' }}>
+                UPI Deposit Gateway & UTR Verification
+              </h3>
+              <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+                Pay ₹{numAmount.toLocaleString()} via UPI or Bank, then submit the 12-digit UTR for Admin activation
+              </p>
+            </div>
+          </div>
+          <span className="badge badge-emerald" style={{ fontSize: '0.72rem', padding: '0.35rem 0.75rem' }}>
+            Step 2 of 2: Payment & UTR
+          </span>
+        </div>
+
+        {/* Plan Summary Bar */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+            gap: '0.85rem',
+            padding: '1rem 1.25rem',
+            borderRadius: 'var(--radius-md)',
+            background: 'rgba(16, 185, 129, 0.08)',
+            border: '1.5px solid rgba(16, 185, 129, 0.3)',
+            marginBottom: '1.5rem',
+          }}
+        >
+          <div>
+            <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Selected Membership Plan</div>
+            <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#ffffff' }}>
+              {selectedLockin.label} Duration Tier
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Exact Payable Amount</div>
+            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#34d399' }}>
+              ₹{numAmount.toLocaleString()}
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Estimated Daily Quota</div>
+            <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#22d3ee' }}>
+              ~{formatINR(calculation.estimatedDailyIncome)}/day
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Refundable Capital</div>
+            <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#a78bfa' }}>
+              {formatINR(calculation.principal)} at maturity
+            </div>
+          </div>
+        </div>
+
+        {/* Payment Method Switcher */}
+        <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={() => setActivePaymentTab('upi')}
+            style={{
+              flex: 1,
+              minWidth: 200,
+              padding: '0.8rem 1rem',
+              borderRadius: 'var(--radius-md)',
+              background: activePaymentTab === 'upi' ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.25) 0%, rgba(6, 182, 212, 0.2) 100%)' : 'rgba(255, 255, 255, 0.03)',
+              border: `1.5px solid ${activePaymentTab === 'upi' ? '#10b981' : 'var(--border-subtle)'}`,
+              color: activePaymentTab === 'upi' ? '#34d399' : '#94a3b8',
+              fontWeight: 700,
+              fontSize: '0.92rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem',
+            }}
+          >
+            <Smartphone size={18} />
+            <span>UPI Transfer & QR Code (Instant)</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActivePaymentTab('bank')}
+            style={{
+              flex: 1,
+              minWidth: 200,
+              padding: '0.8rem 1rem',
+              borderRadius: 'var(--radius-md)',
+              background: activePaymentTab === 'bank' ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.25) 0%, rgba(99, 102, 241, 0.2) 100%)' : 'rgba(255, 255, 255, 0.03)',
+              border: `1.5px solid ${activePaymentTab === 'bank' ? '#60a5fa' : 'var(--border-subtle)'}`,
+              color: activePaymentTab === 'bank' ? '#93c5fd' : '#94a3b8',
+              fontWeight: 700,
+              fontSize: '0.92rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem',
+            }}
+          >
+            <Building2 size={18} />
+            <span>Direct Bank Transfer (IMPS/NEFT)</span>
+          </button>
+        </div>
+
+        {/* TAB 1: UPI Transfer */}
+        {activePaymentTab === 'upi' && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.75rem', marginBottom: '2rem', alignItems: 'center' }}>
+            {/* QR Code Container */}
+            <div style={{ textAlign: 'center', padding: '1.25rem', background: 'rgba(255, 255, 255, 0.03)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-subtle)' }}>
+              <div style={{ background: '#ffffff', padding: '0.75rem', borderRadius: '12px', display: 'inline-block', marginBottom: '0.75rem', boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)' }}>
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=upi://pay?pa=${encodeURIComponent(settings.upiId)}%26pn=${encodeURIComponent(settings.upiName || 'TaskCoin Corporate Treasury')}%26am=${numAmount}%26cu=INR`}
+                  alt="UPI QR Code"
+                  style={{ width: 190, height: 190, display: 'block' }}
+                />
+              </div>
+              <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f8fafc', marginBottom: '0.2rem' }}>
+                Scan to Pay ₹{numAmount.toLocaleString()}
+              </div>
+              <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
+                PhonePe • Google Pay • Paytm • BHIM • Cred
+              </div>
+            </div>
+
+            {/* UPI Details & Instructions */}
+            <div>
+              <div style={{ marginBottom: '1rem' }}>
+                <div className="form-label">Official Treasury UPI ID</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <input
+                    type="text"
+                    readOnly
+                    value={settings.upiId}
+                    className="input-field"
+                    style={{ fontWeight: 800, color: '#34d399', fontSize: '1.05rem', background: 'rgba(255, 255, 255, 0.04)' }}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => handleCopy(settings.upiId, 'UPI ID')}
+                    style={{ whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+                  >
+                    {copiedField === 'UPI ID' ? <Check size={16} color="#34d399" /> : <Copy size={16} />}
+                    <span>{copiedField === 'UPI ID' ? 'Copied' : 'Copy'}</span>
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1.25rem' }}>
+                <div style={{ padding: '0.75rem', background: 'rgba(255, 255, 255, 0.02)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
+                  <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>Payee Name</div>
+                  <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#f8fafc' }}>{settings.upiName || 'TaskCoin Treasury'}</div>
+                </div>
+                <div style={{ padding: '0.75rem', background: 'rgba(255, 255, 255, 0.02)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
+                  <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>Payment Verification</div>
+                  <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#34d399' }}>5–15 Mins Approval</div>
+                </div>
+              </div>
+
+              <div style={{ padding: '0.75rem 1rem', background: 'rgba(59, 130, 246, 0.08)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(59, 130, 246, 0.25)', fontSize: '0.78rem', color: '#cbd5e1', lineHeight: 1.5 }}>
+                <strong>Payment Instructions:</strong><br />
+                1. Open any UPI App and pay exact amount <strong>₹{numAmount.toLocaleString()}</strong>.<br />
+                2. Note the 12-digit UTR/UPI Reference Number from your receipt.<br />
+                3. Paste the 12-digit UTR below and click Submit for Admin activation.
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 2: Direct Bank Transfer */}
+        {activePaymentTab === 'bank' && (
+          <div style={{ padding: '1.5rem', background: 'rgba(255, 255, 255, 0.03)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-subtle)', marginBottom: '2rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '1.25rem' }}>
+              <div>
+                <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Bank Name</div>
+                <div style={{ fontSize: '1rem', fontWeight: 700, color: '#f8fafc' }}>{settings.bankName || 'HDFC Bank Ltd'}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Account Number</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <span style={{ fontSize: '1.05rem', fontWeight: 800, color: '#60a5fa' }}>{settings.accountNumber || '50200089123456'}</span>
+                  <button type="button" onClick={() => handleCopy(settings.accountNumber || '50200089123456', 'Account Number')} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}>
+                    {copiedField === 'Account Number' ? <Check size={14} color="#34d399" /> : <Copy size={14} />}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>IFSC Code</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <span style={{ fontSize: '1.05rem', fontWeight: 800, color: '#f8fafc' }}>{settings.ifsc || 'HDFC0000123'}</span>
+                  <button type="button" onClick={() => handleCopy(settings.ifsc || 'HDFC0000123', 'IFSC')} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}>
+                    {copiedField === 'IFSC' ? <Check size={14} color="#34d399" /> : <Copy size={14} />}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Account Holder</div>
+                <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#f8fafc' }}>{settings.accountHolder || 'TaskCoin Technologies Pvt Ltd'}</div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* UTR Input Form & Submission */}
+        <div
+          style={{
+            padding: '1.75rem',
+            borderRadius: 'var(--radius-lg)',
+            background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(15, 23, 42, 0.95) 100%)',
+            border: '1.5px solid rgba(16, 185, 129, 0.4)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.75rem' }}>
+            <FileText size={20} color="#34d399" />
+            <h4 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#f8fafc' }}>
+              Submit 12-Digit UTR / UPI Reference Number
+            </h4>
+          </div>
+          <p style={{ fontSize: '0.82rem', color: '#94a3b8', marginBottom: '1.25rem' }}>
+            After transferring ₹{numAmount.toLocaleString()} in PhonePe, Google Pay, or Paytm, copy the 12-digit UTR/Ref No. from the receipt and enter below.
+          </p>
+
+          <div style={{ marginBottom: '1.25rem' }}>
+            <input
+              type="text"
+              maxLength={24}
+              value={userUtr}
+              onChange={(e) => setUserUtr(e.target.value.replace(/[^0-9a-zA-Z]/g, ''))}
+              placeholder="Paste 12-digit UTR No. here (e.g. 429381729012)"
+              className="input-field"
+              style={{
+                fontSize: '1.2rem',
+                letterSpacing: '1px',
+                fontWeight: 800,
+                borderColor: userUtr.trim().length >= 6 ? '#10b981' : undefined,
+                padding: '0.85rem 1.25rem',
+              }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.78rem', color: '#fbbf24', marginBottom: '1.5rem', background: 'rgba(245, 158, 11, 0.1)', padding: '0.65rem 0.9rem', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(245, 158, 11, 0.25)' }}>
+            <AlertTriangle size={15} />
+            <span>Admin verifies this UTR before activating your account. Fake UTR submissions will be rejected immediately.</span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+            <button
+              type="button"
+              onClick={() => setStep(1)}
+              className="btn btn-secondary btn-lg"
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              <ArrowLeft size={16} /> Back / Change Plan
+            </button>
+
+            <button
+              type="button"
+              onClick={handleFinalUtrSubmit}
+              className="btn btn-emerald btn-lg"
+              disabled={!userUtr.trim() || userUtr.trim().length < 6}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.85rem 2rem',
+                fontSize: '1rem',
+                fontWeight: 800,
+                opacity: (!userUtr.trim() || userUtr.trim().length < 6) ? 0.5 : 1,
+                cursor: (!userUtr.trim() || userUtr.trim().length < 6) ? 'not-allowed' : 'pointer',
+              }}
+            >
+              <CheckCircle2 size={20} />
+              <span>Submit Payment Verification (₹{numAmount.toLocaleString()})</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+  </div>
 
       {/* Membership Tiers Overview Table (NO % RETURN NOTATION) */}
       <div className="glass-card" style={{ padding: '1.5rem', marginBottom: '2.5rem' }}>

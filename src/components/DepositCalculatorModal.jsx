@@ -32,9 +32,9 @@ export default function DepositCalculatorModal({ isOpen, onClose }) {
   const activePlan = (plans || []).find((p) => p.status === 'active');
   const minAllowedUpgrade = activePlan ? activePlan.amount + 1000 : 2000;
 
-  // Default to the first preset higher than active plan, or 10000
+  // Default to the first preset higher than active plan, or 2000 for new user
   const defaultAmount = useMemo(() => {
-    if (!activePlan) return 10000;
+    if (!activePlan) return 2000;
     const higher = DEPOSIT_PRESETS.find((amt) => amt > activePlan.amount);
     return higher || activePlan.amount + 5000;
   }, [activePlan]);
@@ -44,6 +44,12 @@ export default function DepositCalculatorModal({ isOpen, onClose }) {
   const [customAmount, setCustomAmount] = useState(defaultAmount.toString());
   const [selectedLockin, setSelectedLockin] = useState(LOCKIN_PERIODS[0]); // Default 30 Days
   const [planTitle, setPlanTitle] = useState('');
+
+  // Keep state in sync with defaultAmount
+  React.useEffect(() => {
+    setSelectedAmount(defaultAmount);
+    setCustomAmount(defaultAmount.toString());
+  }, [defaultAmount]);
   
   // Payment Step state
   const [activePaymentTab, setActivePaymentTab] = useState('upi'); // 'upi' or 'bank'
@@ -234,9 +240,9 @@ export default function DepositCalculatorModal({ isOpen, onClose }) {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.5rem', marginBottom: '0.75rem' }}>
                 {DEPOSIT_PRESETS.map((amt) => {
                   const isSelected = selectedAmount === amt;
-                  const isCurrentActive = activePlan && activePlan.amount === amt;
-                  const isLowerThanActive = activePlan && amt < activePlan.amount;
-                  const isDisabled = isCurrentActive || isLowerThanActive;
+                  const isCurrentActive = Boolean(activePlan && activePlan.amount === amt);
+                  const isLowerThanActive = Boolean(activePlan && amt < activePlan.amount);
+                  const isDisabled = Boolean(isCurrentActive || isLowerThanActive);
 
                   return (
                     <button

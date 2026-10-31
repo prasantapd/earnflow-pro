@@ -619,6 +619,51 @@ export default function AdminPanelView() {
         </div>
       </div>
 
+      {/* HIGH PRIORITY PENDING DEPOSIT VERIFICATION ALERT BANNER */}
+      {pendingDeposits.length > 0 && (
+        <div 
+          className="glass-card" 
+          onClick={() => setActiveAdminTab('deposits')}
+          style={{ 
+            padding: '1.15rem 1.35rem', 
+            marginBottom: '1.75rem', 
+            background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.22) 0%, rgba(234, 88, 12, 0.16) 100%)',
+            border: '2px solid #fbbf24',
+            borderRadius: '14px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            boxShadow: '0 8px 25px rgba(245, 158, 11, 0.25)',
+            flexWrap: 'wrap',
+            gap: '1rem'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+            <div style={{ width: 44, height: 44, borderRadius: '12px', background: 'rgba(245, 158, 11, 0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fbbf24', flexShrink: 0 }}>
+              <Clock size={24} />
+            </div>
+            <div>
+              <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#fef08a', display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                <span>⚡ ACTION REQUIRED: {pendingDeposits.length} Deposit Payment(s) Awaiting Approval!</span>
+                <span className="badge badge-gold" style={{ fontSize: '0.65rem' }}>NEW</span>
+              </div>
+              <div style={{ fontSize: '0.82rem', color: '#cbd5e1', marginTop: '0.2rem' }}>
+                Pending Volume: <strong style={{ color: '#34d399' }}>{formatINR(pendingDeposits.reduce((acc, d) => acc + d.amount, 0))}</strong> • Latest UTR: <code style={{ color: '#fbbf24' }}>{pendingDeposits[0]?.utr}</code> from <strong>{pendingDeposits[0]?.userName}</strong>
+              </div>
+            </div>
+          </div>
+          <button 
+            type="button"
+            className="btn btn-gold btn-sm" 
+            style={{ fontWeight: 800, padding: '0.55rem 1.15rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+          >
+            <span>Review & Approve Now</span>
+            <ArrowRight size={15} />
+          </button>
+        </div>
+      )}
+
       {/* KPI Metric Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem', marginBottom: '2rem' }}>
         <div className="glass-card" style={{ padding: '1.25rem', borderLeft: '4px solid #3b82f6' }}>
@@ -631,13 +676,28 @@ export default function AdminPanelView() {
           </div>
         </div>
 
-        <div className="glass-card" style={{ padding: '1.25rem', borderLeft: '4px solid #10b981' }}>
-          <div style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700 }}>Pending Deposits</div>
-          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#34d399', margin: '0.2rem 0' }}>
+        <div 
+          className="glass-card card-interactive" 
+          onClick={() => setActiveAdminTab('deposits')}
+          style={{ 
+            padding: '1.25rem', 
+            borderLeft: '4px solid #10b981', 
+            cursor: 'pointer',
+            borderColor: pendingDeposits.length > 0 ? 'rgba(251, 191, 36, 0.6)' : undefined 
+          }}
+          title="Click to view Deposit Approvals"
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700 }}>Pending Deposits</span>
+            {pendingDeposits.length > 0 && (
+              <span className="badge badge-gold" style={{ fontSize: '0.62rem' }}>ACTION NEEDED</span>
+            )}
+          </div>
+          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: pendingDeposits.length > 0 ? '#fbbf24' : '#34d399', margin: '0.2rem 0' }}>
             {pendingDeposits.length}
           </div>
           <div style={{ fontSize: '0.75rem', color: '#cbd5e1' }}>
-            Volume: {formatINR(pendingDeposits.reduce((acc, d) => acc + d.amount, 0))}
+            Volume: {formatINR(pendingDeposits.reduce((acc, d) => acc + d.amount, 0))} • Click to review →
           </div>
         </div>
 
@@ -1211,7 +1271,11 @@ export default function AdminPanelView() {
                   </tr>
                 </thead>
                 <tbody>
-                  {depositRequests.map((dep) => (
+                  {[...(depositRequests || [])].sort((a, b) => {
+                    if (a.status === 'PENDING' && b.status !== 'PENDING') return -1;
+                    if (a.status !== 'PENDING' && b.status === 'PENDING') return 1;
+                    return new Date(b.submittedAt || 0) - new Date(a.submittedAt || 0);
+                  }).map((dep) => (
                     <tr key={dep.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.04)' }}>
                       <td style={{ padding: '0.85rem 0.75rem', fontFamily: 'monospace', color: '#22d3ee', fontWeight: 600 }}>
                         {dep.id}

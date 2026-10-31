@@ -145,6 +145,11 @@ export default function PlansView({ onOpenDeposit, onWithdrawPrincipal }) {
       return;
     }
 
+    if (pendingDeposit && pendingDeposit.status === 'PENDING') {
+      showToast(`You already have a pending payment of ₹${pendingDeposit.amount?.toLocaleString()} (UTR: ${pendingDeposit.utr}). Multiple payments are strictly prohibited until Admin verifies your current deposit.`, 'error');
+      return;
+    }
+
     const amount = Number(customAmount);
     const isTrialSelected = selectedLockin.id === 'trial_3d' || amount === 300;
 
@@ -318,6 +323,26 @@ export default function PlansView({ onOpenDeposit, onWithdrawPrincipal }) {
                 style={{ opacity: 0.65, cursor: 'not-allowed', fontSize: '0.82rem', padding: '0.55rem 1rem' }}
               >
                 <Check size={15} /> Active Membership Held
+              </button>
+            ) : pendingDeposit && pendingDeposit.status === 'PENDING' ? (
+              <button
+                type="button"
+                className="btn btn-secondary btn-lg"
+                disabled
+                style={{
+                  opacity: 0.7,
+                  cursor: 'not-allowed',
+                  fontWeight: 700,
+                  fontSize: '0.88rem',
+                  padding: '0.65rem 1.25rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  borderColor: 'rgba(245, 158, 11, 0.4)',
+                  color: '#fbbf24'
+                }}
+              >
+                <Clock size={16} /> Verification In Progress
               </button>
             ) : (
               <button
@@ -643,9 +668,13 @@ export default function PlansView({ onOpenDeposit, onWithdrawPrincipal }) {
                 type="submit"
                 className="btn btn-primary btn-lg"
                 style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
-                disabled={isDowngradeAttempt || (selectedLockin.id !== 'trial_3d' && numAmount < 2000 && numAmount !== 300)}
+                disabled={Boolean(pendingDeposit && pendingDeposit.status === 'PENDING') || isDowngradeAttempt || (selectedLockin.id !== 'trial_3d' && numAmount < 2000 && numAmount !== 300)}
               >
-                {activePlan ? (
+                {pendingDeposit && pendingDeposit.status === 'PENDING' ? (
+                  <>
+                    <Clock size={18} /> Payment Verification Pending (UTR: {pendingDeposit.utr})
+                  </>
+                ) : activePlan ? (
                   <>
                     <ArrowRight size={18} /> Proceed to Upgrade Payment ({formatINR(numAmount)})
                   </>

@@ -20,13 +20,14 @@ import {
   ArrowRight,
   ArrowLeft,
   FileText,
-  AlertCircle
+  AlertCircle,
+  Clock
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { DEPOSIT_PRESETS, LOCKIN_PERIODS, TRIAL_PLAN, calculateEarnings, formatINR } from '../utils/finance';
 
 export default function DepositCalculatorModal({ isOpen, onClose }) {
-  const { subscribePlan, plans, showToast, paymentSettings, hasUsedTrialPlan } = useApp();
+  const { subscribePlan, plans, showToast, paymentSettings, hasUsedTrialPlan, pendingDeposit } = useApp();
 
   // Find user's current active plan
   const activePlan = (plans || []).find((p) => p.status === 'active');
@@ -190,9 +191,35 @@ export default function DepositCalculatorModal({ isOpen, onClose }) {
           </button>
         </div>
 
-        {/* STEP 1: PLAN & DURATION SELECTION */}
-        {step === 1 && (
-          <form onSubmit={handleProceedToPayment}>
+        {/* PENDING APPROVAL LOCKED SCREEN (PREVENTS MULTIPLE DEPOSITS) */}
+        {pendingDeposit && pendingDeposit.status === 'PENDING' ? (
+          <div style={{ padding: '1.75rem 1rem', textAlign: 'center' }}>
+            <div style={{ width: 60, height: 60, borderRadius: '50%', background: 'rgba(245, 158, 11, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fbbf24', margin: '0 auto 1.25rem', boxShadow: '0 0 25px rgba(245, 158, 11, 0.25)' }}>
+              <Clock size={32} />
+            </div>
+            <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#f8fafc', marginBottom: '0.4rem' }}>
+              Deposit Verification In Progress
+            </h3>
+            <p style={{ fontSize: '0.9rem', color: '#cbd5e1', maxWidth: '460px', margin: '0 auto 1.25rem', lineHeight: 1.5 }}>
+              You already have a pending payment of <strong style={{ color: '#34d399' }}>₹{pendingDeposit.amount?.toLocaleString()}</strong> with UTR <code style={{ color: '#fbbf24', background: 'rgba(245, 158, 11, 0.1)', padding: '2px 6px', borderRadius: '4px' }}>{pendingDeposit.utr}</code> submitted on {new Date(pendingDeposit.submittedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.
+            </p>
+            <div style={{ background: 'rgba(245, 158, 11, 0.12)', border: '1.5px solid rgba(245, 158, 11, 0.4)', borderRadius: '12px', padding: '1rem', maxWidth: '460px', margin: '0 auto 1.5rem', fontSize: '0.82rem', color: '#fef08a', textAlign: 'left', lineHeight: 1.5 }}>
+              🛡️ <strong>Single Deposit Protocol:</strong> To prevent duplicate transactions, multiple deposits cannot be submitted while your current payment is awaiting Administrator verification. Once approved, your membership plan and daily earning tasks will be unlocked immediately!
+            </div>
+            <button 
+              type="button" 
+              className="btn btn-secondary btn-lg" 
+              onClick={onClose} 
+              style={{ minWidth: '160px', fontWeight: 700 }}
+            >
+              Understood, Close
+            </button>
+          </div>
+        ) : (
+          <>
+            {/* STEP 1: PLAN & DURATION SELECTION */}
+            {step === 1 && (
+              <form onSubmit={handleProceedToPayment}>
             {/* Active Plan Policy Banner */}
             {activePlan ? (
               <div 
@@ -797,6 +824,8 @@ export default function DepositCalculatorModal({ isOpen, onClose }) {
               </button>
             </div>
           </form>
+        )}
+        </>
         )}
       </div>
     </div>

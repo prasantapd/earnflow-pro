@@ -1498,7 +1498,42 @@ export function AppProvider({ children }) {
     const numAmount = Number(amount);
     const isTrialPlan = Boolean(isTrial || numAmount === 300 || lockinPeriod?.id === 'trial_3d' || lockinPeriod?.days === 3);
 
-    // Rule: ₹300 Trial Plan is strictly once per mobile number!
+    // Rule 1: A user cannot submit multiple deposits if one is already pending Admin verification!
+    const activeUserId = state.user?.id || 'USR-GUEST';
+    const activeUserPhone = state.user?.phone || '';
+    const activeUserName = state.user?.name || '';
+    const existingPendingDeposit = (state.depositRequests || []).find(
+      (d) => d.status === 'PENDING' && (
+        (activeUserId !== 'USR-GUEST' && d.userId === activeUserId) ||
+        (activeUserPhone && d.userPhone === activeUserPhone) ||
+        (activeUserName && d.userName === activeUserName)
+      )
+    );
+    if (existingPendingDeposit) {
+      showToast(
+        `Payment verification in progress! You already have a pending deposit of ₹${existingPendingDeposit.amount.toLocaleString()} (UTR: ${existingPendingDeposit.utr}). Multiple payments are strictly prohibited until Admin verifies your current deposit.`,
+        'error'
+      );
+      return false;
+    }
+
+    // Rule 2: A user cannot submit another plan if one is already pending approval!
+    const existingPendingPlan = (state.plans || []).find(
+      (p) => p.status === 'pending_approval' && (
+        (activeUserId !== 'USR-GUEST' && p.userId === activeUserId) ||
+        (activeUserPhone && p.userPhone === activeUserPhone) ||
+        (activeUserName && p.userName === activeUserName)
+      )
+    );
+    if (existingPendingPlan) {
+      showToast(
+        `Plan activation pending! You already have a plan awaiting Admin approval. Multiple payments are not permitted.`,
+        'error'
+      );
+      return false;
+    }
+
+    // Rule 3: ₹300 Trial Plan is strictly once per mobile number!
     if (isTrialPlan) {
       if (hasUsedTrialPlan) {
         showToast('The ₹300 3-Day Trial Plan is limited to once per mobile number. This number has already availed the trial. Please select a regular Membership Plan (₹2,000+).', 'error');

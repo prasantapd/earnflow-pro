@@ -45,6 +45,21 @@ export async function handleApiRequest(pathname, method, body = {}) {
       case 'POST /api/password-reset/resolve':
         return { status: 200, data: db.resolvePasswordReset(body.requestId, body.tempPassword) };
 
+      case 'GET /api':
+        return { status: 200, data: { status: 'ok', server: 'EarnFlow Pro Backend API' } };
+
+      case 'GET /api/deposits':
+        return { status: 200, data: db.getState().depositRequests || [] };
+
+      case 'POST /api/deposits':
+        return { status: 200, data: db.submitDeposit(body) };
+
+      case 'GET /api/users':
+        return { status: 200, data: db.getState().allUsers || [] };
+
+      case 'GET /api/plans':
+        return { status: 200, data: db.getState().plans || [] };
+
       default:
         return { status: 404, data: { error: 'Not Found', path: pathname, method } };
     }

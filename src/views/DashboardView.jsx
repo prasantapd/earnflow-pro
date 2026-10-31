@@ -271,10 +271,18 @@ export default function DashboardView({
               <button 
                 className="btn btn-secondary btn-sm"
                 onClick={onOpenDeposit}
-                style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.55rem 0.95rem' }}
+                style={{ 
+                  fontWeight: 700, 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '0.35rem', 
+                  padding: '0.55rem 0.95rem',
+                  borderColor: pendingDeposit?.status === 'PENDING' ? 'rgba(245, 158, 11, 0.5)' : undefined,
+                  color: pendingDeposit?.status === 'PENDING' ? '#fbbf24' : undefined 
+                }}
               >
-                <PlusCircle size={16} />
-                <span>{activePlans.length > 0 ? 'Upgrade' : 'Deposit'}</span>
+                {pendingDeposit?.status === 'PENDING' ? <Clock size={16} /> : <PlusCircle size={16} />}
+                <span>{pendingDeposit?.status === 'PENDING' ? 'Under Review' : (activePlans.length > 0 ? 'Upgrade' : 'Deposit')}</span>
               </button>
             </div>
           </div>
@@ -289,12 +297,17 @@ export default function DashboardView({
           onClick={onOpenDeposit}
           role="button"
           tabIndex={0}
+          style={{ borderColor: pendingDeposit?.status === 'PENDING' ? 'rgba(245, 158, 11, 0.5)' : undefined }}
         >
-          <div className="quick-action-icon" style={{ background: 'rgba(6, 182, 212, 0.15)', color: '#22d3ee' }}>
-            <PlusCircle size={22} />
+          <div className="quick-action-icon" style={{ background: pendingDeposit?.status === 'PENDING' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(6, 182, 212, 0.15)', color: pendingDeposit?.status === 'PENDING' ? '#fbbf24' : '#22d3ee' }}>
+            {pendingDeposit?.status === 'PENDING' ? <Clock size={22} /> : <PlusCircle size={22} />}
           </div>
-          <div className="quick-action-title">{activePlans.length > 0 ? 'Upgrade Plan' : 'Add Capital'}</div>
-          <div className="quick-action-desc">100% Refundable at maturity</div>
+          <div className="quick-action-title">
+            {pendingDeposit?.status === 'PENDING' ? 'Deposit Under Review' : (activePlans.length > 0 ? 'Upgrade Plan' : 'Add Capital')}
+          </div>
+          <div className="quick-action-desc" style={{ color: pendingDeposit?.status === 'PENDING' ? '#fbbf24' : '#94a3b8' }}>
+            {pendingDeposit?.status === 'PENDING' ? `UTR: ${pendingDeposit.utr} Pending` : '100% Refundable at maturity'}
+          </div>
         </div>
 
         {/* Tile 2: Daily Tasks */}

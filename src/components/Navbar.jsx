@@ -19,7 +19,8 @@ import {
   Clock,
   Globe,
   ChevronDown,
-  Check
+  Check,
+  User
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { formatINR } from '../utils/finance';
@@ -44,21 +45,26 @@ export default function Navbar({ activeTab, setActiveTab, onOpenAuth, onOpenPayo
 
   const [isLangOpen, setIsLangOpen] = React.useState(false);
   const langRef = React.useRef(null);
+  const [isUserMenuOpen, setIsUserMenuOpen] = React.useState(false);
+  const userMenuRef = React.useRef(null);
 
-  // Close language dropdown on outside click
+  // Close dropdowns on outside click
   React.useEffect(() => {
     function handleClickOutside(event) {
       if (langRef.current && !langRef.current.contains(event.target)) {
         setIsLangOpen(false);
       }
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+        setIsUserMenuOpen(false);
+      }
     }
-    if (isLangOpen) {
+    if (isLangOpen || isUserMenuOpen) {
       document.addEventListener('pointerdown', handleClickOutside);
     }
     return () => {
       document.removeEventListener('pointerdown', handleClickOutside);
     };
-  }, [isLangOpen]);
+  }, [isLangOpen, isUserMenuOpen]);
 
   const activeLangOption = (LANGUAGE_OPTIONS || []).find((o) => o.code === language) || {
     code: 'en',
@@ -83,7 +89,7 @@ export default function Navbar({ activeTab, setActiveTab, onOpenAuth, onOpenPayo
 
   return (
     <header className="navbar">
-      <div className="app-container" style={{ paddingBottom: 0 }}>
+      <div className="navbar-container">
         {/* Warning banner if account is pending activation */}
         {user?.status === 'PENDING_ACTIVATION' && (
           <div style={{ background: 'rgba(245, 158, 11, 0.15)', border: '1px solid rgba(245, 158, 11, 0.35)', borderRadius: 'var(--radius-md)', padding: '0.45rem 0.85rem', marginBottom: '0.65rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem', color: '#fbbf24', flexWrap: 'wrap', gap: '0.4rem' }}>
@@ -197,7 +203,7 @@ export default function Navbar({ activeTab, setActiveTab, onOpenAuth, onOpenPayo
           )}
 
           {/* Right Header Controls */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexShrink: 0 }}>
             {/* Compact Multi-Language Dropdown Selector */}
             <div style={{ position: 'relative', flexShrink: 0 }} ref={langRef}>
               <button
@@ -311,20 +317,22 @@ export default function Navbar({ activeTab, setActiveTab, onOpenAuth, onOpenPayo
                 style={{ 
                   display: 'flex', 
                   alignItems: 'center', 
-                  gap: '0.45rem',
-                  padding: '0.35rem 0.75rem',
+                  gap: '0.35rem',
+                  padding: '0.32rem 0.55rem',
                   borderRadius: '20px',
                   background: 'rgba(16, 185, 129, 0.12)',
                   border: '1px solid rgba(16, 185, 129, 0.35)',
                   color: '#34d399',
                   cursor: 'pointer',
                   transition: 'all 0.2s',
-                  fontSize: '0.82rem',
-                  fontWeight: 700
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0
                 }}
                 title="Your Task Reward Wallet — Click to withdraw"
               >
-                <Wallet size={14} />
+                <Wallet size={13} />
                 <span>{formatINR(rewardWallet)}</span>
               </button>
             )}
@@ -341,9 +349,11 @@ export default function Navbar({ activeTab, setActiveTab, onOpenAuth, onOpenPayo
                   fontWeight: 700,
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.4rem',
-                  fontSize: '0.78rem',
-                  padding: '0.35rem 0.75rem'
+                  gap: '0.35rem',
+                  fontSize: '0.75rem',
+                  padding: '0.32rem 0.6rem',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0
                 }}
                 title="Exit administrative mode"
               >
@@ -352,60 +362,188 @@ export default function Navbar({ activeTab, setActiveTab, onOpenAuth, onOpenPayo
               </button>
             )}
 
-            {/* User Profile & Logout Controls */}
+            {/* Unified User Account Menu Dropdown */}
             {user ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <div style={{ position: 'relative', flexShrink: 0 }} ref={userMenuRef}>
                 <button 
-                  onClick={onOpenAuth}
+                  type="button"
+                  onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                   className="btn btn-secondary btn-sm"
                   style={{ 
-                    display: 'flex', 
+                    display: 'inline-flex', 
                     alignItems: 'center', 
-                    gap: '0.35rem', 
-                    fontSize: '0.8rem', 
-                    padding: '0.35rem 0.65rem',
-                    borderColor: user?.status === 'PENDING_ACTIVATION' ? 'rgba(245, 158, 11, 0.45)' : undefined,
-                    color: user?.status === 'PENDING_ACTIVATION' ? '#fbbf24' : undefined,
-                    background: user?.status === 'PENDING_ACTIVATION' ? 'rgba(245, 158, 11, 0.12)' : undefined
+                    gap: '0.3rem', 
+                    fontSize: '0.76rem', 
+                    padding: '0.3rem 0.5rem',
+                    borderRadius: '20px',
+                    borderColor: user?.status === 'PENDING_ACTIVATION' ? 'rgba(245, 158, 11, 0.45)' : isUserMenuOpen ? 'rgba(16, 185, 129, 0.5)' : 'rgba(255, 255, 255, 0.15)',
+                    color: user?.status === 'PENDING_ACTIVATION' ? '#fbbf24' : isUserMenuOpen ? '#34d399' : '#f8fafc',
+                    background: user?.status === 'PENDING_ACTIVATION' ? 'rgba(245, 158, 11, 0.12)' : isUserMenuOpen ? 'rgba(16, 185, 129, 0.18)' : 'rgba(255, 255, 255, 0.05)',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
+                    cursor: 'pointer'
                   }}
-                  title={user?.status === 'PENDING_ACTIVATION' ? 'Account Pending Admin Activation' : `Logged in as ${user?.name || 'Member'} (${user?.email || user?.phone || 'Verified'})`}
+                  title={user?.status === 'PENDING_ACTIVATION' ? 'Account Pending Admin Activation' : `Logged in as ${user?.name || 'Member'}`}
+                  aria-label="User Account Menu"
                 >
+                  <div 
+                    style={{ 
+                      width: 20, 
+                      height: 20, 
+                      borderRadius: '50%', 
+                      background: user?.status === 'PENDING_ACTIVATION' ? 'linear-gradient(135deg, #f59e0b, #d97706)' : 'linear-gradient(135deg, #10b981, #06b6d4)', 
+                      color: '#ffffff', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      fontSize: '0.62rem',
+                      fontWeight: 800,
+                      flexShrink: 0
+                    }}
+                  >
+                    {(user?.name || 'U').charAt(0).toUpperCase()}
+                  </div>
+                  <span style={{ maxWidth: '62px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {(user?.name || 'Member').split(' ')[0]}
+                  </span>
                   {user?.status === 'PENDING_ACTIVATION' ? (
-                    <Clock size={14} color="#fbbf24" />
-                  ) : (
-                    <UserCheck size={14} color="#34d399" />
-                  )}
-                  <span>{(user?.name || 'Member').split(' ')[0]}</span>
-                  {user?.status === 'PENDING_ACTIVATION' && (
-                    <span style={{ fontSize: '0.62rem', background: 'rgba(245, 158, 11, 0.3)', padding: '1px 4px', borderRadius: '4px', fontWeight: 800 }}>
+                    <span style={{ fontSize: '0.52rem', background: 'rgba(245, 158, 11, 0.3)', color: '#fbbf24', padding: '1px 3px', borderRadius: '4px', fontWeight: 800, flexShrink: 0 }}>
                       WAIT
                     </span>
-                  )}
+                  ) : null}
+                  <ChevronDown 
+                    size={11} 
+                    style={{ 
+                      transform: isUserMenuOpen ? 'rotate(180deg)' : 'none', 
+                      transition: 'transform 0.2s ease',
+                      opacity: 0.7,
+                      flexShrink: 0
+                    }} 
+                  />
                 </button>
-                <button
-                  onClick={logoutUser}
-                  className="btn btn-secondary btn-sm"
-                  style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '0.3rem',
-                    color: '#f87171',
-                    borderColor: 'rgba(239, 68, 68, 0.3)',
-                    background: 'rgba(239, 68, 68, 0.08)',
-                    fontSize: '0.8rem',
-                    padding: '0.35rem 0.65rem'
-                  }}
-                  title="Log out of TaskCoin Pro"
-                >
-                  <LogOut size={13} />
-                  <span>Logout</span>
-                </button>
+
+                {/* User Menu Popover */}
+                {isUserMenuOpen && (
+                  <div className="user-dropdown-menu" style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 99999 }}>
+                    {/* User Card Header */}
+                    <div style={{ padding: '0.35rem 0.5rem 0.55rem', borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
+                        <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.9rem', flexShrink: 0 }}>
+                          {(user?.name || 'U').charAt(0).toUpperCase()}
+                        </div>
+                        <div style={{ textAlign: 'left', overflow: 'hidden' }}>
+                          <div style={{ fontWeight: 800, fontSize: '0.88rem', color: '#f8fafc', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                            {user?.name || 'Member'}
+                          </div>
+                          <div style={{ fontSize: '0.72rem', color: '#94a3b8', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                            {user?.phone || user?.email || 'Verified Member'}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ marginTop: '0.45rem' }}>
+                        {user?.status === 'PENDING_ACTIVATION' ? (
+                          <span className="badge badge-amber" style={{ fontSize: '0.65rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                            <Clock size={11} /> Pending Admin Activation
+                          </span>
+                        ) : (
+                          <span className="badge badge-emerald" style={{ fontSize: '0.65rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                            <UserCheck size={11} /> Active Investor
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Action Items */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
+                      <button
+                        type="button"
+                        className="user-menu-btn"
+                        onClick={() => {
+                          setIsUserMenuOpen(false);
+                          if (onOpenAuth) onOpenAuth();
+                        }}
+                      >
+                        <User size={15} color="#34d399" />
+                        <span>Account Profile & Security</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className="user-menu-btn"
+                        onClick={() => {
+                          setIsUserMenuOpen(false);
+                          setActiveTab('withdraw');
+                        }}
+                        style={{ justifyContent: 'space-between' }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                          <Wallet size={15} color="#fbbf24" />
+                          <span>Wallet & Payouts</span>
+                        </div>
+                        <strong style={{ color: '#34d399', fontSize: '0.78rem' }}>{formatINR(rewardWallet)}</strong>
+                      </button>
+
+                      <button
+                        type="button"
+                        className="user-menu-btn"
+                        onClick={() => {
+                          setIsUserMenuOpen(false);
+                          setActiveTab('plans');
+                        }}
+                      >
+                        <Layers size={15} color="#60a5fa" />
+                        <span>My Membership Plans</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className="user-menu-btn"
+                        onClick={() => {
+                          setIsUserMenuOpen(false);
+                          setActiveTab('tasks');
+                        }}
+                      >
+                        <PlayCircle size={15} color="#fbbf24" />
+                        <span>Daily Earning Tasks</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className="user-menu-btn"
+                        onClick={() => {
+                          setIsUserMenuOpen(false);
+                          setActiveTab('mlm');
+                        }}
+                      >
+                        <GitBranch size={15} color="#a78bfa" />
+                        <span>Referral & Team Network</span>
+                      </button>
+                    </div>
+
+                    {/* Logout Button */}
+                    <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: '0.25rem', marginTop: '0.15rem' }}>
+                      <button
+                        type="button"
+                        className="user-menu-btn logout"
+                        onClick={() => {
+                          setIsUserMenuOpen(false);
+                          logoutUser();
+                        }}
+                        style={{ color: '#f87171' }}
+                      >
+                        <LogOut size={14} color="#f87171" />
+                        <span>Log Out of Account</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <button 
                 onClick={onOpenAuth}
                 className="btn btn-primary btn-sm"
-                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700, fontSize: '0.8rem', padding: '0.35rem 0.75rem' }}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontWeight: 700, fontSize: '0.78rem', padding: '0.32rem 0.65rem', whiteSpace: 'nowrap', flexShrink: 0 }}
               >
                 <UserCheck size={14} />
                 <span>Log In</span>

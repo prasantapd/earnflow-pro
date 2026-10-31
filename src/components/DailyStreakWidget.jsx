@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   Flame, 
   CheckCircle2, 
@@ -13,7 +13,8 @@ import {
   CalendarCheck,
   ChevronRight,
   Layers,
-  Calendar
+  Calendar,
+  ArrowRight
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { STREAK_SCHEDULE, STREAK_REWARDS, STREAK_WEEKS } from '../context/AppContext';
@@ -78,6 +79,16 @@ export default function DailyStreakWidget({ onOpenDeposit }) {
   
   const [selectedWeek, setSelectedWeek] = useState(currentWeekNum);
   const [viewMode, setViewMode] = useState('weekly'); // 'weekly' or 'full30'
+  const activeCardRef = useRef(null);
+
+  // Auto-scroll today's card into center view on mobile/tablet
+  useEffect(() => {
+    if (activeCardRef.current && viewMode === 'weekly') {
+      try {
+        activeCardRef.current.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+      } catch (e) {}
+    }
+  }, [selectedWeek, viewMode, currentDay]);
 
   // Active items based on view mode
   const displayedSchedule = viewMode === 'full30' 
@@ -95,7 +106,7 @@ export default function DailyStreakWidget({ onOpenDeposit }) {
     <div 
       className="glass-card" 
       style={{ 
-        padding: '1.5rem', 
+        padding: '1.25rem', 
         marginBottom: '2rem', 
         background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(234, 88, 12, 0.06) 50%, rgba(16, 185, 129, 0.08) 100%)',
         borderColor: 'rgba(245, 158, 11, 0.35)',
@@ -118,36 +129,37 @@ export default function DailyStreakWidget({ onOpenDeposit }) {
       />
 
       {/* Header section */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
+      <div className="streak-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <div 
             style={{ 
-              width: 46, 
-              height: 46, 
+              width: 44, 
+              height: 44, 
               borderRadius: '12px', 
               background: 'linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)', 
               display: 'flex', 
               alignItems: 'center', 
               justifyContent: 'center', 
               color: '#ffffff',
-              boxShadow: '0 4px 14px rgba(245, 158, 11, 0.4)'
+              boxShadow: '0 4px 14px rgba(245, 158, 11, 0.4)',
+              flexShrink: 0
             }}
           >
-            <Flame size={26} />
+            <Flame size={24} />
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#f8fafc' }}>
+              <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#f8fafc', margin: 0 }}>
                 {t ? t('daily_login_bonus') : '30-Day Progressive Daily Login Streak'}
               </h3>
-              <span className="badge badge-gold" style={{ fontSize: '0.7rem' }}>
+              <span className="badge badge-gold" style={{ fontSize: '0.68rem' }}>
                 🔥 {t ? t('streak_day_progress', { day: claimedToday ? (currentDay > 1 ? currentDay - 1 : 30) : currentDay, total: 30 }) : `Day ${claimedToday ? (currentDay > 1 ? currentDay - 1 : 30) : currentDay} of 30`}
               </span>
-              <span className={`badge ${userMembershipTier?.badgeClass || 'badge-cyan'}`} style={{ fontSize: '0.7rem' }}>
+              <span className={`badge ${userMembershipTier?.badgeClass || 'badge-cyan'}`} style={{ fontSize: '0.68rem' }}>
                 {userMembershipTier?.tierBadge || 'Starter'} • {loginMultiplier}× Deposit Multiplier
               </span>
             </div>
-            <p style={{ fontSize: '0.82rem', color: '#cbd5e1', marginTop: '0.2rem' }}>
+            <p style={{ fontSize: '0.8rem', color: '#cbd5e1', marginTop: '0.2rem', marginBottom: 0 }}>
               Basic Plan (₹2,000) base rates are scaled by your active deposit ({loginMultiplier}× for ₹{(activePlan?.amount || 2000).toLocaleString()}). Miss 1 day and streak strictly restarts from Day 1 on next login!
             </p>
           </div>
@@ -286,8 +298,8 @@ export default function DailyStreakWidget({ onOpenDeposit }) {
 
       {/* 30-Day Overall Progress Bar */}
       <div style={{ marginBottom: '1.25rem', background: 'rgba(0, 0, 0, 0.25)', padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', marginBottom: '0.4rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', marginBottom: '0.4rem', flexWrap: 'wrap', gap: '0.4rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
             <span style={{ color: '#94a3b8' }}>30-Day Cycle Progress:</span>
             <strong style={{ color: '#fbbf24' }}>{completedCount} of 30 Days Completed</strong>
             <span style={{ color: '#64748b' }}>•</span>
@@ -313,7 +325,7 @@ export default function DailyStreakWidget({ onOpenDeposit }) {
       {/* Week Selector Tabs & View Toggle */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1rem' }}>
         {/* 4 Week Tabs */}
-        <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap' }}>
+        <div className="streak-week-tabs">
           {STREAK_WEEKS.map((w) => {
             const isSelected = viewMode === 'weekly' && selectedWeek === w.weekNum;
             const isCurrentWeek = currentWeekNum === w.weekNum;
@@ -323,12 +335,13 @@ export default function DailyStreakWidget({ onOpenDeposit }) {
               <button
                 key={w.weekNum}
                 type="button"
+                className="streak-week-tab-btn"
                 onClick={() => {
                   setViewMode('weekly');
                   setSelectedWeek(w.weekNum);
                 }}
                 style={{
-                  padding: '0.5rem 0.85rem',
+                  padding: '0.45rem 0.75rem',
                   borderRadius: 'var(--radius-md)',
                   background: isSelected 
                     ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.25) 0%, rgba(234, 88, 12, 0.3) 100%)' 
@@ -351,7 +364,7 @@ export default function DailyStreakWidget({ onOpenDeposit }) {
                       style={{ 
                         background: '#10b981', 
                         color: '#ffffff', 
-                        fontSize: '0.58rem', 
+                        fontSize: '0.55rem', 
                         fontWeight: 800, 
                         padding: '1px 5px', 
                         borderRadius: '6px' 
@@ -361,7 +374,7 @@ export default function DailyStreakWidget({ onOpenDeposit }) {
                     </span>
                   )}
                 </div>
-                <div style={{ fontSize: '0.68rem', color: isSelected ? '#ffffff' : '#94a3b8' }}>
+                <div className="week-range" style={{ fontSize: '0.68rem', color: isSelected ? '#ffffff' : '#94a3b8' }}>
                   {w.range} • <strong style={{ color: '#34d399' }}>₹{scaledWeekSum}</strong>
                 </div>
               </button>
@@ -402,70 +415,65 @@ export default function DailyStreakWidget({ onOpenDeposit }) {
         </div>
       </div>
 
-      {/* Days Progress Grid */}
-      <div 
-        style={{ 
-          display: 'grid', 
-          gridTemplateColumns: viewMode === 'full30' 
-            ? 'repeat(auto-fit, minmax(95px, 1fr))' 
-            : 'repeat(auto-fit, minmax(105px, 1fr))', 
-          gap: '0.6rem', 
-          marginBottom: '1.25rem' 
-        }}
-      >
-        {displayedSchedule.map((item) => {
-          const dayNum = item.day;
-          const isGrandFinish = item.isGrandFinish; // Day 30
-          const isWeeklyFinish = item.isWeeklyFinish; // Day 7, 14, 21
-          const scaledReward = Math.round(item.reward * loginMultiplier);
-          
-          // Determine status
-          const isDone = (streak.history && streak.history[dayNum - 1]) === true;
-          const isCurrent = !claimedToday && dayNum === currentDay;
-          const isLocked = !isDone && !isCurrent;
+      {/* Days Progress Container (Responsive Weekly Strip or 30-Day Grid) */}
+      <div className="streak-days-container">
+        {viewMode === 'weekly' && (
+          <div className="streak-scroll-hint">
+            <span>👈 Swipe to view all 7 days of {STREAK_WEEKS.find(w => w.weekNum === selectedWeek)?.title || 'Week'} 👉</span>
+          </div>
+        )}
 
-          let cardBg = 'rgba(255, 255, 255, 0.03)';
-          let borderColor = 'rgba(255, 255, 255, 0.08)';
-          let statusText = 'Upcoming';
-          let statusColor = '#64748b';
+        <div className={viewMode === 'full30' ? 'streak-grid-full30' : 'streak-grid-weekly'}>
+          {displayedSchedule.map((item) => {
+            const dayNum = item.day;
+            const isGrandFinish = item.isGrandFinish; // Day 30
+            const isWeeklyFinish = item.isWeeklyFinish; // Day 7, 14, 21
+            const scaledReward = Math.round(item.reward * loginMultiplier);
+            
+            // Determine status
+            const isDone = (streak.history && streak.history[dayNum - 1]) === true;
+            const isCurrent = !claimedToday && dayNum === currentDay;
+            const isLocked = !isDone && !isCurrent;
 
-          if (isDone) {
-            cardBg = 'rgba(16, 185, 129, 0.12)';
-            borderColor = 'rgba(16, 185, 129, 0.4)';
-            statusText = 'Claimed ✓';
-            statusColor = '#34d399';
-          } else if (isCurrent) {
-            cardBg = 'linear-gradient(135deg, rgba(245, 158, 11, 0.22) 0%, rgba(234, 88, 12, 0.28) 100%)';
-            borderColor = '#f59e0b';
-            statusText = 'Ready!';
-            statusColor = '#fbbf24';
-          } else if (isGrandFinish) {
-            cardBg = 'rgba(245, 158, 11, 0.08)';
-            borderColor = 'rgba(245, 158, 11, 0.35)';
-          } else if (isWeeklyFinish) {
-            cardBg = 'rgba(168, 85, 247, 0.06)';
-            borderColor = 'rgba(168, 85, 247, 0.25)';
-          }
+            let cardBg = 'rgba(255, 255, 255, 0.03)';
+            let borderColor = 'rgba(255, 255, 255, 0.08)';
+            let statusText = 'Upcoming';
+            let statusColor = '#64748b';
 
-          return (
-            <div
-              key={dayNum}
-              style={{
-                background: cardBg,
-                border: `1.5px solid ${borderColor}`,
-                borderRadius: 'var(--radius-md)',
-                padding: '0.75rem 0.45rem',
-                textAlign: 'center',
-                position: 'relative',
-                transition: 'all 0.2s ease',
-                boxShadow: isCurrent 
-                  ? '0 0 16px rgba(245, 158, 11, 0.35)' 
-                  : isGrandFinish 
-                    ? '0 0 10px rgba(245, 158, 11, 0.15)' 
-                    : 'none',
-                transform: isCurrent ? 'scale(1.03)' : 'none'
-              }}
-            >
+            if (isDone) {
+              cardBg = 'rgba(16, 185, 129, 0.12)';
+              borderColor = 'rgba(16, 185, 129, 0.4)';
+              statusText = 'Claimed ✓';
+              statusColor = '#34d399';
+            } else if (isCurrent) {
+              cardBg = 'linear-gradient(135deg, rgba(245, 158, 11, 0.22) 0%, rgba(234, 88, 12, 0.28) 100%)';
+              borderColor = '#f59e0b';
+              statusText = 'Ready!';
+              statusColor = '#fbbf24';
+            } else if (isGrandFinish) {
+              cardBg = 'rgba(245, 158, 11, 0.08)';
+              borderColor = 'rgba(245, 158, 11, 0.35)';
+            } else if (isWeeklyFinish) {
+              cardBg = 'rgba(168, 85, 247, 0.06)';
+              borderColor = 'rgba(168, 85, 247, 0.25)';
+            }
+
+            return (
+              <div
+                key={dayNum}
+                ref={isCurrent ? activeCardRef : null}
+                className="streak-day-card"
+                style={{
+                  background: cardBg,
+                  border: `1.5px solid ${borderColor}`,
+                  boxShadow: isCurrent 
+                    ? '0 0 16px rgba(245, 158, 11, 0.35)' 
+                    : isGrandFinish 
+                      ? '0 0 10px rgba(245, 158, 11, 0.15)' 
+                      : 'none',
+                  transform: isCurrent ? 'scale(1.02)' : 'none',
+                }}
+              >
               {isGrandFinish && (
                 <div 
                   style={{ 
@@ -555,6 +563,7 @@ export default function DailyStreakWidget({ onOpenDeposit }) {
             </div>
           );
         })}
+        </div>
       </div>
 
       {/* Main Claim Button Bar & Reset Rules */}

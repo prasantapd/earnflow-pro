@@ -854,9 +854,126 @@ h1, h2, h3, h4, .font-display {
     padding: 0.85rem !important;
   }
 
-  /* Grid auto columns adjust to single column on small phones */
-  div[style*="repeat(auto-fit"] {
+  /* Form and card auto columns adjust on small phones */
+  .form-grid {
     grid-template-columns: 1fr !important;
+  }
+}
+
+/* ==========================================================================
+   Daily Login Streak Widget - Desktop & Mobile Polish
+   ========================================================================== */
+.streak-days-container {
+  margin-bottom: 1.25rem;
+  width: 100%;
+}
+
+/* Desktop: 7 days in 1 row */
+.streak-grid-weekly {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.65rem;
+  width: 100%;
+}
+
+/* Desktop: 30 days in 6 columns (5 neat rows) */
+.streak-grid-full30 {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0.6rem;
+  width: 100%;
+}
+
+.streak-day-card {
+  position: relative;
+  text-align: center;
+  border-radius: var(--radius-md);
+  padding: 0.75rem 0.45rem;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.streak-week-tabs {
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.streak-scroll-hint {
+  display: none;
+}
+
+/* Mobile & Tablet Responsive (< 768px) */
+@media (max-width: 768px) {
+  .streak-scroll-hint {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    font-size: 0.72rem;
+    color: #94a3b8;
+    margin-bottom: 0.5rem;
+  }
+
+  .streak-grid-weekly {
+    display: flex !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    scroll-snap-type: x mandatory !important;
+    gap: 0.55rem !important;
+    padding: 0.35rem 0.2rem 0.75rem 0.2rem !important;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(245, 158, 11, 0.4) transparent;
+  }
+
+  .streak-grid-weekly::-webkit-scrollbar {
+    height: 4px;
+  }
+
+  .streak-grid-weekly::-webkit-scrollbar-thumb {
+    background: rgba(245, 158, 11, 0.4);
+    border-radius: 4px;
+  }
+
+  .streak-grid-weekly > .streak-day-card {
+    flex: 0 0 94px !important;
+    min-width: 94px !important;
+    scroll-snap-align: center !important;
+    padding: 0.65rem 0.35rem !important;
+  }
+
+  .streak-grid-full30 {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 0.45rem !important;
+  }
+
+  .streak-grid-full30 > .streak-day-card {
+    padding: 0.55rem 0.25rem !important;
+  }
+
+  .streak-week-tabs {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 0.35rem !important;
+    width: 100% !important;
+  }
+
+  .streak-week-tab-btn {
+    padding: 0.4rem 0.25rem !important;
+    text-align: center !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .streak-week-tab-btn .week-range {
+    display: none !important;
+  }
+
+  .streak-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 0.75rem !important;
   }
 }
 

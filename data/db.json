@@ -1,6 +1,96 @@
 {
   "allUsers": [
     {
+      "id": "USR-7658",
+      "name": "Secure User",
+      "email": "secure@example.com",
+      "phone": "9876500005",
+      "password": "Pass@123",
+      "referralCode": "SECU179",
+      "referredBy": null,
+      "sponsorId": null,
+      "sponsorName": null,
+      "joinedDate": "2026-10-31T17:07:02.138Z",
+      "status": "PENDING_ACTIVATION",
+      "isActivated": false,
+      "suspensionReason": "",
+      "isVerified": false,
+      "totalDeposited": 0,
+      "walletBalance": 0
+    },
+    {
+      "id": "USR-1914",
+      "name": "Sunita Das",
+      "email": "sunita@example.com",
+      "phone": "9876500004",
+      "password": "Sunita@123",
+      "referralCode": "SUNI356",
+      "referredBy": null,
+      "sponsorId": null,
+      "sponsorName": null,
+      "joinedDate": "2026-10-31T17:07:02.099Z",
+      "status": "ACTIVE",
+      "isActivated": true,
+      "suspensionReason": "",
+      "isVerified": true,
+      "totalDeposited": 0,
+      "walletBalance": 800
+    },
+    {
+      "id": "USR-2171",
+      "name": "Amitabh Roy",
+      "email": "amitabh@example.com",
+      "phone": "9876500003",
+      "password": "Amitabh@123",
+      "referralCode": "AMIT688",
+      "referredBy": null,
+      "sponsorId": null,
+      "sponsorName": null,
+      "joinedDate": "2026-10-31T17:07:02.064Z",
+      "status": "ACTIVE",
+      "isActivated": true,
+      "suspensionReason": "",
+      "isVerified": true,
+      "totalDeposited": 0,
+      "walletBalance": 700
+    },
+    {
+      "id": "USR-5706",
+      "name": "Priyanka Sen",
+      "email": "priyanka@example.com",
+      "phone": "9876500002",
+      "password": "Password@2026",
+      "referralCode": "PRIY735",
+      "referredBy": null,
+      "sponsorId": null,
+      "sponsorName": null,
+      "joinedDate": "2026-10-31T17:07:02.034Z",
+      "status": "ACTIVE",
+      "isActivated": true,
+      "suspensionReason": "",
+      "isVerified": true,
+      "totalDeposited": 5000,
+      "walletBalance": 0
+    },
+    {
+      "id": "USR-6454",
+      "name": "Rohan Sharma",
+      "email": "rohan@example.com",
+      "phone": "9876500001",
+      "password": "RohanPassword@123",
+      "referralCode": "ROHA210",
+      "referredBy": null,
+      "sponsorId": null,
+      "sponsorName": null,
+      "joinedDate": "2026-10-31T17:07:02.012Z",
+      "status": "ACTIVE",
+      "isActivated": true,
+      "suspensionReason": "",
+      "isVerified": true,
+      "totalDeposited": 0,
+      "walletBalance": 0
+    },
+    {
       "id": "USR-8999",
       "name": "Trial User 99",
       "email": "trial99@earnflow.app",
@@ -108,7 +198,8 @@
       "suspensionReason": "",
       "isVerified": true,
       "totalDeposited": 0,
-      "walletBalance": 0
+      "walletBalance": 0,
+      "isActivated": true
     },
     {
       "id": "USR-7155",
@@ -167,7 +258,8 @@
       "suspensionReason": "",
       "isVerified": true,
       "totalDeposited": 0,
-      "walletBalance": 0
+      "walletBalance": 0,
+      "isActivated": true
     },
     {
       "id": "USR-5896",
@@ -228,9 +320,54 @@
       "isVerified": true,
       "totalDeposited": 4000,
       "walletBalance": 0
+    },
+    {
+      "id": "USR-SECURE-1",
+      "name": "Secure User",
+      "phone": "9876500005",
+      "status": "ACTIVE",
+      "isActivated": true,
+      "totalDeposited": 4000,
+      "walletBalance": 400,
+      "suspensionReason": "",
+      "isVerified": true
     }
   ],
   "depositRequests": [
+    {
+      "id": "DEP-SECURE-1",
+      "userId": "USR-SECURE-1",
+      "status": "APPROVED",
+      "userName": "Member",
+      "userPhone": "",
+      "amount": 2000,
+      "planMonths": 1,
+      "planDays": 30,
+      "planTitle": "Tier Plan",
+      "isUpgrade": false,
+      "isTrial": false,
+      "previousPlanId": null,
+      "utr": "UTR3466422153",
+      "submittedAt": "2026-10-31T17:07:02.153Z",
+      "rejectionReason": ""
+    },
+    {
+      "id": "DEP-TEST-9001",
+      "userId": "USR-5706",
+      "userName": "Priyanka Sen",
+      "userPhone": "9876500002",
+      "amount": 5000,
+      "planMonths": 3,
+      "planDays": 90,
+      "planTitle": "Quarterly Growth Tier",
+      "isUpgrade": false,
+      "isTrial": false,
+      "previousPlanId": null,
+      "utr": "UTR987654321012",
+      "submittedAt": "2026-10-31T17:07:02.042Z",
+      "status": "APPROVED",
+      "rejectionReason": ""
+    },
     {
       "id": "DEP-3523",
       "userId": "USR-8153",
@@ -548,6 +685,38 @@
   ],
   "withdrawalRequests": [
     {
+      "id": "WDR-TEST-7002",
+      "userId": "USR-1914",
+      "userName": "Sunita Das",
+      "userPhone": "9876500004",
+      "userEmail": "",
+      "amount": 300,
+      "type": "TASK_REWARD",
+      "payoutDetails": {},
+      "submittedAt": "2026-10-31T17:07:02.114Z",
+      "status": "REJECTED",
+      "rejectionReason": "Invalid UPI ID format",
+      "disbursedUtr": ""
+    },
+    {
+      "id": "WDR-TEST-7001",
+      "userId": "USR-2171",
+      "userName": "Amitabh Roy",
+      "userPhone": "9876500003",
+      "userEmail": "",
+      "amount": 500,
+      "type": "TASK_REWARD",
+      "payoutDetails": {
+        "type": "upi_id",
+        "upiId": "amitabh@okaxis",
+        "holderName": "Amitabh Roy"
+      },
+      "submittedAt": "2026-10-31T17:07:02.078Z",
+      "status": "APPROVED",
+      "rejectionReason": "",
+      "disbursedUtr": "IMPS20261031998877"
+    },
+    {
       "id": "WDR-5918",
       "userId": "USR-9060",
       "userName": "Test Realtime User",
@@ -691,6 +860,46 @@
     }
   ],
   "plans": [
+    {
+      "id": "PLN-9592",
+      "userId": "USR-SECURE-1",
+      "userName": "Member",
+      "userPhone": "",
+      "title": "Tier Plan",
+      "amount": 2000,
+      "months": 1,
+      "days": 30,
+      "startDate": "2026-10-31T17:07:44.444Z",
+      "maturityDate": "2026-11-30T17:07:44.444Z",
+      "totalExpectedGain": 2300,
+      "dailyQuota": 10,
+      "earnedSoFar": 0,
+      "status": "active",
+      "isUpgrade": false,
+      "isTrial": false,
+      "depositRef": "DEP-SECURE-1",
+      "utr": "UTR3466464438"
+    },
+    {
+      "id": "PLN-9039",
+      "userId": "USR-5706",
+      "userName": "Priyanka Sen",
+      "userPhone": "9876500002",
+      "title": "Quarterly Growth Tier",
+      "amount": 5000,
+      "months": 3,
+      "days": 90,
+      "startDate": "2026-10-31T17:07:02.048Z",
+      "maturityDate": "2027-01-29T17:07:02.048Z",
+      "totalExpectedGain": 7250,
+      "dailyQuota": 25,
+      "earnedSoFar": 0,
+      "status": "active",
+      "isUpgrade": false,
+      "isTrial": false,
+      "depositRef": "DEP-TEST-9001",
+      "utr": "UTR987654321012"
+    },
     {
       "id": "PLN-6179",
       "userId": "USR-9370",
@@ -1270,6 +1479,26 @@
       "isUpgrade": false,
       "depositRef": "DEP-3550",
       "utr": "565656561111"
+    },
+    {
+      "id": "PLN-3600",
+      "userId": "USR-SECURE-1",
+      "userName": "Member",
+      "userPhone": "",
+      "title": "Tier Plan",
+      "amount": 2000,
+      "months": 1,
+      "days": 30,
+      "startDate": "2026-10-31T17:07:02.159Z",
+      "maturityDate": "2026-11-30T17:07:02.159Z",
+      "totalExpectedGain": 2300,
+      "dailyQuota": 10,
+      "earnedSoFar": 0,
+      "status": "active",
+      "isUpgrade": false,
+      "isTrial": false,
+      "depositRef": "DEP-SECURE-1",
+      "utr": "UTR3466422153"
     }
   ],
   "transactions": [],
@@ -1303,7 +1532,7 @@
     "50000": 25
   },
   "version": 1,
-  "lastUpdated": 1793465105496,
+  "lastUpdated": 1793466589469,
   "tasks": [
     {
       "id": "task-test-custom",

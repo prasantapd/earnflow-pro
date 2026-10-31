@@ -125,7 +125,7 @@ export default function AuthView({ onOpenAdminLogin }) {
       sessionStorage.removeItem('taskcoin_ref_code');
       sessionStorage.removeItem('taskcoin_ref_leg');
       localStorage.removeItem('taskcoin_ref_code');
-      showToast('Welcome! Your account is active. Instant login (No OTP required)!', 'success');
+      showToast('Registration successful! Please select an Investment Plan and submit payment for Admin activation.', 'info');
     }
   };
 

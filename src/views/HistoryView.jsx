@@ -135,7 +135,7 @@ export default function HistoryView({ onOpenReceipt }) {
                     </td>
 
                     <td style={{ padding: '0.85rem 0.75rem', textAlign: 'center' }}>
-                      <span className="badge badge-emerald" style={{ fontSize: '0.62rem' }}>
+                      <span className={`badge ${tx.status === 'COMPLETED' || tx.status === 'APPROVED' ? 'badge-emerald' : tx.status === 'REJECTED' ? 'badge-danger' : 'badge-gold'}`} style={{ fontSize: '0.62rem' }}>
                         {tx.status}
                       </span>
                     </td>

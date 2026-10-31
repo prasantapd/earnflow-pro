@@ -35,19 +35,19 @@ export default function ReceiptModal({ isOpen, onClose, txn }) {
           className="glass-card" 
           style={{ 
             padding: '1.25rem', 
-            background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(6, 182, 212, 0.1) 100%)',
-            borderColor: 'rgba(16, 185, 129, 0.3)',
+            background: txn.status === 'REJECTED' ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 38, 0.1) 100%)' : txn.status === 'PENDING' ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(217, 119, 6, 0.1) 100%)' : 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(6, 182, 212, 0.1) 100%)',
+            borderColor: txn.status === 'REJECTED' ? 'rgba(239, 68, 68, 0.4)' : txn.status === 'PENDING' ? 'rgba(245, 158, 11, 0.4)' : 'rgba(16, 185, 129, 0.3)',
             marginBottom: '1.5rem'
           }}
         >
           <div style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            {t ? t('withdrawal_gross') : 'Amount Transferred'}
+            {txn.type === 'DEPOSIT' ? 'Deposit Amount' : (t ? t('withdrawal_gross') : 'Amount Transferred')}
           </div>
-          <div style={{ fontSize: '2rem', fontWeight: 800, color: '#34d399', margin: '0.25rem 0' }}>
+          <div style={{ fontSize: '2rem', fontWeight: 800, color: txn.status === 'REJECTED' ? '#f87171' : txn.status === 'PENDING' ? '#fbbf24' : '#34d399', margin: '0.25rem 0' }}>
             {formatINR(txn.amount)}
           </div>
-          <span className="badge badge-emerald" style={{ fontSize: '0.7rem' }}>
-            {t ? t('receipt_status_cleared') : 'STATUS: COMPLETED'}
+          <span className={`badge ${txn.status === 'REJECTED' ? 'badge-danger' : txn.status === 'PENDING' ? 'badge-gold' : 'badge-emerald'}`} style={{ fontSize: '0.7rem' }}>
+            {txn.status === 'REJECTED' ? 'STATUS: REJECTED & REFUNDED' : txn.status === 'PENDING' ? 'STATUS: PENDING ADMIN DISBURSAL' : (t ? t('receipt_status_cleared') : 'STATUS: COMPLETED')}
           </span>
         </div>
 
@@ -66,6 +66,13 @@ export default function ReceiptModal({ isOpen, onClose, txn }) {
             <span style={{ color: '#94a3b8' }}>Transaction Reference:</span>
             <span style={{ fontWeight: 600, color: '#f8fafc', fontFamily: 'monospace' }}>{txn.id}</span>
           </div>
+
+          {txn.utr && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.4rem 0', borderBottom: '1px solid var(--border-subtle)' }}>
+              <span style={{ color: '#34d399', fontWeight: 700 }}>Bank Disbursal UTR:</span>
+              <span style={{ fontWeight: 800, color: '#34d399', fontFamily: 'monospace' }}>{txn.utr}</span>
+            </div>
+          )}
 
           <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.4rem 0', borderBottom: '1px solid var(--border-subtle)' }}>
             <span style={{ color: '#94a3b8' }}>Payment Type:</span>

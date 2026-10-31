@@ -675,7 +675,7 @@ function reconcileStates(prev, incoming) {
   if (!incoming) return prev;
   let changed = false;
 
-  // 1. Reconcile allUsers
+  // 1. Reconcile allUsers with authoritative status protection
   const userMap = new Map();
   (prev.allUsers || []).forEach((u) => userMap.set(u.id, u));
   (incoming.allUsers || []).forEach((u) => {
@@ -683,21 +683,44 @@ function reconcileStates(prev, incoming) {
     if (!existing) {
       userMap.set(u.id, u);
       changed = true;
-    } else if (
-      existing.status !== u.status ||
-      existing.isActivated !== u.isActivated ||
-      existing.password !== u.password ||
-      existing.totalDeposited !== u.totalDeposited ||
-      existing.suspensionReason !== u.suspensionReason
-    ) {
-      userMap.set(u.id, { ...existing, ...u });
-      changed = true;
+    } else {
+      // Do not allow stale clients to downgrade an ACTIVE or SUSPENDED user back to PENDING
+      const finalStatus = (existing.status === 'ACTIVE' && (u.status === 'PENDING_ACTIVATION' || u.status === 'PENDING'))
+        ? 'ACTIVE'
+        : (existing.status === 'SUSPENDED' && (u.status === 'PENDING_ACTIVATION' || u.status === 'PENDING'))
+        ? 'SUSPENDED'
+        : (u.status || existing.status);
+      const finalActivated = existing.isActivated || u.isActivated || finalStatus === 'ACTIVE';
+      const finalDeposited = Math.max(existing.totalDeposited || 0, u.totalDeposited || 0);
+      const finalWallet = u.walletBalance !== undefined ? u.walletBalance : existing.walletBalance;
+
+      if (
+        existing.status !== finalStatus ||
+        existing.isActivated !== finalActivated ||
+        existing.password !== u.password ||
+        existing.totalDeposited !== finalDeposited ||
+        existing.walletBalance !== finalWallet ||
+        existing.suspensionReason !== u.suspensionReason
+      ) {
+        userMap.set(u.id, {
+          ...existing,
+          ...u,
+          status: finalStatus,
+          isActivated: finalActivated,
+          totalDeposited: finalDeposited,
+          walletBalance: finalWallet,
+        });
+        changed = true;
+      }
     }
   });
   const mergedUsers = Array.from(userMap.values());
 
-  // Check if currently logged in user was updated by Admin (activation, suspension, password change)
+  // Check if currently logged in user was updated by Admin (activation, suspension, password, or balance)
   let updatedCurrentUser = prev.user;
+  let updatedRewardWallet = prev.rewardWallet;
+  let updatedTotalWithdrawn = prev.totalWithdrawn;
+
   if (prev.user) {
     const matched = mergedUsers.find(
       (u) => u.id === prev.user.id || (u.phone && u.phone === prev.user.phone) || (u.email && u.email === prev.user.email)
@@ -708,15 +731,19 @@ function reconcileStates(prev, incoming) {
         matched.isActivated !== prev.user.isActivated ||
         matched.password !== prev.user.password ||
         matched.totalDeposited !== prev.user.totalDeposited ||
+        matched.walletBalance !== prev.user.walletBalance ||
         matched.suspensionReason !== prev.user.suspensionReason
       ) {
         updatedCurrentUser = { ...prev.user, ...matched };
+        if (matched.walletBalance !== undefined && matched.walletBalance !== prev.rewardWallet && !Number.isNaN(matched.walletBalance)) {
+          updatedRewardWallet = matched.walletBalance;
+        }
         changed = true;
       }
     }
   }
 
-  // 2. Reconcile depositRequests
+  // 2. Reconcile depositRequests with decision protection
   const depMap = new Map();
   (prev.depositRequests || []).forEach((d) => depMap.set(d.id, d));
   (incoming.depositRequests || []).forEach((d) => {
@@ -724,14 +751,22 @@ function reconcileStates(prev, incoming) {
     if (!existing) {
       depMap.set(d.id, d);
       changed = true;
-    } else if (existing.status !== d.status || existing.rejectionReason !== d.rejectionReason) {
-      depMap.set(d.id, { ...existing, ...d });
-      changed = true;
+    } else {
+      if ((existing.status === 'APPROVED' || existing.status === 'REJECTED') && d.status === 'PENDING') {
+        // Keep authoritative approved/rejected decision
+        depMap.set(d.id, { ...d, ...existing });
+      } else if (
+        existing.status !== d.status ||
+        existing.rejectionReason !== d.rejectionReason
+      ) {
+        depMap.set(d.id, { ...existing, ...d });
+        changed = true;
+      }
     }
   });
   const mergedDeposits = Array.from(depMap.values());
 
-  // 3. Reconcile withdrawalRequests
+  // 3. Reconcile withdrawalRequests with decision protection & auto-refund on reject
   const wdrMap = new Map();
   (prev.withdrawalRequests || []).forEach((w) => wdrMap.set(w.id, w));
   (incoming.withdrawalRequests || []).forEach((w) => {
@@ -739,13 +774,31 @@ function reconcileStates(prev, incoming) {
     if (!existing) {
       wdrMap.set(w.id, w);
       changed = true;
-    } else if (
-      existing.status !== w.status ||
-      existing.disbursedUtr !== w.disbursedUtr ||
-      existing.rejectionReason !== w.rejectionReason
-    ) {
-      wdrMap.set(w.id, { ...existing, ...w });
-      changed = true;
+    } else {
+      if ((existing.status === 'APPROVED' || existing.status === 'REJECTED') && w.status === 'PENDING') {
+        // Keep authoritative approved/rejected decision
+        wdrMap.set(w.id, { ...w, ...existing });
+      } else {
+        // If transitioning from PENDING to REJECTED for the logged-in user, refund wallet
+        if (existing.status === 'PENDING' && w.status === 'REJECTED') {
+          const isMyWithdrawal = updatedCurrentUser && (w.userId === updatedCurrentUser.id || (updatedCurrentUser.phone && w.userPhone === updatedCurrentUser.phone));
+          if (isMyWithdrawal) {
+            updatedRewardWallet = +(updatedRewardWallet + w.amount).toFixed(2);
+            updatedTotalWithdrawn = Math.max(0, +(updatedTotalWithdrawn - w.amount).toFixed(2));
+            if (updatedCurrentUser) {
+              updatedCurrentUser = { ...updatedCurrentUser, walletBalance: updatedRewardWallet };
+            }
+          }
+        }
+        if (
+          existing.status !== w.status ||
+          existing.disbursedUtr !== w.disbursedUtr ||
+          existing.rejectionReason !== w.rejectionReason
+        ) {
+          wdrMap.set(w.id, { ...existing, ...w });
+          changed = true;
+        }
+      }
     }
   });
   const mergedWithdrawals = Array.from(wdrMap.values());
@@ -765,7 +818,7 @@ function reconcileStates(prev, incoming) {
   });
   const mergedResets = Array.from(rstMap.values());
 
-  // 5. Reconcile plans
+  // 5. Reconcile plans with active status protection
   const planMap = new Map();
   (prev.plans || []).forEach((p) => planMap.set(p.id, p));
   (incoming.plans || []).forEach((p) => {
@@ -773,14 +826,19 @@ function reconcileStates(prev, incoming) {
     if (!existing) {
       planMap.set(p.id, p);
       changed = true;
-    } else if (existing.status !== p.status || existing.earnedSoFar !== p.earnedSoFar) {
-      planMap.set(p.id, { ...existing, ...p });
-      changed = true;
+    } else {
+      if (existing.status === 'active' && p.status === 'pending_approval') {
+        // Keep active status
+        planMap.set(p.id, { ...p, ...existing, status: 'active' });
+      } else if (existing.status !== p.status || existing.earnedSoFar !== p.earnedSoFar) {
+        planMap.set(p.id, { ...existing, ...p });
+        changed = true;
+      }
     }
   });
 
-  // Ensure user has active plan if an approved deposit exists for them
-  if (updatedCurrentUser) {
+  // Ensure user has active plan if an approved deposit exists for them or user is activated
+  if (updatedCurrentUser && (updatedCurrentUser.status === 'ACTIVE' || updatedCurrentUser.isActivated)) {
     const hasActivePlan = Array.from(planMap.values()).some(
       (p) =>
         p.status === 'active' &&
@@ -789,53 +847,68 @@ function reconcileStates(prev, incoming) {
           p.userName === updatedCurrentUser.name)
     );
     if (!hasActivePlan) {
-      const userApprovedDep = mergedDeposits.find(
-        (d) =>
-          d.status === 'APPROVED' &&
-          (d.userId === updatedCurrentUser.id ||
-            d.userName === updatedCurrentUser.name ||
-            (d.userPhone && d.userPhone === updatedCurrentUser.phone))
+      // Check if user has an existing plan in pending_approval
+      const existingPendingPlan = Array.from(planMap.values()).find(
+        (p) =>
+          p.status === 'pending_approval' &&
+          (p.userId === updatedCurrentUser.id ||
+            p.userName === updatedCurrentUser.name ||
+            (updatedCurrentUser.phone && p.userPhone === updatedCurrentUser.phone))
       );
-      if (userApprovedDep) {
-        const incomingApprovedPlan = (incoming.plans || []).find(
-          (p) =>
-            p.depositRef === userApprovedDep.id &&
-            p.status === 'active' &&
-            (p.userId === updatedCurrentUser.id ||
-              p.userName === updatedCurrentUser.name ||
-              (userApprovedDep.userPhone && p.userPhone === userApprovedDep.userPhone))
+      if (existingPendingPlan) {
+        planMap.set(existingPendingPlan.id, { ...existingPendingPlan, status: 'active', startDate: new Date().toISOString() });
+        changed = true;
+      } else {
+        const userApprovedDep = mergedDeposits.find(
+          (d) =>
+            d.status === 'APPROVED' &&
+            (d.userId === updatedCurrentUser.id ||
+              d.userName === updatedCurrentUser.name ||
+              (d.userPhone && d.userPhone === updatedCurrentUser.phone))
         );
-        if (incomingApprovedPlan) {
-          planMap.set(incomingApprovedPlan.id, incomingApprovedPlan);
-          changed = true;
-        } else {
-          const calc = calculateEarnings(userApprovedDep.amount, userApprovedDep.planMonths || 1, 1.0);
-          const startDate = new Date();
-          const totalDays = userApprovedDep.planDays || (userApprovedDep.planMonths || 1) * 30;
-          const maturityDate = new Date();
-          maturityDate.setDate(startDate.getDate() + totalDays);
-          const autoPlan = {
-            id: `PLN-${Math.floor(1000 + Math.random() * 9000)}`,
-            userId: updatedCurrentUser.id,
-            userName: updatedCurrentUser.name,
-            userPhone: updatedCurrentUser.phone || '',
-            title: userApprovedDep.planTitle || 'Membership Plan',
-            amount: userApprovedDep.amount,
-            months: userApprovedDep.planMonths || 1,
-            days: totalDays,
-            startDate: startDate.toISOString(),
-            maturityDate: maturityDate.toISOString(),
-            totalExpectedGain: calc.estimatedTotalIncome,
-            estimatedTotalIncome: calc.estimatedTotalIncome,
-            dailyQuota: calc.estimatedDailyIncome,
-            earnedSoFar: 0,
-            status: 'active',
-            isUpgrade: userApprovedDep.isUpgrade,
-            depositRef: userApprovedDep.id,
-            utr: userApprovedDep.utr,
-          };
-          planMap.set(autoPlan.id, autoPlan);
-          changed = true;
+        if (userApprovedDep) {
+          const incomingApprovedPlan = (incoming.plans || []).find(
+            (p) =>
+              p.depositRef === userApprovedDep.id &&
+              p.status === 'active' &&
+              (p.userId === updatedCurrentUser.id ||
+                p.userName === updatedCurrentUser.name ||
+                (userApprovedDep.userPhone && p.userPhone === userApprovedDep.userPhone))
+          );
+          if (incomingApprovedPlan) {
+            planMap.set(incomingApprovedPlan.id, incomingApprovedPlan);
+            changed = true;
+          } else {
+            const calc = calculateEarnings(userApprovedDep.amount, userApprovedDep.planMonths || 1, 1.0);
+            const startDate = new Date();
+            const totalDays = userApprovedDep.planDays || (userApprovedDep.planMonths || 1) * 30;
+            const maturityDate = new Date();
+            maturityDate.setDate(startDate.getDate() + totalDays);
+            const isTrial = Boolean(userApprovedDep.isTrial || userApprovedDep.amount === 300 || totalDays === 3);
+            const autoPlan = {
+              id: `PLN-${Math.floor(1000 + Math.random() * 9000)}`,
+              userId: updatedCurrentUser.id,
+              userName: updatedCurrentUser.name,
+              userPhone: updatedCurrentUser.phone || '',
+              title: userApprovedDep.planTitle || (isTrial ? '⚡ 3-Day Special Trial Pass' : `${totalDays} Days Tier Plan`),
+              amount: userApprovedDep.amount,
+              months: userApprovedDep.planMonths || 1,
+              days: totalDays,
+              startDate: startDate.toISOString(),
+              maturityDate: maturityDate.toISOString(),
+              totalExpectedGain: isTrial ? 11 : calc.estimatedTotalIncome,
+              estimatedTotalIncome: isTrial ? 11 : calc.estimatedTotalIncome,
+              dailyQuota: isTrial ? 3.67 : calc.estimatedDailyIncome,
+              earnedSoFar: 0,
+              status: 'active',
+              isUpgrade: Boolean(userApprovedDep.isUpgrade),
+              isTrial: isTrial,
+              depositRef: userApprovedDep.id,
+              utr: userApprovedDep.utr,
+            };
+            planMap.set(autoPlan.id, autoPlan);
+            changed = true;
+          }
         }
       }
     }
@@ -843,16 +916,61 @@ function reconcileStates(prev, incoming) {
 
   const mergedPlans = Array.from(planMap.values());
 
+  // 6. Reconcile transactions with deposit & withdrawal statuses
+  let updatedTxns = prev.transactions || [];
+  let txnsChanged = false;
+
+  mergedDeposits.forEach((dep) => {
+    updatedTxns = updatedTxns.map((t) => {
+      const isMatch = (t.depositRef && t.depositRef === dep.id) || (t.meta && (t.meta.includes(dep.id) || (dep.utr && t.meta.includes(dep.utr))));
+      if (isMatch && t.type === 'DEPOSIT') {
+        if (dep.status === 'APPROVED' && t.status !== 'COMPLETED') {
+          txnsChanged = true;
+          return { ...t, status: 'COMPLETED', title: dep.isUpgrade ? 'Membership Plan Upgrade' : 'Membership Tier Subscription' };
+        }
+        if (dep.status === 'REJECTED' && t.status !== 'REJECTED') {
+          txnsChanged = true;
+          return { ...t, status: 'REJECTED', meta: `${t.meta} • Rejected: ${dep.rejectionReason || 'Declined'}` };
+        }
+      }
+      return t;
+    });
+  });
+
+  mergedWithdrawals.forEach((wdr) => {
+    updatedTxns = updatedTxns.map((t) => {
+      const isMatch = (t.withdrawalRef && t.withdrawalRef === wdr.id) || t.id === wdr.id || (t.meta && t.meta.includes(wdr.id));
+      if (isMatch && (t.type === 'WITHDRAWAL' || t.type === 'PRINCIPAL_WITHDRAWAL')) {
+        if (wdr.status === 'APPROVED' && t.status !== 'COMPLETED') {
+          txnsChanged = true;
+          return { ...t, status: 'COMPLETED', utr: wdr.disbursedUtr, meta: `${t.meta} • Disbursed IMPS UTR: ${wdr.disbursedUtr || 'IMPS-REF'}` };
+        }
+        if (wdr.status === 'REJECTED' && t.status !== 'REJECTED') {
+          txnsChanged = true;
+          return { ...t, status: 'REJECTED', meta: `${t.meta} • Rejected: ${wdr.rejectionReason || 'Declined'}` };
+        }
+      }
+      return t;
+    });
+  });
+
+  if (txnsChanged) {
+    changed = true;
+  }
+
   if (!changed) return prev;
 
   return {
     ...prev,
     allUsers: mergedUsers,
     user: updatedCurrentUser,
+    rewardWallet: updatedRewardWallet,
+    totalWithdrawn: updatedTotalWithdrawn,
     depositRequests: mergedDeposits,
     withdrawalRequests: mergedWithdrawals,
     passwordResetRequests: mergedResets,
     plans: mergedPlans,
+    transactions: updatedTxns,
     paymentSettings: incoming.paymentSettings ? { ...prev.paymentSettings, ...incoming.paymentSettings } : prev.paymentSettings,
     adminAnnouncement: incoming.adminAnnouncement ? { ...prev.adminAnnouncement, ...incoming.adminAnnouncement } : prev.adminAnnouncement,
     adminPassword: incoming.adminPassword || prev.adminPassword,
@@ -1249,6 +1367,50 @@ export function AppProvider({ children }) {
     }
     prevUserRef.current = cur;
   }, [state.user]);
+
+  // 5. Real-Time Deposit Approval & Rejection Watcher
+  const prevDepositsRef = React.useRef(state.depositRequests);
+  useEffect(() => {
+    const prevDeps = prevDepositsRef.current || [];
+    const curDeps = state.depositRequests || [];
+    if (state.user) {
+      curDeps.forEach((d) => {
+        const isMine = d.userId === state.user.id || (state.user.phone && d.userPhone === state.user.phone);
+        if (isMine) {
+          const old = prevDeps.find((p) => p.id === d.id);
+          if (old && old.status === 'PENDING' && d.status === 'APPROVED') {
+            showToast(`🎉 Payment of ₹${d.amount.toLocaleString()} verified & APPROVED by Admin! Membership tier unlocked.`, 'success');
+            triggerCelebration();
+          } else if (old && old.status === 'PENDING' && d.status === 'REJECTED') {
+            showToast(`⚠️ Deposit of ₹${d.amount.toLocaleString()} was REJECTED: ${d.rejectionReason || 'Invalid UTR reference'}.`, 'error');
+          }
+        }
+      });
+    }
+    prevDepositsRef.current = curDeps;
+  }, [state.depositRequests, state.user]);
+
+  // 6. Real-Time Withdrawal Disbursal & Rejection Watcher
+  const prevWithdrawalsRef = React.useRef(state.withdrawalRequests);
+  useEffect(() => {
+    const prevWdrs = prevWithdrawalsRef.current || [];
+    const curWdrs = state.withdrawalRequests || [];
+    if (state.user) {
+      curWdrs.forEach((w) => {
+        const isMine = w.userId === state.user.id || (state.user.phone && w.userPhone === state.user.phone);
+        if (isMine) {
+          const old = prevWdrs.find((p) => p.id === w.id);
+          if (old && old.status === 'PENDING' && w.status === 'APPROVED') {
+            showToast(`🎉 Payout of ₹${w.amount.toLocaleString()} has been DISBURSED to your account! IMPS Ref: ${w.disbursedUtr || 'IMPS-SUCCESS'}`, 'success');
+            triggerCelebration();
+          } else if (old && old.status === 'PENDING' && w.status === 'REJECTED') {
+            showToast(`⚠️ Withdrawal of ₹${w.amount.toLocaleString()} was REJECTED: ${w.rejectionReason || 'Declined'}. Funds refunded to your Task Wallet.`, 'error');
+          }
+        }
+      });
+    }
+    prevWithdrawalsRef.current = curWdrs;
+  }, [state.withdrawalRequests, state.user]);
 
   /* =========================================================================
      AUTOMATIC 00:00 MIDNIGHT WATCHER
@@ -1689,9 +1851,15 @@ export function AppProvider({ children }) {
         return p;
       });
 
+      const newWallet = +(prev.rewardWallet + numReward).toFixed(2);
+      const updatedCurUser = prev.user ? { ...prev.user, walletBalance: newWallet } : prev.user;
+      const updatedUsers = (prev.allUsers || []).map((u) => u.id === prev.user?.id ? { ...u, walletBalance: newWallet } : u);
+
       return {
         ...prev,
-        rewardWallet: +(prev.rewardWallet + numReward).toFixed(2),
+        user: updatedCurUser,
+        allUsers: updatedUsers,
+        rewardWallet: newWallet,
         tasksCompletedToday: {
           ...prev.tasksCompletedToday,
           [taskId]: numReward,
@@ -1700,6 +1868,8 @@ export function AppProvider({ children }) {
         plans: updatedPlans,
       };
     });
+
+    broadcastState({ allUsers: (state.allUsers || []).map((u) => u.id === state.user?.id ? { ...u, walletBalance: +(state.rewardWallet + numReward).toFixed(2) } : u) });
 
     showToast(`+${formatINR(numReward)} credited to your Task Wallet!${multLabel}`);
     triggerCelebration();
@@ -1784,6 +1954,8 @@ export function AppProvider({ children }) {
 
     const newTxn = {
       id: `TXN-${Math.floor(100000 + Math.random() * 900000)}`,
+      userId: state.user?.id || 'USR-GUEST',
+      withdrawalRef: newWithdrawalRequest.id,
       type: 'WITHDRAWAL',
       title: 'Task Reward Withdrawal Request',
       amount: amount,
@@ -1794,10 +1966,15 @@ export function AppProvider({ children }) {
     };
 
     const updatedWdrs = [newWithdrawalRequest, ...(state.withdrawalRequests || [])];
+    const newWallet = Math.max(0, +(state.rewardWallet - amount).toFixed(2));
+    const updatedCurUser = state.user ? { ...state.user, walletBalance: newWallet } : state.user;
+    const updatedUsers = (state.allUsers || []).map((u) => u.id === state.user?.id ? { ...u, walletBalance: newWallet } : u);
 
     setState((prev) => ({
       ...prev,
-      rewardWallet: +(prev.rewardWallet - amount).toFixed(2),
+      user: updatedCurUser,
+      allUsers: updatedUsers,
+      rewardWallet: newWallet,
       totalWithdrawn: +(prev.totalWithdrawn + amount).toFixed(2),
       lastWithdrawalTime: new Date().toISOString(),
       withdrawalRequests: updatedWdrs,
@@ -1805,7 +1982,7 @@ export function AppProvider({ children }) {
     }));
 
     // Real-Time Cross-Tab & Cross-Device broadcast
-    broadcastState({ withdrawalRequests: updatedWdrs });
+    broadcastState({ withdrawalRequests: updatedWdrs, allUsers: updatedUsers, transactions: [newTxn, ...state.transactions] });
     dispatchApi('/api/withdrawal/submit', newWithdrawalRequest);
 
     showToast(`Withdrawal of ₹${amount.toLocaleString()} submitted! Verification within 5–15 mins.`);
@@ -2287,16 +2464,32 @@ export function AppProvider({ children }) {
       updatedPlans = [approvedPlan, ...updatedPlans.filter((p) => p.depositRef !== userPendingDep.id)];
     }
 
+    const updatedTxns = (state.transactions || []).map((t) => {
+      if (t.type === 'DEPOSIT') {
+        const matchDep = userPendingDep && ((t.depositRef && t.depositRef === userPendingDep.id) || (t.meta && (t.meta.includes(userPendingDep.id) || t.meta.includes(userPendingDep.utr))));
+        const matchUser = t.userId === userId || (targetUser && (t.userName === targetUser.name || (targetUser.phone && t.meta?.includes(targetUser.phone))));
+        if (matchDep || (matchUser && t.status === 'PENDING')) {
+          return {
+            ...t,
+            status: 'COMPLETED',
+            title: userPendingDep?.isUpgrade ? 'Membership Plan Upgrade' : 'Membership Tier Subscription',
+          };
+        }
+      }
+      return t;
+    });
+
     setState((prev) => ({
       ...prev,
       allUsers: updatedUsers,
       user: updatedCurUser,
       plans: updatedPlans,
       depositRequests: updatedDeposits,
+      transactions: updatedTxns,
     }));
 
     // Real-Time Broadcast & Backend Sync
-    broadcastState({ allUsers: updatedUsers, plans: updatedPlans, depositRequests: updatedDeposits });
+    broadcastState({ allUsers: updatedUsers, plans: updatedPlans, depositRequests: updatedDeposits, transactions: updatedTxns });
     dispatchApi('/api/user/status', { userId, status: 'ACTIVE' });
     if (userPendingDep) {
       dispatchApi('/api/deposit/review', { depositId: userPendingDep.id, action: 'APPROVE' });
@@ -2605,15 +2798,23 @@ export function AppProvider({ children }) {
     const updatedDeposits = (state.depositRequests || []).map((d) =>
       d.id === depositId ? { ...d, status: 'REJECTED', rejectionReason: rejReason } : d
     );
+    const updatedTxns = (state.transactions || []).map((t) => {
+      const isMatch = (t.depositRef && t.depositRef === depositId) || (t.meta && t.meta.includes(depositId));
+      if (isMatch && t.type === 'DEPOSIT') {
+        return { ...t, status: 'REJECTED', meta: `${t.meta} • Rejected: ${rejReason}` };
+      }
+      return t;
+    });
 
     setState((prev) => ({
       ...prev,
       plans: updatedPlans,
       depositRequests: updatedDeposits,
+      transactions: updatedTxns,
     }));
 
     // Real-Time Cross-Tab & Cross-Device broadcast
-    broadcastState({ depositRequests: updatedDeposits, plans: updatedPlans });
+    broadcastState({ depositRequests: updatedDeposits, plans: updatedPlans, transactions: updatedTxns });
     dispatchApi('/api/deposit/review', { depositId, action: 'REJECT', reason: rejReason });
 
     showToast(`Deposit ${depositId} REJECTED. Reason: ${rejReason}`, 'error');
@@ -2624,14 +2825,22 @@ export function AppProvider({ children }) {
     const updatedWdrs = (state.withdrawalRequests || []).map((w) =>
       w.id === withdrawalId ? { ...w, status: 'APPROVED', disbursedUtr: utr } : w
     );
+    const updatedTxns = (state.transactions || []).map((t) => {
+      const isMatch = (t.withdrawalRef && t.withdrawalRef === withdrawalId) || t.id === withdrawalId || (t.meta && t.meta.includes(withdrawalId));
+      if (isMatch && (t.type === 'WITHDRAWAL' || t.type === 'PRINCIPAL_WITHDRAWAL')) {
+        return { ...t, status: 'COMPLETED', utr: utr, meta: `${t.meta} • Disbursed IMPS UTR: ${utr}` };
+      }
+      return t;
+    });
 
     setState((prev) => ({
       ...prev,
       withdrawalRequests: updatedWdrs,
+      transactions: updatedTxns,
     }));
 
     // Real-Time Cross-Tab & Cross-Device broadcast
-    broadcastState({ withdrawalRequests: updatedWdrs });
+    broadcastState({ withdrawalRequests: updatedWdrs, transactions: updatedTxns });
     dispatchApi('/api/withdrawal/review', { withdrawalId, action: 'APPROVE', utr });
 
     showToast(`Withdrawal ${withdrawalId} APPROVED & Disbursed! IMPS UTR: ${utr}`);
@@ -2648,15 +2857,39 @@ export function AppProvider({ children }) {
       w.id === withdrawalId ? { ...w, status: 'REJECTED', rejectionReason: rejReason } : w
     );
 
+    // Update user in allUsers
+    const updatedUsers = (state.allUsers || []).map((u) => {
+      if (u.id === req.userId || (u.phone && req.userPhone && u.phone === req.userPhone)) {
+        return {
+          ...u,
+          walletBalance: +((u.walletBalance || 0) + refundAmount).toFixed(2),
+        };
+      }
+      return u;
+    });
+
+    const isCurrent = state.user && (req.userId === state.user.id || (state.user.phone && req.userPhone === state.user.phone));
+
+    const updatedTxns = (state.transactions || []).map((t) => {
+      const isMatch = (t.withdrawalRef && t.withdrawalRef === withdrawalId) || t.id === withdrawalId || (t.meta && t.meta.includes(withdrawalId));
+      if (isMatch && (t.type === 'WITHDRAWAL' || t.type === 'PRINCIPAL_WITHDRAWAL')) {
+        return { ...t, status: 'REJECTED', meta: `${t.meta} • Rejected: ${rejReason}` };
+      }
+      return t;
+    });
+
     setState((prev) => ({
       ...prev,
-      rewardWallet: +(prev.rewardWallet + refundAmount).toFixed(2),
-      totalWithdrawn: Math.max(0, +(prev.totalWithdrawn - refundAmount).toFixed(2)),
+      allUsers: updatedUsers,
+      user: isCurrent ? { ...prev.user, walletBalance: +(prev.rewardWallet + refundAmount).toFixed(2) } : prev.user,
+      rewardWallet: isCurrent ? +(prev.rewardWallet + refundAmount).toFixed(2) : prev.rewardWallet,
+      totalWithdrawn: isCurrent ? Math.max(0, +(prev.totalWithdrawn - refundAmount).toFixed(2)) : prev.totalWithdrawn,
       withdrawalRequests: updatedWdrs,
+      transactions: updatedTxns,
     }));
 
     // Real-Time Cross-Tab & Cross-Device broadcast
-    broadcastState({ withdrawalRequests: updatedWdrs });
+    broadcastState({ withdrawalRequests: updatedWdrs, allUsers: updatedUsers, transactions: updatedTxns });
     dispatchApi('/api/withdrawal/review', { withdrawalId, action: 'REJECT', reason: rejReason });
 
     showToast(`Withdrawal ${withdrawalId} REJECTED. Funds reverted to user wallet.`, 'error');

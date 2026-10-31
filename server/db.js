@@ -85,24 +85,46 @@ export const db = {
     return loadDb();
   },
 
+  resetState(newState) {
+    memoryDb = { ...DEFAULT_STATE, ...(newState || {}) };
+    saveDb();
+    return memoryDb;
+  },
+
   syncState(incoming) {
     const current = loadDb();
     if (!incoming) return current;
 
-    // Merge allUsers by ID
+    // Merge allUsers by ID with status & balance protection
     const userMap = new Map();
     (current.allUsers || []).forEach(u => userMap.set(u.id, u));
     (incoming.allUsers || []).forEach(u => {
       if (!userMap.has(u.id)) {
         userMap.set(u.id, u);
       } else {
-        // Keep the one with latest activity or active status
         const existing = userMap.get(u.id);
-        userMap.set(u.id, { ...existing, ...u });
+        // Never downgrade an ACTIVE or SUSPENDED status to PENDING
+        const finalStatus = (existing.status === 'ACTIVE' && (u.status === 'PENDING_ACTIVATION' || u.status === 'PENDING'))
+          ? 'ACTIVE'
+          : (existing.status === 'SUSPENDED' && (u.status === 'PENDING_ACTIVATION' || u.status === 'PENDING'))
+          ? 'SUSPENDED'
+          : (u.status || existing.status);
+        const finalActivated = existing.isActivated || u.isActivated || finalStatus === 'ACTIVE';
+        const finalDeposited = Math.max(existing.totalDeposited || 0, u.totalDeposited || 0);
+        const finalWallet = u.walletBalance !== undefined ? u.walletBalance : existing.walletBalance;
+
+        userMap.set(u.id, {
+          ...existing,
+          ...u,
+          status: finalStatus,
+          isActivated: finalActivated,
+          totalDeposited: finalDeposited,
+          walletBalance: finalWallet,
+        });
       }
     });
 
-    // Merge deposit requests by ID
+    // Merge deposit requests by ID with decision protection
     const depMap = new Map();
     (current.depositRequests || []).forEach(d => depMap.set(d.id, d));
     (incoming.depositRequests || []).forEach(d => {
@@ -110,11 +132,16 @@ export const db = {
         depMap.set(d.id, d);
       } else {
         const existing = depMap.get(d.id);
-        depMap.set(d.id, { ...existing, ...d });
+        if ((existing.status === 'APPROVED' || existing.status === 'REJECTED') && d.status === 'PENDING') {
+          // Keep authoritative approved/rejected decision
+          depMap.set(d.id, { ...d, ...existing });
+        } else {
+          depMap.set(d.id, { ...existing, ...d });
+        }
       }
     });
 
-    // Merge withdrawal requests by ID
+    // Merge withdrawal requests by ID with decision protection
     const wdrMap = new Map();
     (current.withdrawalRequests || []).forEach(w => wdrMap.set(w.id, w));
     (incoming.withdrawalRequests || []).forEach(w => {
@@ -122,7 +149,12 @@ export const db = {
         wdrMap.set(w.id, w);
       } else {
         const existing = wdrMap.get(w.id);
-        wdrMap.set(w.id, { ...existing, ...w });
+        if ((existing.status === 'APPROVED' || existing.status === 'REJECTED') && w.status === 'PENDING') {
+          // Keep authoritative approved/rejected decision
+          wdrMap.set(w.id, { ...w, ...existing });
+        } else {
+          wdrMap.set(w.id, { ...existing, ...w });
+        }
       }
     });
 
@@ -138,7 +170,7 @@ export const db = {
       }
     });
 
-    // Merge plans
+    // Merge plans with active status protection
     const planMap = new Map();
     (current.plans || []).forEach(p => planMap.set(p.id, p));
     (incoming.plans || []).forEach(p => {
@@ -146,7 +178,12 @@ export const db = {
         planMap.set(p.id, p);
       } else {
         const existing = planMap.get(p.id);
-        planMap.set(p.id, { ...existing, ...p });
+        if (existing.status === 'active' && p.status === 'pending_approval') {
+          // Keep active status
+          planMap.set(p.id, { ...p, ...existing, status: 'active' });
+        } else {
+          planMap.set(p.id, { ...existing, ...p });
+        }
       }
     });
 
@@ -189,7 +226,7 @@ export const db = {
       return { success: false, message: 'An account already exists with this Email or Mobile Number.' };
     }
 
-    const newId = `USR-${Math.floor(1000 + Math.random() * 9000)}`;
+    const newId = userData.id || `USR-${Math.floor(1000 + Math.random() * 9000)}`;
     const myOwnRefCode = (userData.name.replace(/[^a-zA-Z]/g, '').toUpperCase().slice(0, 4) || 'USER') + Math.floor(100 + Math.random() * 900);
 
     const sponsorCode = (userData.referredBy || userData.referralCode || '').trim().toUpperCase();
@@ -293,6 +330,14 @@ export const db = {
                 utr: pendingDep.utr,
               };
               current.plans = [approvedPlan, ...(current.plans || []).filter(p => p.depositRef !== pendingDep.id && !(p.userId === u.id && p.status === 'pending_approval'))];
+            } else {
+              // Also unlock any existing pending plan for this user
+              current.plans = (current.plans || []).map(p => {
+                if ((p.userId === u.id || (u.phone && p.userPhone === u.phone)) && p.status === 'pending_approval') {
+                  return { ...p, status: 'active', startDate: new Date().toISOString() };
+                }
+                return p;
+              });
             }
           }
         }
@@ -372,7 +417,7 @@ export const db = {
         utr: req.utr,
       };
 
-      current.plans = [approvedPlan, ...(current.plans || []).filter(p => p.depositRef !== req.id)];
+      current.plans = [approvedPlan, ...(current.plans || []).filter(p => p.depositRef !== req.id && !(p.userId === req.userId && p.status === 'pending_approval'))];
 
       // Activate User
       current.allUsers = (current.allUsers || []).map(u => {
@@ -393,6 +438,7 @@ export const db = {
     } else {
       req.status = 'REJECTED';
       req.rejectionReason = reason || 'Payment not verified';
+      current.plans = (current.plans || []).filter(p => p.depositRef !== req.id);
       saveDb();
       return { success: true, status: 'REJECTED', reason: req.rejectionReason };
     }
@@ -417,6 +463,18 @@ export const db = {
     };
 
     current.withdrawalRequests = [newReq, ...(current.withdrawalRequests || [])];
+
+    // Deduct user wallet balance in allUsers on server
+    current.allUsers = (current.allUsers || []).map(u => {
+      if (u.id === newReq.userId || (u.phone && newReq.userPhone && u.phone === newReq.userPhone)) {
+        return {
+          ...u,
+          walletBalance: Math.max(0, +((u.walletBalance || 0) - newReq.amount).toFixed(2)),
+        };
+      }
+      return u;
+    });
+
     saveDb();
     return { success: true, withdrawal: newReq };
   },
@@ -434,6 +492,16 @@ export const db = {
     } else {
       req.status = 'REJECTED';
       req.rejectionReason = reason || 'Declined by Admin';
+      // Refund user in allUsers
+      current.allUsers = (current.allUsers || []).map(u => {
+        if (u.id === req.userId || (u.phone && req.userPhone && u.phone === req.userPhone)) {
+          return {
+            ...u,
+            walletBalance: +((u.walletBalance || 0) + req.amount).toFixed(2),
+          };
+        }
+        return u;
+      });
       saveDb();
       return { success: true, status: 'REJECTED', reason: req.rejectionReason };
     }

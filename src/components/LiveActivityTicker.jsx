@@ -202,7 +202,7 @@ export default function LiveActivityTicker() {
         height: '30px',
         overflow: 'hidden',
         position: 'relative',
-        marginBottom: '1rem',
+        marginBottom: '0.65rem',
         userSelect: 'none'
       }}
     >

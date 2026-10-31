@@ -34,7 +34,8 @@ export default function DailyStreakWidget({ onOpenDeposit }) {
     isUserActivated,
     freeTrialStatus,
     setState,
-    showToast
+    showToast,
+    t
   } = useApp();
 
   const streak = loginStreak || {
@@ -137,10 +138,10 @@ export default function DailyStreakWidget({ onOpenDeposit }) {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
               <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#f8fafc' }}>
-                30-Day Progressive Daily Login Streak
+                {t ? t('daily_login_bonus') : '30-Day Progressive Daily Login Streak'}
               </h3>
               <span className="badge badge-gold" style={{ fontSize: '0.7rem' }}>
-                🔥 Day {claimedToday ? (currentDay > 1 ? currentDay - 1 : 30) : currentDay} of 30
+                🔥 {t ? t('streak_day_progress', { day: claimedToday ? (currentDay > 1 ? currentDay - 1 : 30) : currentDay, total: 30 }) : `Day ${claimedToday ? (currentDay > 1 ? currentDay - 1 : 30) : currentDay} of 30`}
               </span>
               <span className={`badge ${userMembershipTier?.badgeClass || 'badge-cyan'}`} style={{ fontSize: '0.7rem' }}>
                 {userMembershipTier?.tierBadge || 'Starter'} • {loginMultiplier}× Deposit Multiplier
@@ -630,7 +631,7 @@ export default function DailyStreakWidget({ onOpenDeposit }) {
               }}
             >
               <CalendarCheck size={16} />
-              <span>Claimed for Today ✓ (Day {currentDay === 30 ? 1 : currentDay + 1} unlocks tomorrow)</span>
+              <span>{t ? t('streak_claimed_today') : 'Claimed for Today ✓'} (Day {currentDay === 30 ? 1 : currentDay + 1} unlocks tomorrow)</span>
             </div>
           ) : (
             <button 
@@ -644,7 +645,7 @@ export default function DailyStreakWidget({ onOpenDeposit }) {
               }}
             >
               <Sparkles size={18} />
-              <span>Claim Day {currentDay} Bonus (+₹{currentReward}.00) Now</span>
+              <span>{t ? t('streak_claim_now', { day: currentDay }) : `Claim Day ${currentDay} Bonus`} (+₹{currentReward}.00)</span>
             </button>
           )}
         </div>

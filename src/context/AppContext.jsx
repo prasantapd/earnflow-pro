@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useMemo } from '
 import confetti from 'canvas-confetti';
 import { calculateEarnings, getNextSundayStatus, extractYoutubeId, getMembershipTier, formatINR, TRIAL_PLAN, DEFAULT_PLAN_MULTIPLIERS } from '../utils/finance';
 import { getLocalDateString, getUpcoming7Days } from '../utils/dateUtils';
+import { SUPPORTED_LANGUAGES, LANGUAGE_OPTIONS, t as translateFn } from '../utils/translations';
 
 const AppContext = createContext();
 
@@ -603,6 +604,7 @@ const INITIAL_STATE = {
   streakRewards: STREAK_REWARDS,
   planMultipliers: DEFAULT_PLAN_MULTIPLIERS,
   passwordResetRequests: [],
+  language: 'en',
 };
 
 /* =========================================================================
@@ -899,6 +901,28 @@ export function AppProvider({ children }) {
   });
 
   const [toastMessage, setToastMessage] = useState(null);
+
+  // Internationalization: language state (default 'en', supported: 'en', 'hi', 'bn')
+  const [language, setLanguageState] = useState(() => {
+    try {
+      const savedLang = localStorage.getItem('taskcoin_lang');
+      if (savedLang && SUPPORTED_LANGUAGES.includes(savedLang)) {
+        return savedLang;
+      }
+    } catch (e) {}
+    return 'en';
+  });
+
+  const setLanguage = (newLang) => {
+    if (SUPPORTED_LANGUAGES.includes(newLang)) {
+      setLanguageState(newLang);
+      try {
+        localStorage.setItem('taskcoin_lang', newLang);
+      } catch (e) {}
+    }
+  };
+
+  const t = (key, params) => translateFn(key, language, params);
 
   // Derive current user's personal plans strictly isolated by user ID or phone/name
   const userPlans = useMemo(() => {
@@ -2828,6 +2852,12 @@ export function AppProvider({ children }) {
         // Admin Broadcast Announcement
         adminAnnouncement: state.adminAnnouncement || INITIAL_ADMIN_ANNOUNCEMENT,
         updateAdminAnnouncement,
+        // Multi-Language Support (English, Hindi, Bengali)
+        language,
+        setLanguage,
+        t,
+        SUPPORTED_LANGUAGES,
+        LANGUAGE_OPTIONS,
       }}
     >
       {children}

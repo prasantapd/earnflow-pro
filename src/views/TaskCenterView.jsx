@@ -59,7 +59,8 @@ export default function TaskCenterView({ onOpenWithdraw, onOpenDeposit, setActiv
     isUserActivated,
     canUserEarn,
     freeTrialStatus,
-    showToast
+    showToast,
+    t
   } = useApp();
 
   // Active modals for daily tasks
@@ -364,9 +365,9 @@ export default function TaskCenterView({ onOpenWithdraw, onOpenDeposit, setActiv
                 <Clock size={12} /> Auto-Switch at 00:00 hrs: {timeUntilMidnight?.formatted || '00h 00m 00s'}
               </span>
             </div>
-            <h2 style={{ fontSize: '1.9rem', fontWeight: 800 }}>Task Earning Center</h2>
+            <h2 style={{ fontSize: '1.9rem', fontWeight: 800 }}>{t ? t('task_center_title') : 'Task Earning Center'}</h2>
             <p style={{ fontSize: '0.9rem', color: '#cbd5e1', maxWidth: '650px', marginTop: '0.3rem' }}>
-              Tasks are scheduled daily and automatically change at <strong>00:00 hrs midnight</strong>. Complete today's tasks to claim verified rewards. Withdraw anytime 24/7!
+              {t ? t('task_center_subtitle') : "Tasks are scheduled daily and automatically change at 00:00 hrs midnight. Complete today's tasks to claim verified rewards. Withdraw anytime 24/7!"}
             </p>
           </div>
 
@@ -380,7 +381,7 @@ export default function TaskCenterView({ onOpenWithdraw, onOpenDeposit, setActiv
             }}
           >
             <div style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>
-              Reward Wallet
+              {t ? t('wallet_task_rewards') : 'Reward Wallet'}
             </div>
             <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#34d399', margin: '0.2rem 0' }}>
               {formatINR(rewardWallet)}
@@ -391,7 +392,7 @@ export default function TaskCenterView({ onOpenWithdraw, onOpenDeposit, setActiv
               onClick={onOpenWithdraw}
               disabled={rewardWallet < 100}
             >
-              <ArrowDownCircle size={14} /> Withdraw (Min ₹100)
+              <ArrowDownCircle size={14} /> {t ? t('action_withdraw') : 'Withdraw (Min ₹100)'}
             </button>
           </div>
         </div>
@@ -634,7 +635,7 @@ export default function TaskCenterView({ onOpenWithdraw, onOpenDeposit, setActiv
                       style={{ width: '100%', color: '#34d399', cursor: 'default' }}
                       disabled
                     >
-                      <CheckCircle2 size={16} /> Completed (+{formatINR(typeof safeCompletedTasks[task.id] === 'number' ? safeCompletedTasks[task.id] : effectiveReward)})
+                      <CheckCircle2 size={16} /> {t ? t('task_completed') : 'Completed'} (+{formatINR(typeof safeCompletedTasks[task.id] === 'number' ? safeCompletedTasks[task.id] : effectiveReward)})
                     </button>
                   ) : !canUserEarn ? (
                     <button 

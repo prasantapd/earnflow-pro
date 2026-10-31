@@ -1115,14 +1115,5 @@
     "50000": 25
   },
   "version": 1,
-  "lastUpdated": 1793435678056,
-  "tasks": [
-    {
-      "id": "task-test-custom",
-      "title": "Custom Admin Task",
-      "baseReward": 75,
-      "multiplierOverride": 2,
-      "duration": 45
-    }
-  ]
+  "lastUpdated": 1793436354122
 }

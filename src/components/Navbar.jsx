@@ -16,7 +16,8 @@ import {
   Smartphone,
   GitBranch,
   LogOut,
-  Clock
+  Clock,
+  Globe
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { formatINR } from '../utils/finance';
@@ -32,7 +33,11 @@ export default function Navbar({ activeTab, setActiveTab, onOpenAuth, onOpenPayo
     toggleForceSunday,
     currentRole,
     switchRole,
-    logoutUser
+    logoutUser,
+    language,
+    setLanguage,
+    t,
+    LANGUAGE_OPTIONS
   } = useApp();
 
   const [secretClicks, setSecretClicks] = React.useState(0);
@@ -118,21 +123,21 @@ export default function Navbar({ activeTab, setActiveTab, onOpenAuth, onOpenPayo
                 className={`nav-btn ${activeTab === 'dashboard' ? 'active' : ''}`}
                 onClick={() => setActiveTab('dashboard')}
               >
-                <TrendingUp size={15} /> Dashboard
+                <TrendingUp size={15} /> {t ? t('nav_dashboard') : 'Dashboard'}
               </button>
 
               <button 
                 className={`nav-btn ${activeTab === 'plans' ? 'active' : ''}`}
                 onClick={() => setActiveTab('plans')}
               >
-                <Layers size={15} /> Plans
+                <Layers size={15} /> {t ? t('nav_plans') : 'Plans'}
               </button>
 
               <button 
                 className={`nav-btn ${activeTab === 'tasks' ? 'active' : ''}`}
                 onClick={() => setActiveTab('tasks')}
               >
-                <PlayCircle size={15} color="#fbbf24" /> Tasks
+                <PlayCircle size={15} color="#fbbf24" /> {t ? t('nav_tasks') : 'Tasks'}
                 <span className="badge badge-gold" style={{ fontSize: '0.58rem', padding: '1px 5px' }}>EARN</span>
               </button>
 
@@ -140,32 +145,75 @@ export default function Navbar({ activeTab, setActiveTab, onOpenAuth, onOpenPayo
                 className={`nav-btn ${activeTab === 'withdraw' ? 'active' : ''}`}
                 onClick={() => setActiveTab('withdraw')}
               >
-                <ArrowDownCircle size={15} /> Payouts
+                <ArrowDownCircle size={15} /> {t ? t('nav_withdraw') : 'Payouts'}
               </button>
 
               <button 
                 className={`nav-btn ${activeTab === 'history' ? 'active' : ''}`}
                 onClick={() => setActiveTab('history')}
               >
-                <History size={15} /> History
+                <History size={15} /> {t ? t('nav_history') : 'History'}
               </button>
 
               <button 
                 className={`nav-btn ${activeTab === 'mlm' ? 'active' : ''}`}
                 onClick={() => setActiveTab('mlm')}
               >
-                <GitBranch size={15} /> MLM Network
+                <GitBranch size={15} /> {t ? t('nav_network') : 'MLM Network'}
               </button>
             </nav>
           ) : (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#f87171', fontWeight: 700, fontSize: '0.85rem' }}>
               <ShieldAlert size={16} />
-              <span>ADMINISTRATOR GOVERNANCE PORTAL</span>
+              <span>{t ? t('nav_admin') : 'ADMINISTRATOR GOVERNANCE PORTAL'}</span>
             </div>
           )}
 
           {/* Right Header Controls */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', flexShrink: 0 }}>
+            {/* Multi-Language Selector (English / हिंदी / বাংলা) */}
+            <div 
+              style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                background: 'rgba(255, 255, 255, 0.05)', 
+                borderRadius: '20px', 
+                padding: '2px', 
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                gap: '2px'
+              }}
+              aria-label="Language Selector"
+            >
+              <div style={{ display: 'flex', alignItems: 'center', padding: '0 4px', color: '#94a3b8' }}>
+                <Globe size={13} />
+              </div>
+              {(LANGUAGE_OPTIONS || []).map((opt) => (
+                <button
+                  key={opt.code}
+                  type="button"
+                  onClick={() => setLanguage && setLanguage(opt.code)}
+                  style={{
+                    border: 'none',
+                    background: language === opt.code ? 'rgba(16, 185, 129, 0.28)' : 'transparent',
+                    color: language === opt.code ? '#34d399' : '#94a3b8',
+                    fontWeight: language === opt.code ? 700 : 500,
+                    fontSize: '0.72rem',
+                    padding: '0.2rem 0.45rem',
+                    borderRadius: '14px',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.2rem',
+                  }}
+                  title={opt.label}
+                >
+                  <span style={{ fontSize: '0.75rem' }}>{opt.flag}</span>
+                  <span>{opt.native}</span>
+                </button>
+              ))}
+            </div>
+
             {/* Quick Wallet Pill (Investor Mode) */}
             {currentRole === 'investor' && user && (
               <button 

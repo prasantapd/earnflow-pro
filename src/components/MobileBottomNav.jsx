@@ -10,7 +10,7 @@ import {
 import { useApp } from '../context/AppContext';
 
 export default function MobileBottomNav({ activeTab, setActiveTab, onOpenAuth }) {
-  const { currentRole, switchRole } = useApp();
+  const { currentRole, switchRole, t } = useApp();
 
   return (
     <nav className="mobile-bottom-nav">
@@ -22,7 +22,7 @@ export default function MobileBottomNav({ activeTab, setActiveTab, onOpenAuth })
         }}
       >
         <TrendingUp size={20} />
-        <span>Home</span>
+        <span>{t ? t('mobile_nav_dashboard') : 'Home'}</span>
       </button>
 
       <button 
@@ -33,7 +33,7 @@ export default function MobileBottomNav({ activeTab, setActiveTab, onOpenAuth })
         }}
       >
         <Layers size={20} />
-        <span>Plans</span>
+        <span>{t ? t('mobile_nav_plans') : 'Plans'}</span>
       </button>
 
       <button 
@@ -47,7 +47,7 @@ export default function MobileBottomNav({ activeTab, setActiveTab, onOpenAuth })
           <PlayCircle size={22} color="#fbbf24" />
           <span style={{ position: 'absolute', top: -3, right: -3, width: 7, height: 7, borderRadius: '50%', background: '#10b981' }} />
         </div>
-        <span style={{ color: '#fbbf24', fontWeight: 700 }}>Earn</span>
+        <span style={{ color: '#fbbf24', fontWeight: 700 }}>{t ? t('mobile_nav_tasks') : 'Earn'}</span>
       </button>
 
       <button 
@@ -58,7 +58,7 @@ export default function MobileBottomNav({ activeTab, setActiveTab, onOpenAuth })
         }}
       >
         <GitBranch size={20} />
-        <span>2:1 MLM</span>
+        <span>{t ? t('nav_network') : '2:1 MLM'}</span>
       </button>
 
       {currentRole === 'admin' ? (
@@ -81,7 +81,7 @@ export default function MobileBottomNav({ activeTab, setActiveTab, onOpenAuth })
           }}
         >
           <ArrowDownCircle size={20} />
-          <span>Payout</span>
+          <span>{t ? t('mobile_nav_withdraw') : 'Payout'}</span>
         </button>
       )}
     </nav>

@@ -53,6 +53,19 @@ function MainApp() {
     window.addEventListener('popstate', checkAdminQuery);
 
     const handleKeyDown = (e) => {
+      // Prevent browser Backspace from navigating back or closing the page if not in an editable field
+      if (e.key === 'Backspace') {
+        const target = e.target;
+        const isEditable = target && (
+          target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable
+        );
+        if (!isEditable || target.readOnly || target.disabled) {
+          e.preventDefault();
+        }
+      }
+
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'A' || e.key === 'a')) {
         e.preventDefault();
         setIsAdminLoginOpen(true);

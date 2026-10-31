@@ -24,24 +24,47 @@ export default function WithdrawView({ onOpenWithdraw, onOpenPayout, onWithdrawP
     sundayStatus, 
     forceSunday, 
     toggleForceSunday,
-    plans 
+    plans,
+    activePlan,
+    hasUsedTrialWithdrawal,
+    freeTrialStatus
   } = useApp();
 
   const maturedPlans = plans.filter((p) => p.status === 'matured');
   const activePlans = plans.filter((p) => p.status === 'active');
   const withdrawnPlans = plans.filter((p) => p.status === 'principal_withdrawn');
 
+  const isTrialMember = Boolean(activePlan && (activePlan.isTrial || activePlan.amount === 300));
+  const isFreeTrialOnly = Boolean(freeTrialStatus?.isFreeTrial && !activePlan);
+  const isZeroMinEligible = isTrialMember && !hasUsedTrialWithdrawal;
+
   return (
     <div>
       {/* Header */}
       <div style={{ marginBottom: '2rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem', flexWrap: 'wrap' }}>
           <span className="badge badge-emerald">⚡ 24/7 Instant Payouts Active</span>
+          {isTrialMember && (
+            <span className="badge" style={{ background: '#ec4899', color: '#ffffff', fontWeight: 700 }}>
+              ⚡ 3-Day Trial Pass: Zero Min. Withdrawal
+            </span>
+          )}
+          {isFreeTrialOnly && (
+            <span className="badge badge-amber">
+              🎁 2-Day Free Pass: Withdrawals Locked
+            </span>
+          )}
           <span className="badge badge-gold">Instant IMPS Disbursal</span>
         </div>
         <h2 style={{ fontSize: '1.8rem', fontWeight: 800 }}>Withdrawal & Settlement Center</h2>
         <p style={{ fontSize: '0.9rem', color: '#94a3b8', maxWidth: '750px' }}>
-          Withdraw your accumulated task rewards anytime, any day directly to your UPI or Bank Account (Min. ₹100 • 1 payout per 24 hours). Matured plan principals are unlocked automatically after their lock-in period.
+          {isZeroMinEligible ? (
+            <>As a <strong>3-Day Trial Member</strong>, you have <strong>no minimum withdrawal requirement</strong>! Withdraw whatever you want directly to your UPI (allowed once in a lifetime).</>
+          ) : isFreeTrialOnly ? (
+            <>Welcome to the 2-Day Free Trial! You can earn daily login bonuses and complete tasks for 2 days. <strong>Withdrawal unlocks upon activating the ₹300 Trial Plan or a regular Membership Plan.</strong></>
+          ) : (
+            <>Withdraw your accumulated task rewards anytime, any day directly to your UPI or Bank Account (Min. ₹100 • 1 payout per 24 hours). Matured plan principals are unlocked automatically after their lock-in period.</>
+          )}
         </p>
       </div>
 
@@ -53,19 +76,19 @@ export default function WithdrawView({ onOpenWithdraw, onOpenPayout, onWithdrawP
           style={{ 
             padding: '2rem', 
             background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(6, 182, 212, 0.08) 100%)',
-            borderColor: 'rgba(16, 185, 129, 0.35)',
+            borderColor: isZeroMinEligible ? 'rgba(236, 72, 153, 0.5)' : 'rgba(16, 185, 129, 0.35)',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between'
           }}
         >
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
               <span style={{ fontSize: '0.78rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700 }}>
                 Accumulated Task Rewards
               </span>
-              <span className="badge badge-emerald">
-                🟢 24/7 Instant Payouts
+              <span className={`badge ${isZeroMinEligible ? 'badge-pink' : 'badge-emerald'}`}>
+                {isZeroMinEligible ? '⚡ Zero Min Limit (1× Lifetime)' : '🟢 24/7 Instant Payouts'}
               </span>
             </div>
 
@@ -74,10 +97,10 @@ export default function WithdrawView({ onOpenWithdraw, onOpenPayout, onWithdrawP
             </div>
 
             <p style={{ fontSize: '0.85rem', color: '#cbd5e1', marginBottom: '1.5rem' }}>
-              Earned from watching videos, streaming music, daily login streaks, and casual games. Ready for instant 24/7 cash-out.
+              Earned from watching videos, streaming music, daily login streaks, and casual games.
             </p>
 
-            {/* 24/7 Payout Rules Box */}
+            {/* Payout Rules Box */}
             <div 
               style={{ 
                 padding: '1rem', 
@@ -87,31 +110,88 @@ export default function WithdrawView({ onOpenWithdraw, onOpenPayout, onWithdrawP
                 marginBottom: '1.5rem'
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem', color: '#34d399' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem', color: isZeroMinEligible ? '#ec4899' : '#34d399' }}>
                 <Clock size={16} />
                 <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>
-                  24/7 Instant IMPS Disbursal Engine
+                  {isZeroMinEligible ? '⚡ Trial Pass Instant Disbursal' : '24/7 Instant IMPS Disbursal Engine'}
                 </span>
               </div>
               <div style={{ fontSize: '0.78rem', color: '#94a3b8', lineHeight: 1.5 }}>
-                • <strong>Anytime Disbursal:</strong> Withdraw 24/7/365 to your verified UPI ID or Bank Account.<br />
-                • <strong>Min. Withdrawal:</strong> ₹100 per request (zero platform fees).<br />
-                • <strong>Daily Frequency:</strong> 1 withdrawal per 24 hours per user.
+                {isZeroMinEligible ? (
+                  <>
+                    • <strong>Zero Minimum:</strong> Trial members can withdraw whatever amount they want (no ₹100 limit)!<br />
+                    • <strong>Lifetime Frequency:</strong> Exactly 1 withdrawal allowed per trial member.<br />
+                    • <strong>Instant Disbursal:</strong> Directly to your verified UPI ID or Bank Account.
+                  </>
+                ) : isTrialMember && hasUsedTrialWithdrawal ? (
+                  <>
+                    • <strong>Trial Withdrawal Used:</strong> You have completed your 1 lifetime trial withdrawal.<br />
+                    • <strong>Upgrade Required:</strong> Upgrade to a regular Membership Plan (₹2,000+) to unlock unlimited 24/7 withdrawals!
+                  </>
+                ) : isFreeTrialOnly ? (
+                  <>
+                    • <strong>Free New User Pass:</strong> Earning enabled for 2 consecutive days.<br />
+                    • <strong>Withdrawal Requirement:</strong> Activate the ₹300 3-Day Trial Plan or a regular Membership Plan to withdraw your earnings.
+                  </>
+                ) : (
+                  <>
+                    • <strong>Anytime Disbursal:</strong> Withdraw 24/7/365 to your verified UPI ID or Bank Account.<br />
+                    • <strong>Min. Withdrawal:</strong> ₹100 per request (zero platform fees).<br />
+                    • <strong>Daily Frequency:</strong> 1 withdrawal per 24 hours per user.
+                  </>
+                )}
               </div>
             </div>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <button 
-              className="btn btn-primary btn-lg"
-              onClick={onOpenWithdraw}
-              disabled={rewardWallet < 100}
-            >
-              <ArrowDownCircle size={18} />
-              <span>Withdraw Task Rewards ({formatINR(rewardWallet)})</span>
-            </button>
+            {isFreeTrialOnly ? (
+              <button 
+                className="btn btn-secondary btn-lg"
+                onClick={() => {
+                  if (onOpenWithdraw) onOpenWithdraw();
+                }}
+                style={{ background: 'rgba(245, 158, 11, 0.15)', borderColor: 'rgba(245, 158, 11, 0.4)', color: '#fbbf24' }}
+              >
+                <Lock size={18} />
+                <span>Activate Plan to Withdraw ({formatINR(rewardWallet)})</span>
+              </button>
+            ) : isTrialMember && hasUsedTrialWithdrawal ? (
+              <button 
+                className="btn btn-secondary btn-lg"
+                disabled
+                style={{ opacity: 0.65, cursor: 'not-allowed' }}
+              >
+                <Lock size={18} />
+                <span>Trial Withdrawal Used (Upgrade Plan)</span>
+              </button>
+            ) : isZeroMinEligible ? (
+              <button 
+                className="btn btn-primary btn-lg"
+                onClick={onOpenWithdraw}
+                disabled={rewardWallet <= 0}
+                style={{ background: 'linear-gradient(135deg, #ec4899 0%, #db2777 100%)', borderColor: '#f472b6' }}
+              >
+                <ArrowDownCircle size={18} />
+                <span>Withdraw Any Balance ({formatINR(rewardWallet)})</span>
+              </button>
+            ) : (
+              <button 
+                className="btn btn-primary btn-lg"
+                onClick={onOpenWithdraw}
+                disabled={rewardWallet < 100}
+              >
+                <ArrowDownCircle size={18} />
+                <span>Withdraw Task Rewards ({formatINR(rewardWallet)})</span>
+              </button>
+            )}
 
-            {rewardWallet < 100 && (
+            {isFreeTrialOnly && (
+              <div style={{ fontSize: '0.75rem', color: '#fbbf24', textAlign: 'center' }}>
+                🎁 2-Day Free Trial allows earning for 2 days. Activate the ₹300 Trial or Membership Plan to cash out!
+              </div>
+            )}
+            {!isZeroMinEligible && !isFreeTrialOnly && rewardWallet < 100 && (
               <div style={{ fontSize: '0.75rem', color: '#fbbf24', textAlign: 'center' }}>
                 ⚠️ Minimum withdrawal is ₹100. Complete daily tasks or streak bonus to reach ₹100!
               </div>

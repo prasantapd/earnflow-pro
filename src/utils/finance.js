@@ -47,19 +47,53 @@ export const LOCKIN_PERIODS = [
   },
 ];
 
+export const TRIAL_PLAN = {
+  id: 'trial_3d',
+  months: 0.1,
+  days: 3,
+  label: '3 Days Trial',
+  badge: '⚡ Special 3-Day Trial',
+  amount: 300,
+  tierFactor: 0.055,
+  description: '3-Day introductory trial pass (Once per mobile number). Full ₹2,000 plan task earnings & login rewards + flexible 1-time lifetime withdrawal with ZERO minimum threshold!',
+  color: '#ec4899',
+};
+
+export const DEFAULT_PLAN_MULTIPLIERS = {
+  300: 1.0,     // 3-Day Trial Pass: strictly 1.0x (same as ₹2,000 plan)
+  2000: 1.0,    // Base Anchor Plan: strictly 1.0x (all tasks & login streak authored at this rate)
+  3500: 1.75,   // Starter Sprint
+  5000: 2.5,    // Growth Tier
+  7500: 3.75,   // Momentum Tier
+  10000: 5.0,   // Alpha Executive (admin can change to 5.5x, 6.0x, etc.)
+  25000: 12.5,  // Elite VIP
+  50000: 25.0,  // Diamond VIP
+};
+
 /**
  * Calculates Estimated Income based on deposit tier and lock-in duration.
  * Strictly outputs estimated monetary income without percentage return claims.
  */
-export function calculateEarnings(principal, months, factor) {
+export function calculateEarnings(principal, months, factor, days = null, customMultiplier = null) {
   const p = Number(principal) || 2000;
-  const m = Number(months) || 1;
+  const isTrial = p === 300 || days === 3;
+  const m = isTrial ? 0.1 : (Number(months) || 1);
   const f = Number(factor) || (m === 1 ? 0.055 : m === 3 ? 0.060 : m === 6 ? 0.065 : 0.070);
 
+  // If a custom multiplier is given (e.g. 5.5x or 6.0x for 10000 vs baseline 5.0x),
+  // boost proportional gain accordingly
+  let boostFactor = 1.0;
+  if (!isTrial && customMultiplier && customMultiplier > 0 && p >= 2000) {
+    const baselineMult = p / 2000;
+    if (baselineMult > 0) {
+      boostFactor = customMultiplier / baselineMult;
+    }
+  }
+
   const totalGainMultiplier = Math.pow(1 + f, m) - 1;
-  const estimatedTotalIncome = Math.round(p * totalGainMultiplier);
+  const estimatedTotalIncome = isTrial ? 11 : Math.round(p * totalGainMultiplier * boostFactor);
   const estimatedMaturityValue = p + estimatedTotalIncome;
-  const totalDays = m * 30;
+  const totalDays = days || (isTrial ? 3 : m * 30);
   const estimatedDailyIncome = +(estimatedTotalIncome / totalDays).toFixed(2);
   const estimatedMonthlyIncome = +(estimatedDailyIncome * 30).toFixed(2);
   const estimatedWeeklyIncome = +(estimatedDailyIncome * 7).toFixed(2);
@@ -77,6 +111,7 @@ export function calculateEarnings(principal, months, factor) {
     estimatedMonthlyIncome,
     estimatedWeeklyIncome,
     weeklySundayQuota: estimatedWeeklyIncome,
+    isTrial,
   };
 }
 
@@ -152,66 +187,126 @@ export function extractYoutubeId(url) {
 
 /**
  * Calculates membership tier, login streak bonus multiplier, and task income multiplier
- * based on the user's active membership plan deposit amount / tier.
+ * based on the user's active membership plan deposit amount / tier, or 2-day free registration pass.
+ * Fully supports dynamic Admin-configured multipliers per plan tier!
  */
-export function getMembershipTier(activePlan) {
-  if (!activePlan || activePlan.status !== 'active') {
+export function getMembershipTier(activePlan, freeTrialStatus = null, planMultipliers = null) {
+  const multipliers = { ...DEFAULT_PLAN_MULTIPLIERS, ...(planMultipliers || {}) };
+  // Crucial rule: Base anchor (₹2,000) and 3-Day Trial (₹300) are strictly 1.0x (anchor for tasks and streak)
+  multipliers[2000] = 1.0;
+  multipliers[300] = 1.0;
+
+  // 1. Active Paid Plan
+  if (activePlan && activePlan.status === 'active') {
+    const amount = Number(activePlan.amount) || 2000;
+    const isTrial = Boolean(activePlan.isTrial || amount === 300 || (activePlan.id && String(activePlan.id).includes('trial')));
+
+    if (isTrial) {
+      return {
+        tierKey: 'trial_300',
+        tierName: '⚡ 3-Day Trial Member (₹300)',
+        tierBadge: '⚡ 3-Day Trial (₹300)',
+        depositAmount: 300,
+        loginMultiplier: 1.0, // EXACT SAME AS ₹2,000 PLAN
+        taskMultiplier: 1.0,  // EXACT SAME AS ₹2,000 PLAN
+        color: '#ec4899',
+        badgeClass: 'badge-pink',
+        isTrial: true,
+        description: '3-Day Trial Member: Full ₹2,000 base rate rewards active (1.0× multiplier). Flexible 1-time lifetime withdrawal with ZERO minimum requirement!',
+      };
+    }
+
+    // Dynamic Multiplier determined by Admin configuration
+    let customMult = multipliers[amount];
+    if (customMult === undefined) {
+      // Find closest lower preset or compute default proportional
+      const presets = Object.keys(multipliers).map(Number).sort((a, b) => b - a);
+      const match = presets.find(pr => amount >= pr);
+      if (match && match >= 2000) {
+        customMult = multipliers[match];
+      } else {
+        customMult = +(amount / 2000).toFixed(2);
+      }
+    }
+    const finalMultiplier = Math.max(1.0, Number(customMult) || 1.0);
+
+    let tierKey = 'basic_2000';
+    let tierBadge = '🥉 Basic Member (₹2k)';
+    let badgeClass = 'badge-cyan';
+    let color = '#06b6d4';
+
+    if (amount >= 50000) {
+      tierKey = 'vip_50000';
+      tierBadge = '👑 Diamond VIP (₹50k)';
+      badgeClass = 'badge-emerald';
+      color = '#10b981';
+    } else if (amount >= 25000) {
+      tierKey = 'vip_25000';
+      tierBadge = '💎 Elite VIP (₹25k)';
+      badgeClass = 'badge-indigo';
+      color = '#8b5cf6';
+    } else if (amount >= 10000) {
+      tierKey = 'alpha_10000';
+      tierBadge = '⚡ Alpha Executive (₹10k)';
+      badgeClass = 'badge-gold';
+      color = '#f59e0b';
+    } else if (amount >= 7500) {
+      tierKey = 'momentum_7500';
+      tierBadge = '🔥 Momentum Tier (₹7.5k)';
+      badgeClass = 'badge-gold';
+      color = '#f59e0b';
+    } else if (amount >= 5000) {
+      tierKey = 'growth_5000';
+      tierBadge = '🚀 Growth Tier (₹5k)';
+      badgeClass = 'badge-cyan';
+      color = '#38bdf8';
+    } else if (amount >= 3500) {
+      tierKey = 'sprint_3500';
+      tierBadge = '⚡ Starter Sprint (₹3.5k)';
+      badgeClass = 'badge-cyan';
+      color = '#06b6d4';
+    }
+
     return {
-      tierKey: 'starter',
-      tierName: 'Free Visitor (No Plan)',
-      tierBadge: 'No Active Plan',
-      depositAmount: 0,
-      loginMultiplier: 1.0,
-      taskMultiplier: 1.0,
-      color: '#94a3b8',
-      badgeClass: 'badge-zinc',
-      description: 'Subscribe to a plan (min ₹2,000) to activate daily login streak and task rewards.',
+      tierKey,
+      tierName: `${tierBadge} • ${finalMultiplier}× Multiplier`,
+      tierBadge,
+      depositAmount: amount,
+      loginMultiplier: finalMultiplier,
+      taskMultiplier: finalMultiplier,
+      color,
+      badgeClass,
+      description: `${finalMultiplier}× Multiplier configured by Admin based on ₹${amount.toLocaleString()} active deposit (Base: ₹2,000 = 1.0×).`,
     };
   }
 
-  const amount = Number(activePlan.amount) || 2000;
-  // Multiplier directly scales from basic deposit (₹2,000 = 1.0x, ₹5,000 = 2.5x, ₹10,000 = 5.0x, etc.)
-  const rawMultiplier = +(amount / 2000).toFixed(2);
-  const loginMultiplier = Math.max(1.0, rawMultiplier);
-  const taskMultiplier = Math.max(1.0, rawMultiplier);
-
-  let tierKey = 'basic_2000';
-  let tierBadge = '🥉 Basic Member (₹2k)';
-  let badgeClass = 'badge-cyan';
-  let color = '#06b6d4';
-
-  if (amount >= 50000) {
-    tierKey = 'vip_50000';
-    tierBadge = '👑 Diamond VIP (₹50k)';
-    badgeClass = 'badge-emerald';
-    color = '#10b981';
-  } else if (amount >= 25000) {
-    tierKey = 'vip_25000';
-    tierBadge = '💎 Elite VIP (₹25k)';
-    badgeClass = 'badge-indigo';
-    color = '#8b5cf6';
-  } else if (amount >= 10000) {
-    tierKey = 'alpha_10000';
-    tierBadge = '⚡ Alpha Executive (₹10k)';
-    badgeClass = 'badge-gold';
-    color = '#f59e0b';
-  } else if (amount >= 5000) {
-    tierKey = 'growth_5000';
-    tierBadge = '🚀 Growth Tier (₹5k)';
-    badgeClass = 'badge-cyan';
-    color = '#38bdf8';
+  // 2. First-Time Registration Free Trial (Day 1 & Day 2)
+  if (freeTrialStatus && freeTrialStatus.canEarn) {
+    return {
+      tierKey: 'free_trial_2d',
+      tierName: `🎁 New User Pass (Day ${freeTrialStatus.dayNumber} of 2)`,
+      tierBadge: `🎁 Free Pass (Day ${freeTrialStatus.dayNumber}/2)`,
+      depositAmount: 0,
+      loginMultiplier: 1.0, // EXACT SAME AS ₹2,000 PLAN
+      taskMultiplier: 1.0,  // EXACT SAME AS ₹2,000 PLAN
+      color: '#f59e0b',
+      badgeClass: 'badge-gold',
+      isFreeTrial: true,
+      description: `Welcome Pass: Complete daily tasks & claim login bonuses for 2 consecutive days. (Withdrawal requires ₹300 Trial or Membership Plan).`,
+    };
   }
 
+  // 3. Free Visitor (No active plan and free trial ended or guest)
   return {
-    tierKey,
-    tierName: `${tierBadge} • ${loginMultiplier}× Multiplier`,
-    tierBadge,
-    depositAmount: amount,
-    loginMultiplier,
-    taskMultiplier,
-    color,
-    badgeClass,
-    description: `${loginMultiplier}× Deposit Multiplier based on ₹${amount.toLocaleString()} active deposit (Base: ₹2,000).`,
+    tierKey: 'starter',
+    tierName: 'Free Visitor (No Plan)',
+    tierBadge: 'No Active Plan',
+    depositAmount: 0,
+    loginMultiplier: 1.0,
+    taskMultiplier: 1.0,
+    color: '#94a3b8',
+    badgeClass: 'badge-zinc',
+    description: 'Subscribe to the ₹300 3-Day Trial or a regular plan (min ₹2,000) to activate daily login streak and task rewards.',
   };
 }
 

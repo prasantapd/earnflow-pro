@@ -53,10 +53,11 @@ import {
   Coins,
   RotateCcw,
   Smartphone,
-  Wallet
+  Wallet,
+  Edit3,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { formatINR, formatDate } from '../utils/finance';
+import { formatINR, formatDate, DEFAULT_PLAN_MULTIPLIERS } from '../utils/finance';
 import { getLocalDateString, getUpcoming7Days, formatFullReadableDate, formatReadableDate } from '../utils/dateUtils';
 
 export default function AdminPanelView() {
@@ -105,14 +106,79 @@ export default function AdminPanelView() {
     // Daily Login Streak Configuration
     streakRewards,
     updateStreakRewards,
+    // Plan Multipliers Dynamic Control
+    planMultipliers,
+    updatePlanMultipliers,
     // Password Reset via SMS Requests
     passwordResetRequests,
     resolvePasswordReset
   } = useApp();
 
-  const [activeAdminTab, setActiveAdminTab] = useState('users'); // 'users', 'deposits', 'withdrawals', 'settings', 'tasks', 'payments', 'broadcast', 'security', 'streak', 'reset_requests'
+  const [activeAdminTab, setActiveAdminTab] = useState('users'); // 'users', 'deposits', 'withdrawals', 'settings', 'tasks', 'payments', 'broadcast', 'security', 'streak', 'multipliers', 'reset_requests'
   const [userSearch, setUserSearch] = useState('');
   const [userStatusFilter, setUserStatusFilter] = useState('ALL');
+
+  // Plan Multipliers Editor Local State
+  const [editableMultipliers, setEditableMultipliers] = useState(() => ({ ...(planMultipliers || DEFAULT_PLAN_MULTIPLIERS) }));
+  const [newCustomTierAmount, setNewCustomTierAmount] = useState('');
+  const [newCustomTierMult, setNewCustomTierMult] = useState('');
+
+  // Keep in sync when planMultipliers changes from context
+  React.useEffect(() => {
+    if (planMultipliers) {
+      setEditableMultipliers({ ...planMultipliers });
+    }
+  }, [planMultipliers]);
+
+  // Edit Task Modal State (for customizing any task on any date)
+  const [editTaskModal, setEditTaskModal] = useState({
+    isOpen: false,
+    targetDate: null,
+    task: null,
+    title: '',
+    category: '',
+    platform: '',
+    type: 'custom',
+    videoUrl: '',
+    actionUrl: '',
+    duration: 20,
+    reward: 35,
+    shareRequired: false,
+    sharePlatform: 'Facebook & Friends',
+    description: '',
+    multiplierOverride: '',
+  });
+
+  const handleSavePlanMultipliers = (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    updatePlanMultipliers(editableMultipliers);
+  };
+
+  const handleSaveEditedTask = (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!editTaskModal.task || !editTaskModal.targetDate) return;
+    const numReward = Number(editTaskModal.reward);
+    if (!numReward || numReward <= 0) {
+      showToast('Please enter a valid base reward amount for ₹2,000 members.', 'error');
+      return;
+    }
+    updateTaskForDate(editTaskModal.targetDate, editTaskModal.task.id, {
+      title: editTaskModal.title.trim(),
+      category: editTaskModal.category.trim(),
+      platform: editTaskModal.platform.trim(),
+      type: editTaskModal.type,
+      videoUrl: editTaskModal.videoUrl.trim(),
+      actionUrl: editTaskModal.actionUrl.trim(),
+      duration: Number(editTaskModal.duration) || 20,
+      reward: numReward,
+      shareRequired: editTaskModal.shareRequired,
+      sharePlatform: editTaskModal.sharePlatform,
+      description: editTaskModal.description.trim(),
+      multiplierOverride: editTaskModal.multiplierOverride ? Number(editTaskModal.multiplierOverride) : null,
+    });
+    setEditTaskModal({ isOpen: false, targetDate: null, task: null });
+    showToast(`Task "${editTaskModal.title}" updated successfully!`, 'success');
+  };
 
   // Daily Streak Rewards Editor Local State
   const [editableStreak, setEditableStreak] = useState(() => ({ ...(streakRewards || {}) }));
@@ -666,6 +732,19 @@ export default function AdminPanelView() {
           onClick={() => setActiveAdminTab('streak')}
         >
           <Flame size={16} color="#fbbf24" /> Daily Login Bonus Rates (Day 1–30)
+        </button>
+
+        <button
+          className={`btn ${activeAdminTab === 'multipliers' ? 'btn-primary' : 'btn-secondary'} btn-sm`}
+          onClick={() => setActiveAdminTab('multipliers')}
+          style={{ 
+            fontWeight: 800,
+            background: activeAdminTab === 'multipliers' ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' : undefined,
+            borderColor: activeAdminTab === 'multipliers' ? '#fbbf24' : undefined,
+            color: activeAdminTab === 'multipliers' ? '#ffffff' : undefined
+          }}
+        >
+          <Sparkles size={16} color="#fbbf24" /> 👑 Plan Multipliers (Admin Control)
         </button>
 
         <button
@@ -1828,93 +1907,142 @@ export default function AdminPanelView() {
                       <th style={{ padding: '0.75rem' }}>Task Name & Description</th>
                       <th style={{ padding: '0.75rem' }}>Category</th>
                       <th style={{ padding: '0.75rem' }}>Duration / Timer Rule</th>
-                      <th style={{ padding: '0.75rem' }}>Reward</th>
+                      <th style={{ padding: '0.75rem' }}>Base Reward (₹2,000 / 1.0×)</th>
+                      <th style={{ padding: '0.75rem' }}>₹10k Plan Preview ({Number(planMultipliers?.[10000] || 5.0)}×)</th>
                       <th style={{ padding: '0.75rem' }}>Status</th>
                       <th style={{ padding: '0.75rem', textAlign: 'center' }}>Admin Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {currentDayTasks.map((t) => (
-                      <tr key={t.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
-                        <td style={{ padding: '0.75rem' }}>
-                          <div style={{ width: 34, height: 34, borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: t.type === 'video' ? 'rgba(239, 68, 68, 0.2)' : t.type === 'walk' ? 'rgba(16, 185, 129, 0.2)' : t.type === 'slide3' ? 'rgba(99, 102, 241, 0.2)' : t.type === 'memory' ? 'rgba(59, 130, 246, 0.2)' : t.type === 'music' ? 'rgba(168, 85, 247, 0.2)' : 'rgba(245, 158, 11, 0.2)', color: t.type === 'video' ? '#f87171' : t.type === 'walk' ? '#34d399' : t.type === 'slide3' ? '#818cf8' : t.type === 'memory' ? '#60a5fa' : t.type === 'music' ? '#c084fc' : '#fbbf24' }}>
-                            {t.type === 'video' ? <Video size={17} /> : t.type === 'walk' ? <Footprints size={17} /> : t.type === 'slide3' ? <Grid size={17} /> : t.type === 'memory' ? <Brain size={17} /> : t.type === 'music' ? <Music size={17} /> : <Sparkles size={17} />}
-                          </div>
-                        </td>
-                        <td style={{ padding: '0.75rem' }}>
-                          <div style={{ fontWeight: 700, color: '#f8fafc', marginBottom: '0.15rem' }}>{t.title}</div>
-                          <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
-                            {t.description || 'Verified engagement task.'}
-                          </div>
-                          {t.videoUrl && (
-                            <a 
-                              href={t.videoUrl} 
-                              target="_blank" 
-                              rel="noreferrer" 
-                              style={{ fontSize: '0.72rem', color: '#60a5fa', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', textDecoration: 'none', marginTop: '0.2rem' }}
-                            >
-                              <ExternalLink size={10} /> {t.videoUrl}
-                            </a>
-                          )}
-                          {t.actionUrl && (
-                            <a 
-                              href={t.actionUrl} 
-                              target="_blank" 
-                              rel="noreferrer" 
-                              style={{ fontSize: '0.72rem', color: '#34d399', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', textDecoration: 'none', marginTop: '0.2rem' }}
-                            >
-                              <Globe size={10} /> {t.actionUrl}
-                            </a>
-                          )}
-                        </td>
-                        <td style={{ padding: '0.75rem' }}>
-                          <span className="badge badge-indigo" style={{ fontSize: '0.68rem' }}>
-                            {t.category || t.type}
-                          </span>
-                        </td>
-                        <td style={{ padding: '0.75rem' }}>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#fbbf24', fontWeight: 600 }}>
-                            <Clock size={12} /> {t.duration >= 60 ? `${Math.round(t.duration / 60)} min` : `${t.duration}s`}
-                          </span>
-                          {t.type === 'slide3' && <span style={{ fontSize: '0.68rem', color: '#f87171', display: 'block' }}>Strict 60s countdown</span>}
-                          {t.type === 'memory' && <span style={{ fontSize: '0.68rem', color: '#f87171', display: 'block' }}>Strict 60s countdown</span>}
-                          {t.type === 'walk' && <span style={{ fontSize: '0.68rem', color: '#34d399', display: 'block' }}>1,200 Steps Pedometer</span>}
-                          {t.shareRequired && <span style={{ fontSize: '0.68rem', color: '#60a5fa', display: 'block' }}>+ Mandatory Share</span>}
-                        </td>
-                        <td style={{ padding: '0.75rem', fontWeight: 800, color: '#34d399' }}>
-                          +{formatINR(t.reward)}
-                        </td>
-                        <td style={{ padding: '0.75rem' }}>
-                          <span className={`badge ${t.status === 'ACTIVE' ? 'badge-emerald' : 'badge-gold'}`} style={{ fontSize: '0.7rem' }}>
-                            {t.status === 'ACTIVE' ? '🟢 ACTIVE' : '⚪ PAUSED'}
-                          </span>
-                        </td>
-                        <td style={{ padding: '0.75rem', textAlign: 'center' }}>
-                          <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center' }}>
-                            <button
-                              className={`btn ${t.status === 'ACTIVE' ? 'btn-secondary' : 'btn-primary'} btn-sm`}
-                              style={{ fontSize: '0.72rem', padding: '0.25rem 0.6rem' }}
-                              onClick={() => toggleTaskStatusForDate(selectedScheduleDate, t.id)}
-                              title="Toggle whether users can see and complete this task"
-                            >
-                              {t.status === 'ACTIVE' ? 'Pause' : 'Activate'}
-                            </button>
-                            <button
-                              className="btn btn-danger btn-sm"
-                              style={{ fontSize: '0.72rem', padding: '0.25rem 0.5rem' }}
-                              onClick={() => {
-                                if (window.confirm(`Delete task "${t.title}" from ${selectedDayMeta.tag}?`)) {
-                                  deleteTaskForDate(selectedScheduleDate, t.id);
-                                }
-                              }}
-                              title="Delete task permanently"
-                            >
-                              <Trash2 size={13} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                    {currentDayTasks.map((t) => {
+                      const effectiveMult = Number(t.multiplierOverride) > 0 ? Number(t.multiplierOverride) : (Number(planMultipliers?.[10000]) || 5.0);
+                      const scaledPreview = Math.round((Number(t.reward) || 0) * effectiveMult);
+
+                      return (
+                        <tr key={t.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                          <td style={{ padding: '0.75rem' }}>
+                            <div style={{ width: 34, height: 34, borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: t.type === 'video' ? 'rgba(239, 68, 68, 0.2)' : t.type === 'walk' ? 'rgba(16, 185, 129, 0.2)' : t.type === 'slide3' ? 'rgba(99, 102, 241, 0.2)' : t.type === 'memory' ? 'rgba(59, 130, 246, 0.2)' : t.type === 'music' ? 'rgba(168, 85, 247, 0.2)' : 'rgba(245, 158, 11, 0.2)', color: t.type === 'video' ? '#f87171' : t.type === 'walk' ? '#34d399' : t.type === 'slide3' ? '#818cf8' : t.type === 'memory' ? '#60a5fa' : t.type === 'music' ? '#c084fc' : '#fbbf24' }}>
+                              {t.type === 'video' ? <Video size={17} /> : t.type === 'walk' ? <Footprints size={17} /> : t.type === 'slide3' ? <Grid size={17} /> : t.type === 'memory' ? <Brain size={17} /> : t.type === 'music' ? <Music size={17} /> : <Sparkles size={17} />}
+                            </div>
+                          </td>
+                          <td style={{ padding: '0.75rem' }}>
+                            <div style={{ fontWeight: 700, color: '#f8fafc', marginBottom: '0.15rem' }}>{t.title}</div>
+                            <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                              {t.description || 'Verified engagement task.'}
+                            </div>
+                            {t.videoUrl && (
+                              <a 
+                                href={t.videoUrl} 
+                                target="_blank" 
+                                rel="noreferrer" 
+                                style={{ fontSize: '0.72rem', color: '#60a5fa', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', textDecoration: 'none', marginTop: '0.2rem' }}
+                              >
+                                <ExternalLink size={10} /> {t.videoUrl}
+                              </a>
+                            )}
+                            {t.actionUrl && (
+                              <a 
+                                href={t.actionUrl} 
+                                target="_blank" 
+                                rel="noreferrer" 
+                                style={{ fontSize: '0.72rem', color: '#34d399', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', textDecoration: 'none', marginTop: '0.2rem' }}
+                              >
+                                <Globe size={10} /> {t.actionUrl}
+                              </a>
+                            )}
+                          </td>
+                          <td style={{ padding: '0.75rem' }}>
+                            <span className="badge badge-indigo" style={{ fontSize: '0.68rem' }}>
+                              {t.category || t.type}
+                            </span>
+                          </td>
+                          <td style={{ padding: '0.75rem' }}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#fbbf24', fontWeight: 600 }}>
+                              <Clock size={12} /> {t.duration >= 60 ? `${Math.round(t.duration / 60)} min` : `${t.duration}s`}
+                            </span>
+                            {t.type === 'slide3' && <span style={{ fontSize: '0.68rem', color: '#f87171', display: 'block' }}>Strict 60s countdown</span>}
+                            {t.type === 'memory' && <span style={{ fontSize: '0.68rem', color: '#f87171', display: 'block' }}>Strict 60s countdown</span>}
+                            {t.type === 'walk' && <span style={{ fontSize: '0.68rem', color: '#34d399', display: 'block' }}>1,200 Steps Pedometer</span>}
+                            {t.shareRequired && <span style={{ fontSize: '0.68rem', color: '#60a5fa', display: 'block' }}>+ Mandatory Share</span>}
+                          </td>
+                          <td style={{ padding: '0.75rem', fontWeight: 800, color: '#34d399' }}>
+                            +{formatINR(t.reward)}
+                            <span style={{ display: 'block', fontSize: '0.68rem', color: '#94a3b8', fontWeight: 500 }}>
+                              Base (₹2k / 1.0×)
+                            </span>
+                            {Number(t.multiplierOverride) > 0 && (
+                              <span className="badge badge-gold" style={{ fontSize: '0.62rem', marginTop: '2px' }}>
+                                ⭐ Fixed {t.multiplierOverride}×
+                              </span>
+                            )}
+                          </td>
+                          <td style={{ padding: '0.75rem', fontWeight: 800, color: '#fbbf24' }}>
+                            +{formatINR(scaledPreview)}
+                            <span style={{ display: 'block', fontSize: '0.68rem', color: '#94a3b8', fontWeight: 500 }}>
+                              {effectiveMult}× member payout
+                            </span>
+                          </td>
+                          <td style={{ padding: '0.75rem' }}>
+                            <span className={`badge ${t.status === 'ACTIVE' ? 'badge-emerald' : 'badge-gold'}`} style={{ fontSize: '0.7rem' }}>
+                              {t.status === 'ACTIVE' ? '🟢 ACTIVE' : '⚪ PAUSED'}
+                            </span>
+                          </td>
+                          <td style={{ padding: '0.75rem', textAlign: 'center' }}>
+                            <div style={{ display: 'flex', gap: '0.35rem', justifyContent: 'center' }}>
+                              <button
+                                type="button"
+                                className="btn btn-primary btn-sm"
+                                style={{ fontSize: '0.72rem', padding: '0.25rem 0.55rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}
+                                onClick={() => {
+                                  setEditTaskModal({
+                                    isOpen: true,
+                                    targetDate: selectedScheduleDate,
+                                    task: t,
+                                    title: t.title || '',
+                                    category: t.category || '',
+                                    platform: t.platform || 'TaskCoin App',
+                                    type: t.type || 'custom',
+                                    videoUrl: t.videoUrl || '',
+                                    actionUrl: t.actionUrl || '',
+                                    duration: t.duration || 20,
+                                    reward: t.reward || 35,
+                                    shareRequired: Boolean(t.shareRequired),
+                                    sharePlatform: t.sharePlatform || 'Facebook & Friends',
+                                    description: t.description || '',
+                                    multiplierOverride: t.multiplierOverride || '',
+                                  });
+                                }}
+                                title="Edit task reward, duration, rules, or multiplier"
+                              >
+                                <Edit3 size={11} /> Edit
+                              </button>
+                              <button
+                                type="button"
+                                className={`btn ${t.status === 'ACTIVE' ? 'btn-secondary' : 'btn-primary'} btn-sm`}
+                                style={{ fontSize: '0.72rem', padding: '0.25rem 0.55rem' }}
+                                onClick={() => toggleTaskStatusForDate(selectedScheduleDate, t.id)}
+                                title="Toggle whether users can see and complete this task"
+                              >
+                                {t.status === 'ACTIVE' ? 'Pause' : 'Activate'}
+                              </button>
+                              <button
+                                type="button"
+                                className="btn btn-danger btn-sm"
+                                style={{ fontSize: '0.72rem', padding: '0.25rem 0.45rem' }}
+                                onClick={() => {
+                                  if (window.confirm(`Delete task "${t.title}" from ${selectedDayMeta.tag}?`)) {
+                                    deleteTaskForDate(selectedScheduleDate, t.id);
+                                  }
+                                }}
+                                title="Delete task permanently"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               )}
@@ -2463,6 +2591,401 @@ export default function AdminPanelView() {
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* TAB: PLAN MULTIPLIERS CONTROLLER (ADMIN MASTER CONTROL) */}
+      {activeAdminTab === 'multipliers' && (
+        <div>
+          {/* Header & Quick Action Presets */}
+          <div 
+            className="glass-card" 
+            style={{ 
+              padding: '1.5rem', 
+              marginBottom: '1.5rem',
+              background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(168, 85, 247, 0.1) 50%, rgba(15, 23, 42, 0.95) 100%)',
+              border: '1.5px solid rgba(245, 158, 11, 0.4)',
+              borderRadius: '16px'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem', flexWrap: 'wrap' }}>
+                  <span className="badge badge-gold">
+                    <Sparkles size={12} /> Master Multiplier Engine
+                  </span>
+                  <span className="badge badge-cyan">₹2,000 Base Anchor (1.0×)</span>
+                  <span className="badge badge-pink">₹300 Trial Pass (1.0×)</span>
+                  <span className="badge badge-emerald">Admin Fully Customizable</span>
+                </div>
+                <h3 style={{ fontSize: '1.4rem', fontWeight: 800, margin: 0, color: '#f8fafc' }}>
+                  👑 মেম্বারশিপ প্ল্যান মাল্টিপ্লায়ার কন্ট্রোল (Plan Multipliers Manager)
+                </h3>
+                <p style={{ fontSize: '0.84rem', color: '#cbd5e1', margin: '0.35rem 0 0', maxWidth: '850px', lineHeight: 1.5 }}>
+                  অ্যাডমিন সমস্ত টাস্ক ও ডেইলি লগইন বোনাস তৈরি করবেন <strong>₹২,০০০ মেম্বারদের জন্য (১.০× বেস রেট)</strong>। বাকি মেম্বারদের গুণিতক কত হবে তা সম্পূর্ণ অ্যাডমিন নির্ধারণ করবেন। উদাহরণস্বরূপ: <strong>₹১০,০০০ প্ল্যানে ৫× এর বদলে অ্যাডমিন ৫.৫× বা ৬.০×</strong> দিতে পারেন। এখানে যেকোনো পরিবর্তন সাথে সাথে ইউজারের ডেইলি টাস্ক ইনকাম ও ডেইলি লগইন স্ট্রিকে কার্যকর হবে।
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => {
+                    setEditableMultipliers({ ...DEFAULT_PLAN_MULTIPLIERS });
+                    showToast('Reset to proportional defaults (10k=5.0x, 25k=12.5x, 50k=25x)');
+                  }}
+                  title="Reset to mathematical proportional defaults"
+                >
+                  <RotateCcw size={14} /> Reset Defaults
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => {
+                    setEditableMultipliers({
+                      ...editableMultipliers,
+                      10000: 5.5,
+                      25000: 13.8,
+                      50000: 27.5,
+                    });
+                    showToast('Applied +10% VIP Incentive boost (10k=5.5x, 25k=13.8x, 50k=27.5x)!');
+                  }}
+                >
+                  ⭐ VIP Boost (+10% / 10k=5.5×)
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-gold btn-sm"
+                  onClick={() => {
+                    setEditableMultipliers({
+                      ...editableMultipliers,
+                      10000: 6.0,
+                      25000: 15.0,
+                      50000: 30.0,
+                    });
+                    showToast('Applied Super Promo mode (10k=6.0×, 25k=15.0×, 50k=30.0×)!');
+                  }}
+                >
+                  🔥 Super Promo (10k=6.0×)
+                </button>
+              </div>
+            </div>
+
+            {/* Live Formula Banner */}
+            <div style={{ padding: '0.85rem 1.15rem', background: 'rgba(0, 0, 0, 0.35)', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', fontSize: '0.8rem' }}>
+              <div style={{ color: '#94a3b8' }}>
+                <strong style={{ color: '#fbbf24' }}>Earning Formula:</strong> User Reward = Base Reward (authored for ₹2,000 / 1.0×) × Plan Multiplier
+              </div>
+              <div style={{ color: '#34d399', fontWeight: 600 }}>
+                Sample ₹50 Video Task @ 10,000 Plan ({editableMultipliers[10000] || 5.0}×) = ₹{Math.round(50 * (Number(editableMultipliers[10000]) || 5.0))} Payout
+              </div>
+            </div>
+          </div>
+
+          {/* Form with Tiers List */}
+          <form onSubmit={handleSavePlanMultipliers}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.25rem', marginBottom: '1.5rem' }}>
+              {Object.keys(editableMultipliers)
+                .map(Number)
+                .sort((a, b) => a - b)
+                .map((amount) => {
+                  const currentMult = Number(editableMultipliers[amount]) || 1.0;
+                  const isAnchor2000 = amount === 2000;
+                  const isTrial300 = amount === 300;
+                  const isLocked = isAnchor2000 || isTrial300;
+
+                  return (
+                    <div 
+                      key={amount} 
+                      className="glass-card" 
+                      style={{ 
+                        padding: '1.25rem', 
+                        border: isLocked ? '1px solid rgba(255, 255, 255, 0.1)' : '1.5px solid rgba(245, 158, 11, 0.35)',
+                        background: isLocked ? 'rgba(255, 255, 255, 0.02)' : 'rgba(15, 23, 42, 0.75)',
+                        borderRadius: '14px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between'
+                      }}
+                    >
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span style={{ fontSize: '1.2rem', fontWeight: 900, color: '#f8fafc' }}>
+                              ₹{amount.toLocaleString()} Plan
+                            </span>
+                            {isTrial300 && (
+                              <span className="badge badge-pink" style={{ fontSize: '0.62rem' }}>
+                                3-Day Trial Pass
+                              </span>
+                            )}
+                            {isAnchor2000 && (
+                              <span className="badge badge-cyan" style={{ fontSize: '0.62rem' }}>
+                                1.0× Base Anchor
+                              </span>
+                            )}
+                          </div>
+                          <span 
+                            className={`badge ${isLocked ? 'badge-secondary' : 'badge-gold'}`} 
+                            style={{ fontSize: '0.78rem', fontWeight: 800, padding: '0.2rem 0.6rem' }}
+                          >
+                            {currentMult}× Multiplier
+                          </span>
+                        </div>
+
+                        {/* Description */}
+                        <div style={{ fontSize: '0.78rem', color: '#94a3b8', marginBottom: '1rem' }}>
+                          {isTrial300 && 'New user 3-day trial pass. Locked to identical 1.0× rewards as the ₹2,000 plan.'}
+                          {isAnchor2000 && 'Platform base anchor tier. All video tasks, games, and login streak bonuses are authored at this 1.0× baseline.'}
+                          {amount === 3500 && 'Starter Sprint tier. Default 1.75×, fully customizable by Admin.'}
+                          {amount === 5000 && 'Growth Tier. Default 2.5×, fully customizable by Admin.'}
+                          {amount === 7500 && 'Momentum Tier. Default 3.75×, fully customizable by Admin.'}
+                          {amount === 10000 && '⚡ Alpha Executive Tier. Customizable to 5.0×, 5.5×, 6.0× or any custom rate as per requirements.'}
+                          {amount === 25000 && 'Elite VIP Tier. Default 12.5×, fully customizable by Admin.'}
+                          {amount === 50000 && 'Diamond VIP Tier. Default 25.0×, fully customizable by Admin.'}
+                          {amount > 50000 || (amount !== 300 && amount !== 2000 && amount !== 3500 && amount !== 5000 && amount !== 7500 && amount !== 10000 && amount !== 25000 && amount !== 50000) ? 'Custom plan tier configured by Admin.' : null}
+                        </div>
+
+                        {/* Multiplier Stepper & Input */}
+                        <div style={{ marginBottom: '1rem' }}>
+                          <label className="form-label" style={{ fontSize: '0.76rem', marginBottom: '0.35rem' }}>
+                            <span>Multiplier Setting (×)</span>
+                            {isLocked && <span style={{ color: '#94a3b8' }}>Locked (1.0× Anchor)</span>}
+                          </label>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                            <input 
+                              type="number" 
+                              step="0.05"
+                              min="1.0"
+                              max="100.0"
+                              className="input-field" 
+                              disabled={isLocked}
+                              value={currentMult}
+                              onChange={(e) => {
+                                const val = Number(e.target.value);
+                                if (!isNaN(val) && val >= 1.0) {
+                                  setEditableMultipliers({
+                                    ...editableMultipliers,
+                                    [amount]: val
+                                  });
+                                }
+                              }}
+                              style={{ 
+                                fontWeight: 800, 
+                                fontSize: '1.1rem', 
+                                color: isLocked ? '#94a3b8' : '#fbbf24', 
+                                textAlign: 'center',
+                                maxWidth: '110px'
+                              }}
+                            />
+                            {!isLocked && (
+                              <div style={{ display: 'flex', gap: '0.3rem', flex: 1, flexWrap: 'wrap' }}>
+                                <button
+                                  type="button"
+                                  className="btn btn-secondary btn-sm"
+                                  style={{ padding: '0.35rem 0.55rem', fontSize: '0.72rem' }}
+                                  onClick={() => {
+                                    const nextVal = +(currentMult + 0.1).toFixed(2);
+                                    setEditableMultipliers({ ...editableMultipliers, [amount]: nextVal });
+                                  }}
+                                >
+                                  +0.1
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn btn-secondary btn-sm"
+                                  style={{ padding: '0.35rem 0.55rem', fontSize: '0.72rem' }}
+                                  onClick={() => {
+                                    const nextVal = +(currentMult + 0.5).toFixed(2);
+                                    setEditableMultipliers({ ...editableMultipliers, [amount]: nextVal });
+                                  }}
+                                >
+                                  +0.5
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn btn-secondary btn-sm"
+                                  style={{ padding: '0.35rem 0.55rem', fontSize: '0.72rem' }}
+                                  onClick={() => {
+                                    const nextVal = Math.max(1.0, +(currentMult - 0.5).toFixed(2));
+                                    setEditableMultipliers({ ...editableMultipliers, [amount]: nextVal });
+                                  }}
+                                >
+                                  -0.5
+                                </button>
+                                {amount === 10000 && (
+                                  <>
+                                    <button
+                                      type="button"
+                                      className="btn btn-gold btn-sm"
+                                      style={{ padding: '0.35rem 0.55rem', fontSize: '0.72rem', fontWeight: 800 }}
+                                      onClick={() => {
+                                        setEditableMultipliers({ ...editableMultipliers, 10000: 5.5 });
+                                      }}
+                                    >
+                                      5.5×
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="btn btn-gold btn-sm"
+                                      style={{ padding: '0.35rem 0.55rem', fontSize: '0.72rem', fontWeight: 800 }}
+                                      onClick={() => {
+                                        setEditableMultipliers({ ...editableMultipliers, 10000: 6.0 });
+                                      }}
+                                    >
+                                      6.0×
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Live Earning Simulation Table for this Tier */}
+                        <div style={{ padding: '0.75rem', background: 'rgba(0, 0, 0, 0.25)', borderRadius: '10px', fontSize: '0.74rem' }}>
+                          <div style={{ color: '#94a3b8', marginBottom: '0.35rem', fontWeight: 700 }}>
+                            Live Multiplied Rewards Preview:
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
+                            <span style={{ color: '#cbd5e1' }}>Base ₹50 Video Task:</span>
+                            <strong style={{ color: '#34d399' }}>+{formatINR(Math.round(50 * currentMult))}</strong>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
+                            <span style={{ color: '#cbd5e1' }}>Day 1 Login Bonus (₹1 base):</span>
+                            <strong style={{ color: '#fbbf24' }}>+{formatINR(+(1 * currentMult).toFixed(2))}</strong>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span style={{ color: '#cbd5e1' }}>Day 30 Finale Bonus (₹12 base):</span>
+                            <strong style={{ color: '#22d3ee' }}>+{formatINR(+(12 * currentMult).toFixed(2))}</strong>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Remove custom tier button (if not standard) */}
+                      {!isLocked && amount !== 3500 && amount !== 5000 && amount !== 7500 && amount !== 10000 && amount !== 25000 && amount !== 50000 && (
+                        <button
+                          type="button"
+                          className="btn btn-danger btn-sm"
+                          style={{ marginTop: '0.75rem', fontSize: '0.72rem', padding: '0.3rem 0.6rem' }}
+                          onClick={() => {
+                            const copy = { ...editableMultipliers };
+                            delete copy[amount];
+                            setEditableMultipliers(copy);
+                          }}
+                        >
+                          <Trash2 size={12} /> Remove Custom Tier
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+            </div>
+
+            {/* Add Custom Tier Card */}
+            <div 
+              className="glass-card" 
+              style={{ 
+                padding: '1.25rem 1.5rem', 
+                marginBottom: '1.5rem', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'space-between', 
+                flexWrap: 'wrap', 
+                gap: '1rem',
+                border: '1px dashed rgba(255, 255, 255, 0.2)'
+              }}
+            >
+              <div>
+                <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#f8fafc', marginBottom: '0.2rem' }}>
+                  ➕ Add Custom Membership Plan Multiplier
+                </div>
+                <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
+                  Define a new deposit amount tier and set its custom earning multiplier.
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                <input
+                  type="number"
+                  placeholder="Plan Amount (e.g. 15000)"
+                  className="input-field"
+                  style={{ width: '180px', fontSize: '0.85rem' }}
+                  value={newCustomTierAmount}
+                  onChange={(e) => setNewCustomTierAmount(e.target.value)}
+                />
+                <input
+                  type="number"
+                  step="0.1"
+                  placeholder="Multiplier (e.g. 8.0)"
+                  className="input-field"
+                  style={{ width: '150px', fontSize: '0.85rem' }}
+                  value={newCustomTierMult}
+                  onChange={(e) => setNewCustomTierMult(e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{ fontWeight: 700, fontSize: '0.85rem' }}
+                  onClick={() => {
+                    const amt = Number(newCustomTierAmount);
+                    const mult = Number(newCustomTierMult);
+                    if (!amt || amt < 500) {
+                      showToast('Please enter a valid plan amount (minimum ₹500)', 'error');
+                      return;
+                    }
+                    if (!mult || mult < 1.0) {
+                      showToast('Please enter a valid multiplier (minimum 1.0×)', 'error');
+                      return;
+                    }
+                    setEditableMultipliers({
+                      ...editableMultipliers,
+                      [amt]: mult
+                    });
+                    setNewCustomTierAmount('');
+                    setNewCustomTierMult('');
+                    showToast(`Custom tier ₹${amt.toLocaleString()} added with ${mult}× multiplier!`);
+                  }}
+                >
+                  <Plus size={15} /> Add Tier
+                </button>
+              </div>
+            </div>
+
+            {/* Sticky Save Bar */}
+            <div 
+              className="glass-card" 
+              style={{ 
+                padding: '1.25rem 1.5rem', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'space-between', 
+                flexWrap: 'wrap', 
+                gap: '1rem',
+                border: '1.5px solid rgba(245, 158, 11, 0.5)',
+                background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(15, 23, 42, 0.95) 100%)',
+                borderRadius: '14px'
+              }}
+            >
+              <div>
+                <div style={{ fontSize: '1rem', fontWeight: 800, color: '#f8fafc' }}>
+                  Save All Plan Multipliers to Live Database
+                </div>
+                <div style={{ fontSize: '0.8rem', color: '#cbd5e1' }}>
+                  Immediate real-time cross-device propagation via BroadcastChannel & cloud API synchronization.
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                className="btn btn-gold btn-lg"
+                style={{ fontWeight: 800, fontSize: '0.95rem', padding: '0.75rem 1.75rem', boxShadow: '0 4px 20px rgba(245, 158, 11, 0.4)' }}
+              >
+                <Save size={18} /> Save Multipliers (মাল্টিপ্লায়ার সংরক্ষণ করুন)
+              </button>
+            </div>
+          </form>
         </div>
       )}
 
@@ -3400,6 +3923,204 @@ export default function AdminPanelView() {
                   onClick={() => setTaskModal({ ...taskModal, isOpen: false })}
                 >
                   Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT TASK MODAL (FOR CUSTOMIZING ANY TASK ON ANY DATE) */}
+      {editTaskModal.isOpen && editTaskModal.task && (
+        <div className="modal-overlay" onClick={() => setEditTaskModal({ ...editTaskModal, isOpen: false })}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 650, maxHeight: '90vh', overflowY: 'auto' }}>
+            <div className="modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <div style={{ width: 40, height: 40, borderRadius: '12px', background: 'rgba(245, 158, 11, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fbbf24' }}>
+                  <Edit3 size={20} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0 }}>
+                    ✏️ Edit Task: {editTaskModal.title}
+                  </h3>
+                  <p style={{ fontSize: '0.78rem', color: '#94a3b8', margin: 0 }}>
+                    Modify base reward (₹2,000 plan baseline), duration, task rules, or add custom multiplier booster.
+                  </p>
+                </div>
+              </div>
+              <button 
+                type="button" 
+                className="btn btn-secondary btn-sm"
+                onClick={() => setEditTaskModal({ ...editTaskModal, isOpen: false })}
+                style={{ padding: '0.35rem 0.65rem' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditedTask}>
+              {/* Task Title */}
+              <div className="form-group">
+                <label className="form-label">
+                  <span>Task Title</span>
+                  <span style={{ color: '#f87171' }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  className="input-field"
+                  value={editTaskModal.title}
+                  onChange={(e) => setEditTaskModal({ ...editTaskModal, title: e.target.value })}
+                  required
+                />
+              </div>
+
+              {/* Task Type & Category Grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginBottom: '1rem' }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">Task Type</label>
+                  <select
+                    className="input-field"
+                    value={editTaskModal.type}
+                    onChange={(e) => setEditTaskModal({ ...editTaskModal, type: e.target.value })}
+                  >
+                    <option value="video">📺 YouTube Video & Share</option>
+                    <option value="slide3">🧩 3×3 Slide Puzzle</option>
+                    <option value="memory">🧠 Memory Match Challenge</option>
+                    <option value="walk">🚶 10-Min Walk Pedometer</option>
+                    <option value="music">🎵 Focus Music Track</option>
+                    <option value="spin">🎡 Lucky Spin Wheel</option>
+                    <option value="scratch">🎟️ Instant Scratch Card</option>
+                    <option value="custom">⚡ Custom Action / Website</option>
+                  </select>
+                </div>
+
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">Category</label>
+                  <input
+                    type="text"
+                    className="input-field"
+                    value={editTaskModal.category}
+                    onChange={(e) => setEditTaskModal({ ...editTaskModal, category: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              {/* Reward & Duration Grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginBottom: '1rem' }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">
+                    <span>Base Reward (₹2,000 Plan / 1.0×)</span>
+                    <span style={{ color: '#34d399', fontWeight: 700 }}>₹ INR</span>
+                  </label>
+                  <input
+                    type="number"
+                    step="1"
+                    min="1"
+                    className="input-field"
+                    style={{ fontSize: '1.1rem', fontWeight: 800, color: '#34d399' }}
+                    value={editTaskModal.reward}
+                    onChange={(e) => setEditTaskModal({ ...editTaskModal, reward: e.target.value })}
+                    required
+                  />
+                  <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '0.2rem' }}>
+                    Scaled payout for ₹10k plan: <strong>₹{Math.round(Number(editTaskModal.reward || 0) * (Number(planMultipliers?.[10000]) || 5.0))}</strong>
+                  </div>
+                </div>
+
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">Duration (Seconds / Steps)</label>
+                  <input
+                    type="number"
+                    min="5"
+                    className="input-field"
+                    value={editTaskModal.duration}
+                    onChange={(e) => setEditTaskModal({ ...editTaskModal, duration: Number(e.target.value) })}
+                  />
+                  <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '0.2rem' }}>
+                    Timer duration or pedometer target.
+                  </div>
+                </div>
+              </div>
+
+              {/* Task-Specific Multiplier Override (Optional) */}
+              <div className="form-group">
+                <label className="form-label">
+                  <span>Custom Task Multiplier Override (Optional)</span>
+                  <span style={{ fontSize: '0.72rem', color: '#fbbf24' }}>Leave empty to use member's plan multiplier</span>
+                </label>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0.5"
+                  className="input-field"
+                  placeholder="e.g. 2.0 (boosts reward for all members)"
+                  value={editTaskModal.multiplierOverride}
+                  onChange={(e) => setEditTaskModal({ ...editTaskModal, multiplierOverride: e.target.value })}
+                />
+              </div>
+
+              {/* Video URL for Video Tasks */}
+              {editTaskModal.type === 'video' && (
+                <div className="form-group">
+                  <label className="form-label">YouTube Video URL</label>
+                  <input
+                    type="text"
+                    className="input-field"
+                    placeholder="https://www.youtube.com/watch?v=..."
+                    value={editTaskModal.videoUrl}
+                    onChange={(e) => setEditTaskModal({ ...editTaskModal, videoUrl: e.target.value })}
+                  />
+                </div>
+              )}
+
+              {/* Action URL for Custom Tasks */}
+              {editTaskModal.type === 'custom' && (
+                <div className="form-group">
+                  <label className="form-label">External Action URL</label>
+                  <input
+                    type="text"
+                    className="input-field"
+                    placeholder="https://t.me/... or website link"
+                    value={editTaskModal.actionUrl}
+                    onChange={(e) => setEditTaskModal({ ...editTaskModal, actionUrl: e.target.value })}
+                  />
+                </div>
+              )}
+
+              {/* Mandatory Share Checkbox */}
+              <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <input
+                  type="checkbox"
+                  id="editShareRequired"
+                  checked={editTaskModal.shareRequired}
+                  onChange={(e) => setEditTaskModal({ ...editTaskModal, shareRequired: e.target.checked })}
+                />
+                <label htmlFor="editShareRequired" style={{ fontSize: '0.82rem', color: '#cbd5e1', cursor: 'pointer' }}>
+                  Require Mandatory Social Share to Facebook / Friends before reward claim
+                </label>
+              </div>
+
+              {/* Description */}
+              <div className="form-group">
+                <label className="form-label">Task Instructions / Description</label>
+                <textarea
+                  className="input-field"
+                  rows={3}
+                  value={editTaskModal.description}
+                  onChange={(e) => setEditTaskModal({ ...editTaskModal, description: e.target.value })}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1.25rem' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setEditTaskModal({ ...editTaskModal, isOpen: false })}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary" style={{ fontWeight: 800 }}>
+                  <Save size={16} /> Save Changes
                 </button>
               </div>
             </form>

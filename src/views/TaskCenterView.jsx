@@ -58,6 +58,7 @@ export default function TaskCenterView({ onOpenWithdraw, onOpenDeposit, setActiv
     pendingDeposit,
     isUserActivated,
     canUserEarn,
+    freeTrialStatus,
     showToast
   } = useApp();
 
@@ -97,8 +98,17 @@ export default function TaskCenterView({ onOpenWithdraw, onOpenDeposit, setActiv
   const safeCompletedTasks = tasksCompletedToday || {};
   const completedCount = activeRosterTasks.filter((t) => t && safeCompletedTasks[t.id]).length;
   const totalCount = activeRosterTasks.length;
-  const progressPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
-  const totalPotentialIncentive = activeRosterTasks.reduce((sum, t) => sum + Math.round((Number(t?.reward) || 0) * taskMultiplier), 0);
+  const getTaskMultiplier = (task) => {
+    if (task && Number(task.multiplierOverride) > 0) {
+      return Number(task.multiplierOverride);
+    }
+    return taskMultiplier;
+  };
+
+  const totalPotentialIncentive = activeRosterTasks.reduce((sum, t) => {
+    const mult = getTaskMultiplier(t);
+    return sum + Math.round((Number(t?.reward) || 0) * mult);
+  }, 0);
 
   // Helper for task type badges and icons
   const getTaskVisuals = (task, effectiveReward) => {
@@ -196,13 +206,13 @@ export default function TaskCenterView({ onOpenWithdraw, onOpenDeposit, setActiv
   };
 
   const handleLaunchTask = (task) => {
-    if (!canUserEarn || !activePlan) {
+    if (!canUserEarn) {
       if (setActiveTab) {
         setActiveTab('plans');
       } else if (onOpenDeposit) {
         onOpenDeposit();
       }
-      showToast('Payment approval required! Your deposit must be verified and approved by Admin before you can start daily tasks.', 'warning');
+      showToast(freeTrialStatus?.isExpired ? 'Your 2-Day Free Trial has expired. Subscribe to the ₹300 Trial Plan or Membership Plan to continue earning.' : 'Payment approval required! Your deposit must be verified and approved by Admin before you can start daily tasks.', 'warning');
       return;
     }
 
@@ -243,8 +253,53 @@ export default function TaskCenterView({ onOpenWithdraw, onOpenDeposit, setActiv
 
   return (
     <div>
-      {/* PENDING ACTIVATION / PAYMENT APPROVAL BANNER */}
-      {(!canUserEarn || user?.status === 'PENDING_ACTIVATION' || pendingDeposit) && (
+      {/* FREE REGISTRATION 2-DAY PASS ACTIVE BANNER */}
+      {freeTrialStatus?.canEarn && !activePlan && (
+        <div 
+          className="glass-card" 
+          style={{ 
+            padding: '1.25rem', 
+            marginBottom: '1.5rem', 
+            background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.18) 0%, rgba(234, 88, 12, 0.14) 100%)', 
+            border: '1.5px solid rgba(245, 158, 11, 0.5)',
+            borderRadius: '14px'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.85rem' }}>
+            <div style={{ width: 42, height: 42, borderRadius: '10px', background: 'rgba(245, 158, 11, 0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fbbf24', flexShrink: 0 }}>
+              <Sparkles size={24} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.35rem' }}>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#fbbf24', margin: 0 }}>
+                  🎁 New User Free Pass (Day {freeTrialStatus.dayNumber} of 2 Active)
+                </h3>
+                <span className="badge badge-gold" style={{ fontSize: '0.65rem' }}>
+                  Daily Tasks & Bonus Unlocked!
+                </span>
+                <span className="badge badge-emerald" style={{ fontSize: '0.65rem' }}>
+                  1.0× ₹2,000 Reward Rates
+                </span>
+              </div>
+              <p style={{ fontSize: '0.84rem', color: '#cbd5e1', lineHeight: 1.5, marginBottom: '0.65rem' }}>
+                Welcome to TaskCoin! As a newly registered member, you can complete all daily tasks and claim daily login bonuses for <strong>2 consecutive days</strong>. Earnings accumulate directly to your Task Wallet. To unlock withdrawals, activate the <strong>₹300 3-Day Trial Plan</strong> or a regular Membership Plan!
+              </p>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <button 
+                  className="btn btn-primary btn-sm"
+                  onClick={() => setActiveTab('plans')}
+                  style={{ fontWeight: 700, fontSize: '0.82rem', padding: '0.4rem 0.85rem', background: 'linear-gradient(135deg, #ec4899 0%, #db2777 100%)', borderColor: '#f472b6' }}
+                >
+                  ⚡ View ₹300 Trial Pass (Withdrawal Unlock) →
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PENDING ACTIVATION / PAYMENT APPROVAL BANNER (Only when user cannot earn) */}
+      {!canUserEarn && (
         <div 
           className="glass-card" 
           style={{ 
@@ -262,7 +317,7 @@ export default function TaskCenterView({ onOpenWithdraw, onOpenDeposit, setActiv
             <div style={{ flex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.35rem' }}>
                 <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#fbbf24', margin: 0 }}>
-                  {pendingDeposit ? '⏳ Payment Approval in Progress' : '⚠️ Account Pending Activation / Payment Approval'}
+                  {pendingDeposit ? '⏳ Payment Approval in Progress' : freeTrialStatus?.isExpired ? '⏰ 2-Day Free Trial Ended' : '⚠️ Account Pending Activation / Payment Approval'}
                 </h3>
                 <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.3)', color: '#fef08a', fontSize: '0.65rem' }}>
                   Daily Tasks Locked
@@ -271,7 +326,9 @@ export default function TaskCenterView({ onOpenWithdraw, onOpenDeposit, setActiv
               <p style={{ fontSize: '0.84rem', color: '#cbd5e1', lineHeight: 1.5, marginBottom: '0.85rem' }}>
                 {pendingDeposit 
                   ? `Your payment of ₹${pendingDeposit.amount?.toLocaleString()} (UTR: ${pendingDeposit.utr}) has been submitted. Admin verification takes 5–15 minutes. Once approved, all daily task cash rewards will unlock!`
-                  : 'Without an approved membership deposit (min ₹2,000), you cannot earn daily task rewards, login streak bonuses, or skill game prizes. Subscribe to a plan and submit your payment UTR for instant Admin activation.'}
+                  : freeTrialStatus?.isExpired
+                    ? 'Your 2-Day Free Registration Pass has expired. Subscribe to the ₹300 3-Day Trial Plan or a regular Membership Plan to continue earning daily task rewards and unlock withdrawals.'
+                    : 'Without an approved membership deposit, you cannot earn daily task rewards, login streak bonuses, or skill game prizes. Subscribe to a plan and submit your payment UTR for instant Admin activation.'}
               </p>
               <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                 <button 
@@ -474,8 +531,9 @@ export default function TaskCenterView({ onOpenWithdraw, onOpenDeposit, setActiv
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.25rem' }}>
             {activeRosterTasks.map((task) => {
-              const effectiveReward = Math.round((Number(task.reward) || 0) * taskMultiplier);
-              const effectiveTask = { ...task, reward: effectiveReward };
+              const thisMultiplier = getTaskMultiplier(task);
+              const effectiveReward = Math.round((Number(task.reward) || 0) * thisMultiplier);
+              const effectiveTask = { ...task, reward: effectiveReward, multiplier: thisMultiplier };
               const isDone = Boolean(safeCompletedTasks[task.id]);
               const visuals = getTaskVisuals(task, effectiveReward);
 
@@ -531,9 +589,9 @@ export default function TaskCenterView({ onOpenWithdraw, onOpenDeposit, setActiv
                             +{formatINR(effectiveReward)}
                           </span>
                         )}
-                        {taskMultiplier > 1 && (
-                          <span className="badge badge-indigo" style={{ fontSize: '0.62rem' }}>
-                            {taskMultiplier}×
+                        {thisMultiplier > 1 && (
+                          <span className={`badge ${task.multiplierOverride > 0 ? 'badge-gold' : 'badge-indigo'}`} style={{ fontSize: '0.62rem' }}>
+                            {thisMultiplier}× {task.multiplierOverride > 0 ? 'Booster' : ''}
                           </span>
                         )}
                       </div>
@@ -594,11 +652,11 @@ export default function TaskCenterView({ onOpenWithdraw, onOpenDeposit, setActiv
                         fontSize: '0.82rem'
                       }}
                       onClick={() => {
-                        showToast('Payment approval required! Your deposit must be verified and approved by Admin to earn task rewards.', 'error');
+                        showToast(freeTrialStatus?.isExpired ? 'Your 2-Day Free Trial has ended. Please subscribe to continue earning.' : 'Payment approval required! Your deposit must be verified and approved by Admin to earn task rewards.', 'error');
                         setActiveTab('plans');
                       }}
                     >
-                      <Lock size={15} /> {pendingDeposit ? 'Payment Pending Approval' : 'Activate Plan to Earn'}
+                      <Lock size={15} /> {pendingDeposit ? 'Payment Pending Approval' : freeTrialStatus?.isExpired ? 'Trial Expired (Subscribe Plan)' : 'Activate Plan to Earn'}
                     </button>
                   ) : (
                     <button 

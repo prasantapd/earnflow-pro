@@ -32,6 +32,7 @@ export default function DailyStreakWidget({ onOpenDeposit }) {
     pendingDeposit,
     canUserEarn,
     isUserActivated,
+    freeTrialStatus,
     setState,
     showToast
   } = useApp();
@@ -198,8 +199,38 @@ export default function DailyStreakWidget({ onOpenDeposit }) {
         </div>
       )}
 
-      {/* No Active Plan Warning Strip */}
-      {!activePlan && !pendingDeposit && (
+      {/* No Active Plan / Free Trial Banner Strip */}
+      {!activePlan && !pendingDeposit && freeTrialStatus?.canEarn ? (
+        <div 
+          style={{ 
+            marginBottom: '1.25rem', 
+            padding: '0.75rem 1rem', 
+            background: 'rgba(245, 158, 11, 0.12)', 
+            borderRadius: 'var(--radius-md)', 
+            border: '1px solid rgba(245, 158, 11, 0.4)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '0.75rem',
+            flexWrap: 'wrap'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#fbbf24', fontSize: '0.82rem' }}>
+            <Sparkles size={16} style={{ flexShrink: 0 }} />
+            <span><strong>🎁 New User Free Pass (Day {freeTrialStatus.dayNumber} of 2 Active):</strong> You can claim daily login bonus and complete tasks for free! (Withdrawals unlock upon activating ₹300 Trial or Membership Plan).</span>
+          </div>
+          {onOpenDeposit && (
+            <button 
+              type="button" 
+              className="btn btn-gold btn-sm"
+              onClick={onOpenDeposit}
+              style={{ fontSize: '0.75rem', padding: '0.35rem 0.8rem', fontWeight: 700 }}
+            >
+              ⚡ View ₹300 Trial Plan →
+            </button>
+          )}
+        </div>
+      ) : !activePlan && !pendingDeposit ? (
         <div 
           style={{ 
             marginBottom: '1.25rem', 
@@ -216,7 +247,7 @@ export default function DailyStreakWidget({ onOpenDeposit }) {
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#fca5a5', fontSize: '0.82rem' }}>
             <Lock size={16} style={{ flexShrink: 0 }} />
-            <span><strong>No Active Subscription Plan:</strong> Daily login streak and task rewards require an active plan (Min ₹2,000). Subscribe to activate your daily payout engine!</span>
+            <span><strong>{freeTrialStatus?.isExpired ? '2-Day Free Trial Ended:' : 'No Active Subscription Plan:'}</strong> Daily login streak and task rewards require an active plan. Subscribe to the ₹300 Trial or a Membership Plan!</span>
           </div>
           {onOpenDeposit && (
             <button 
@@ -229,7 +260,7 @@ export default function DailyStreakWidget({ onOpenDeposit }) {
             </button>
           )}
         </div>
-      )}
+      ) : null}
 
       {/* Missed Day Reset Warning Strip */}
       {isMissed && (
@@ -557,15 +588,15 @@ export default function DailyStreakWidget({ onOpenDeposit }) {
               <Lock size={16} />
               <span>Payment Pending Approval (+₹{currentReward}.00)</span>
             </button>
-          ) : !activePlan ? (
+          ) : !activePlan && !freeTrialStatus?.canEarn ? (
             <button 
-              type="button"
+              type="button" 
               className="btn btn-secondary btn-lg"
               onClick={() => {
                 if (onOpenDeposit) {
                   onOpenDeposit();
                 } else {
-                  showToast('Please subscribe to an investment plan (min ₹2,000) first to claim daily bonuses.', 'warning');
+                  showToast('Please subscribe to the ₹300 Trial Plan or a regular Membership Plan to claim daily bonuses.', 'warning');
                 }
               }}
               style={{ 

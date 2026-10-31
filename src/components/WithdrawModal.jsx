@@ -22,7 +22,10 @@ export default function WithdrawModal({ isOpen, onClose, onOpenPayoutSetup, onOp
     forceSunday, 
     toggleForceSunday, 
     withdrawRewards,
-    showToast 
+    showToast,
+    activePlan,
+    hasUsedTrialWithdrawal,
+    freeTrialStatus
   } = useApp();
 
   const [withdrawAmount, setWithdrawAmount] = useState('');
@@ -39,6 +42,10 @@ export default function WithdrawModal({ isOpen, onClose, onOpenPayoutSetup, onOp
     setWithdrawAmount(val.toString());
   };
 
+  const isTrialMember = Boolean(activePlan && (activePlan.isTrial || activePlan.amount === 300));
+  const isFreeTrialOnly = Boolean(freeTrialStatus?.isFreeTrial && !activePlan);
+  const isZeroMinEligible = isTrialMember && !hasUsedTrialWithdrawal;
+
   const handleWithdraw = (e) => {
     e.preventDefault();
 
@@ -48,14 +55,27 @@ export default function WithdrawModal({ isOpen, onClose, onOpenPayoutSetup, onOp
       return;
     }
 
+    if (isFreeTrialOnly) {
+      showToast('Withdrawal Locked: First-time free registration allows earning for 2 days, but withdrawal requires activating the ₹300 Trial Plan or a regular Membership Plan.', 'error');
+      return;
+    }
+
     if (numAmount <= 0) {
       showToast('Please enter an amount to withdraw', 'error');
       return;
     }
 
-    if (numAmount < 100) {
-      showToast('Minimum withdrawal amount is ₹100.', 'error');
-      return;
+    if (isTrialMember) {
+      if (hasUsedTrialWithdrawal) {
+        showToast('The 3-Day Trial Plan allows exactly 1 lifetime withdrawal ("একবারই উইথড্র"). You have already used your 1 trial withdrawal. Please upgrade to a regular Membership Plan (₹2,000+).', 'error');
+        return;
+      }
+      // Zero min allowed!
+    } else {
+      if (numAmount < 100) {
+        showToast('Minimum withdrawal amount is ₹100.', 'error');
+        return;
+      }
     }
 
     if (numAmount > currentBal) {
@@ -99,8 +119,8 @@ export default function WithdrawModal({ isOpen, onClose, onOpenPayoutSetup, onOp
           className="glass-card" 
           style={{ 
             padding: '0.85rem 1rem', 
-            background: 'rgba(16, 185, 129, 0.12)', 
-            borderColor: 'rgba(16, 185, 129, 0.35)',
+            background: isZeroMinEligible ? 'rgba(236, 72, 153, 0.14)' : isFreeTrialOnly ? 'rgba(245, 158, 11, 0.12)' : 'rgba(16, 185, 129, 0.12)', 
+            borderColor: isZeroMinEligible ? 'rgba(236, 72, 153, 0.45)' : isFreeTrialOnly ? 'rgba(245, 158, 11, 0.4)' : 'rgba(16, 185, 129, 0.35)', 
             marginBottom: '1.5rem',
             display: 'flex',
             alignItems: 'center',
@@ -108,15 +128,19 @@ export default function WithdrawModal({ isOpen, onClose, onOpenPayoutSetup, onOp
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-            <CheckCircle size={20} color="#34d399" />
+            <CheckCircle size={20} color={isZeroMinEligible ? '#ec4899' : isFreeTrialOnly ? '#fbbf24' : '#34d399'} />
             <div>
-              <span style={{ fontWeight: 700, color: '#34d399', fontSize: '0.9rem' }}>24/7 Payout Gateway Active</span>
+              <span style={{ fontWeight: 700, color: isZeroMinEligible ? '#ec4899' : isFreeTrialOnly ? '#fbbf24' : '#34d399', fontSize: '0.9rem' }}>
+                {isZeroMinEligible ? '⚡ Trial Pass: Zero Min Requirement' : isFreeTrialOnly ? '🔒 Free Pass: Withdrawals Locked' : '24/7 Payout Gateway Active'}
+              </span>
               <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
-                Instant IMPS Disbursal • Min ₹100 • 1 Payout / 24h
+                {isZeroMinEligible ? 'Withdraw whatever amount you want • 1 Lifetime Payout' : isFreeTrialOnly ? 'Activate ₹300 Trial or Membership Plan to cash out' : 'Instant IMPS Disbursal • Min ₹100 • 1 Payout / 24h'}
               </div>
             </div>
           </div>
-          <span className="badge badge-emerald">Instant Transfer</span>
+          <span className={`badge ${isZeroMinEligible ? 'badge-pink' : isFreeTrialOnly ? 'badge-amber' : 'badge-emerald'}`}>
+            {isZeroMinEligible ? '1× Lifetime Pass' : isFreeTrialOnly ? 'Plan Required' : 'Instant Transfer'}
+          </span>
         </div>
 
         {/* Payout Destination Card */}
@@ -184,12 +208,12 @@ export default function WithdrawModal({ isOpen, onClose, onOpenPayoutSetup, onOp
               </span>
               <input
                 type="number"
-                min="100"
+                min={isZeroMinEligible ? 1 : 100}
                 max={currentBal}
                 step="1"
                 className="input-field"
                 style={{ paddingLeft: '2.5rem', fontSize: '1.2rem', fontWeight: 700 }}
-                placeholder="Enter amount (min ₹100)"
+                placeholder={isZeroMinEligible ? "Enter any amount (Zero minimum requirement!)" : "Enter amount (min ₹100)"}
                 value={withdrawAmount}
                 onChange={(e) => setWithdrawAmount(e.target.value)}
                 required

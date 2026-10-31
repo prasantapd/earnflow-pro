@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import confetti from 'canvas-confetti';
-import { calculateEarnings, getNextSundayStatus, extractYoutubeId, getMembershipTier, formatINR } from '../utils/finance';
+import { calculateEarnings, getNextSundayStatus, extractYoutubeId, getMembershipTier, formatINR, TRIAL_PLAN, DEFAULT_PLAN_MULTIPLIERS } from '../utils/finance';
 import { getLocalDateString, getUpcoming7Days } from '../utils/dateUtils';
 
 const AppContext = createContext();
@@ -601,6 +601,7 @@ const INITIAL_STATE = {
   adminAnnouncement: INITIAL_ADMIN_ANNOUNCEMENT,
   adminPassword: 'admin123',
   streakRewards: STREAK_REWARDS,
+  planMultipliers: DEFAULT_PLAN_MULTIPLIERS,
   passwordResetRequests: [],
 };
 
@@ -853,6 +854,7 @@ function reconcileStates(prev, incoming) {
     paymentSettings: incoming.paymentSettings ? { ...prev.paymentSettings, ...incoming.paymentSettings } : prev.paymentSettings,
     adminAnnouncement: incoming.adminAnnouncement ? { ...prev.adminAnnouncement, ...incoming.adminAnnouncement } : prev.adminAnnouncement,
     adminPassword: incoming.adminPassword || prev.adminPassword,
+    planMultipliers: incoming.planMultipliers ? { ...prev.planMultipliers, ...incoming.planMultipliers } : prev.planMultipliers,
     lastUpdated: Date.now(),
   };
 }
@@ -873,6 +875,10 @@ export function AppProvider({ children }) {
           ...parsed,
           adminPassword: parsed.adminPassword || 'admin123',
           streakRewards: parsed.streakRewards || STREAK_REWARDS,
+          planMultipliers: {
+            ...DEFAULT_PLAN_MULTIPLIERS,
+            ...(parsed.planMultipliers || {}),
+          },
           passwordResetRequests: parsed.passwordResetRequests || INITIAL_STATE.passwordResetRequests,
           scheduledTasksByDate: sched,
           dailyTaskRoster: sched[todayStr] || parsed.dailyTaskRoster || INITIAL_DAILY_TASK_ROSTER,
@@ -936,9 +942,75 @@ export function AppProvider({ children }) {
     );
   }, [state.transactions, state.user]);
 
-  const userMembershipTier = getMembershipTier(activePlan);
+  // 1. Free Trial Status for First-Time Registration (consecutive 2 days)
+  const freeTrialStatus = useMemo(() => {
+    if (!state.user) {
+      return { isFreeTrial: false, dayNumber: 0, isExpired: false, canEarn: false };
+    }
+    // If user already has an active paid plan or past paid plan
+    if (activePlan) {
+      return { isFreeTrial: false, dayNumber: 0, isExpired: false, canEarn: false };
+    }
+    const hasAnyPaidPlan = (userPlans || []).some(
+      (p) => p.status === 'active' || p.status === 'matured' || p.amount >= 300
+    );
+    if (hasAnyPaidPlan) {
+      return { isFreeTrial: false, dayNumber: 0, isExpired: false, canEarn: false };
+    }
+
+    const joinDateStr = state.user.joinedDate ? state.user.joinedDate.slice(0, 10) : getLocalDateString(0);
+    const todayStr = getLocalDateString(0);
+    const joinTime = new Date(joinDateStr).getTime();
+    const todayTime = new Date(todayStr).getTime();
+    const dayDiff = Math.max(0, Math.floor((todayTime - joinTime) / (1000 * 60 * 60 * 24)));
+
+    if (dayDiff < 2) {
+      return {
+        isFreeTrial: true,
+        dayNumber: dayDiff + 1, // Day 1 or Day 2
+        isExpired: false,
+        canEarn: true,
+      };
+    } else {
+      return {
+        isFreeTrial: true,
+        dayNumber: dayDiff + 1,
+        isExpired: true,
+        canEarn: false,
+      };
+    }
+  }, [state.user, activePlan, userPlans]);
+
+  // 2. Track whether this mobile number has already used the ₹300 3-day trial plan
+  const hasUsedTrialPlan = useMemo(() => {
+    if (!state.user?.phone) return false;
+    const phone = state.user.phone.trim();
+    const foundInPlans = (state.plans || []).some(
+      (p) => (p.userPhone === phone || p.userId === state.user.id) && (p.amount === 300 || p.isTrial)
+    );
+    const foundInDeposits = (state.depositRequests || []).some(
+      (d) => (d.userPhone === phone || d.userId === state.user.id) && (d.amount === 300 || d.isTrial)
+    );
+    return Boolean(foundInPlans || foundInDeposits);
+  }, [state.plans, state.depositRequests, state.user]);
+
+  // 3. Track whether trial user has already used their 1 lifetime withdrawal
+  const hasUsedTrialWithdrawal = useMemo(() => {
+    if (!state.user) return false;
+    const phone = state.user.phone?.trim();
+    return (state.withdrawalRequests || []).some(
+      (w) =>
+        (w.userId === state.user.id || (phone && w.userPhone === phone)) &&
+        (w.isTrialWithdrawal || w.type === 'TRIAL_WITHDRAWAL' || (w.amount < 100 && w.type === 'TASK_REWARD')) &&
+        w.status !== 'REJECTED'
+    );
+  }, [state.withdrawalRequests, state.user]);
+
+  const userMembershipTier = useMemo(() => {
+    return getMembershipTier(activePlan, freeTrialStatus, state.planMultipliers);
+  }, [activePlan, freeTrialStatus, state.planMultipliers]);
   const isUserActivated = state.user?.status === 'ACTIVE';
-  const canUserEarn = isUserActivated && Boolean(activePlan) && activePlan.status === 'active';
+  const canUserEarn = (isUserActivated && Boolean(activePlan) && activePlan.status === 'active') || Boolean(freeTrialStatus.canEarn);
 
   // Sync state to localStorage
   useEffect(() => {
@@ -1358,20 +1430,33 @@ export function AppProvider({ children }) {
   };
 
   // Subscribe to or Upgrade membership tier (User can hold only 1 active plan; can upgrade, cannot downgrade)
-  const subscribePlan = ({ amount, lockinPeriod, title, utrNumber }) => {
+  const subscribePlan = ({ amount, lockinPeriod, title, utrNumber, isTrial = false }) => {
     const numAmount = Number(amount);
+    const isTrialPlan = Boolean(isTrial || numAmount === 300 || lockinPeriod?.id === 'trial_3d' || lockinPeriod?.days === 3);
+
+    // Rule: ₹300 Trial Plan is strictly once per mobile number!
+    if (isTrialPlan) {
+      if (hasUsedTrialPlan) {
+        showToast('The ₹300 3-Day Trial Plan is limited to once per mobile number. This number has already availed the trial. Please select a regular Membership Plan (₹2,000+).', 'error');
+        return false;
+      }
+    }
+
     const existingActivePlan = userPlans.find((p) => p.status === 'active') || null;
 
-    if (existingActivePlan) {
+    if (existingActivePlan && !isTrialPlan) {
       if (numAmount <= existingActivePlan.amount) {
         showToast(`Downgrade not permitted. You currently hold the ₹${existingActivePlan.amount.toLocaleString()} tier. You can only upgrade to a higher tier plan.`, 'error');
         return false;
       }
     }
 
-    const isUpgrade = Boolean(existingActivePlan);
+    const isUpgrade = Boolean(existingActivePlan && !isTrialPlan);
     const depositRef = `DEP-${Math.floor(1000 + Math.random() * 9000)}`;
     const utr = utrNumber || `UTR${Date.now().toString().slice(-10)}`;
+    const effectiveLockin = lockinPeriod || (isTrialPlan ? TRIAL_PLAN : LOCKIN_PERIODS[0]);
+    const planDays = isTrialPlan ? 3 : (effectiveLockin.days || effectiveLockin.months * 30);
+    const planMonths = isTrialPlan ? 0.1 : effectiveLockin.months;
 
     const newDepositRequest = {
       id: depositRef,
@@ -1380,10 +1465,11 @@ export function AppProvider({ children }) {
       userPhone: state.user?.phone || '',
       userEmail: state.user?.email || '',
       amount: numAmount,
-      planMonths: lockinPeriod.months,
-      planDays: lockinPeriod.days || lockinPeriod.months * 30,
-      planTitle: title || `${lockinPeriod.label} Tier Plan`,
+      planMonths: planMonths,
+      planDays: planDays,
+      planTitle: title || (isTrialPlan ? '⚡ 3-Day Special Trial Pass' : `${effectiveLockin.label} Tier Plan`),
       isUpgrade: isUpgrade,
+      isTrial: isTrialPlan,
       previousPlanId: existingActivePlan?.id || null,
       utr: utr,
       submittedAt: new Date().toISOString(),
@@ -1391,21 +1477,20 @@ export function AppProvider({ children }) {
       rejectionReason: '',
     };
 
-    const calc = calculateEarnings(numAmount, lockinPeriod.months, lockinPeriod.tierFactor);
+    const calc = calculateEarnings(numAmount, planMonths, effectiveLockin.tierFactor, planDays);
     const startDate = new Date();
-    const totalDays = lockinPeriod.days || lockinPeriod.months * 30;
     const maturityDate = new Date();
-    maturityDate.setDate(startDate.getDate() + totalDays);
+    maturityDate.setDate(startDate.getDate() + planDays);
 
     const newPlan = {
       id: `PLN-${Math.floor(1000 + Math.random() * 9000)}`,
       userId: state.user?.id || 'USR-GUEST',
       userName: state.user?.name || 'Member',
       userPhone: state.user?.phone || '',
-      title: title || `${lockinPeriod.label} Tier Plan`,
+      title: title || (isTrialPlan ? '⚡ 3-Day Special Trial Pass' : `${effectiveLockin.label} Tier Plan`),
       amount: numAmount,
-      months: lockinPeriod.months,
-      days: totalDays,
+      months: planMonths,
+      days: planDays,
       startDate: startDate.toISOString(),
       maturityDate: maturityDate.toISOString(),
       totalExpectedGain: calc.estimatedTotalIncome,
@@ -1415,6 +1500,7 @@ export function AppProvider({ children }) {
       earnedSoFar: 0,
       status: 'pending_approval', // STRICT: Requires Admin approval before becoming 'active'
       isUpgrade: isUpgrade,
+      isTrial: isTrialPlan,
       depositRef: depositRef,
       utr: utr,
     };
@@ -1459,13 +1545,17 @@ export function AppProvider({ children }) {
       return false;
     }
 
-    if (state.user?.status === 'PENDING_ACTIVATION') {
-      showToast('Account pending activation! Payment approval by Admin is required before you can earn task rewards.', 'error');
-      return false;
-    }
+    const isFreeTrialAllowed = Boolean(freeTrialStatus?.canEarn);
+    const hasActivePaidPlan = Boolean(activePlan && activePlan.status === 'active');
 
-    if (!activePlan || activePlan.status !== 'active') {
-      showToast('Payment approval required! Your deposit must be verified and approved by Admin to activate task earnings.', 'error');
+    if (!isFreeTrialAllowed && !hasActivePaidPlan) {
+      if (freeTrialStatus?.isExpired) {
+        showToast('Your 2-Day Free Trial has expired. Please subscribe to the ₹300 3-Day Trial Plan or a regular Membership Plan to continue earning.', 'warning');
+      } else if (state.user?.status === 'PENDING_ACTIVATION') {
+        showToast('Account pending activation! Payment approval by Admin is required before you can earn task rewards.', 'error');
+      } else {
+        showToast('Payment approval required! Your deposit must be verified and approved by Admin to activate task earnings.', 'error');
+      }
       return false;
     }
 
@@ -1528,9 +1618,34 @@ export function AppProvider({ children }) {
       return false;
     }
 
-    if (amount < 100) {
-      showToast('Minimum withdrawal amount is ₹100.', 'error');
+    // 1. Check if user is on Free Registration Trial (No paid plan)
+    const isTrialMember = Boolean(activePlan && (activePlan.isTrial || activePlan.amount === 300));
+    const hasPaidRegularPlan = Boolean(activePlan && activePlan.amount >= 2000);
+
+    if (!isTrialMember && !hasPaidRegularPlan) {
+      showToast('Withdrawal Locked: First-time free registration allows earning for 2 days, but withdrawal requires activating the ₹300 Trial Plan or a regular Membership Plan.', 'error');
       return false;
+    }
+
+    // 2. Check Trial Member rules:
+    // - "trial members der khetre minimum requirement for withdrawals ta thakbe na, ora ja khusi with draw korte pare"
+    // - "jibone ekbar e toh" (strictly 1 lifetime withdrawal under trial)
+    if (isTrialMember) {
+      if (hasUsedTrialWithdrawal) {
+        showToast('The 3-Day Trial Plan allows exactly 1 lifetime withdrawal ("একবারই উইথড্র"). You have already claimed your 1 trial withdrawal. Please upgrade to a regular Membership Plan (₹2,000+) to unlock unlimited 24/7 withdrawals.', 'error');
+        return false;
+      }
+      if (amount <= 0) {
+        showToast('Please enter a valid amount to withdraw.', 'error');
+        return false;
+      }
+      // Zero minimum limit for trial members!
+    } else {
+      // Regular members: minimum ₹100
+      if (amount < 100) {
+        showToast('Minimum withdrawal amount is ₹100.', 'error');
+        return false;
+      }
     }
 
     if (amount > state.rewardWallet) {
@@ -1606,13 +1721,17 @@ export function AppProvider({ children }) {
       return false;
     }
 
-    if (state.user?.status === 'PENDING_ACTIVATION') {
-      showToast('Account pending activation! Payment approval by Admin is required to claim daily login bonus.', 'error');
-      return false;
-    }
+    const isFreeTrialAllowed = Boolean(freeTrialStatus?.canEarn);
+    const hasActivePaidPlan = Boolean(activePlan && activePlan.status === 'active');
 
-    if (!activePlan || activePlan.status !== 'active') {
-      showToast('Payment approval required! Please subscribe to an investment plan (₹2,000+) and get Admin payment verification to unlock daily bonus.', 'error');
+    if (!isFreeTrialAllowed && !hasActivePaidPlan) {
+      if (freeTrialStatus?.isExpired) {
+        showToast('Your 2-Day Free Trial has ended. Please subscribe to the ₹300 3-Day Trial Plan or a regular Membership Plan to continue claiming daily bonuses.', 'warning');
+      } else if (state.user?.status === 'PENDING_ACTIVATION') {
+        showToast('Account pending activation! Payment approval by Admin is required to claim daily login bonus.', 'error');
+      } else {
+        showToast('Payment approval required! Please subscribe to the ₹300 Trial or a Membership Plan (₹2,000+) to unlock daily bonus.', 'error');
+      }
       return false;
     }
 
@@ -2083,6 +2202,27 @@ export function AppProvider({ children }) {
     showToast('Daily login streak rewards successfully updated by Admin!', 'success');
   };
 
+  const updatePlanMultipliers = (newMultipliers) => {
+    setState((prev) => {
+      const updated = {
+        ...(prev.planMultipliers || DEFAULT_PLAN_MULTIPLIERS),
+        ...newMultipliers,
+        // Crucial base anchor rules:
+        // Base 2000 plan is strictly 1.0x (all task and daily login bonus authored at this base)
+        // 3-Day 300 trial plan is strictly 1.0x (same as 2000 plan)
+        2000: 1.0,
+        300: 1.0,
+      };
+      broadcastState({ planMultipliers: updated });
+      dispatchApi('/api/sync', { planMultipliers: updated });
+      return {
+        ...prev,
+        planMultipliers: updated,
+      };
+    });
+    showToast('⚡ Membership plan multipliers updated successfully!', 'success');
+  };
+
   const requestPasswordReset = (identifier) => {
     const rawInput = (identifier || '').trim();
     if (!rawInput) {
@@ -2216,6 +2356,7 @@ export function AppProvider({ children }) {
       earnedSoFar: 0,
       status: 'active',
       isUpgrade: req.isUpgrade,
+      isTrial: Boolean(req.isTrial || req.amount === 300 || req.planDays === 3),
       depositRef: req.id,
       utr: req.utr,
     };
@@ -2536,7 +2677,11 @@ export function AppProvider({ children }) {
   const deleteVideoTask = deleteDailyTask;
 
   const sundayStatus = getNextSundayStatus();
-  const isWithdrawalAllowed = true;
+  const isTrialMember = Boolean(activePlan && (activePlan.isTrial || activePlan.amount === 300));
+  const isWithdrawalAllowed = Boolean(
+    (activePlan && activePlan.amount >= 2000) ||
+    (isTrialMember && !hasUsedTrialWithdrawal)
+  );
 
   const totalLockedPrincipal = userPlans
     .filter((p) => p.status === 'active' || p.status === 'matured')
@@ -2668,6 +2813,15 @@ export function AppProvider({ children }) {
         pendingDeposit,
         isUserActivated,
         canUserEarn,
+        // Free Registration Trial & ₹300 3-Day Trial status
+        freeTrialStatus,
+        hasUsedTrialPlan,
+        hasUsedTrialWithdrawal,
+        TRIAL_PLAN,
+        // Dynamic Admin-Configured Plan Multipliers
+        planMultipliers: state.planMultipliers || DEFAULT_PLAN_MULTIPLIERS,
+        updatePlanMultipliers,
+        DEFAULT_PLAN_MULTIPLIERS,
         // Payment & Banking Gateway Settings
         paymentSettings: state.paymentSettings || INITIAL_PAYMENT_SETTINGS,
         updatePaymentSettings,

@@ -23,13 +23,27 @@ import {
   ArrowRight,
   HelpCircle,
   CheckCircle,
+  FileText,
 } from 'lucide-react';
-import { useApp } from '../context/AppContext';
-import { DEPOSIT_PRESETS, LOCKIN_PERIODS, calculateEarnings, formatINR } from '../utils/finance';
+import { DEPOSIT_PRESETS, LOCKIN_PERIODS, TRIAL_PLAN, calculateEarnings, formatINR } from '../utils/finance';
 import PlanCard from '../components/PlanCard';
+import { useApp } from '../context/AppContext';
 
 export default function PlansView({ onOpenDeposit, onWithdrawPrincipal }) {
-  const { plans, activePlan: contextActivePlan, subscribePlan, showToast, pendingDeposit, pendingPlan, isUserActivated, canUserEarn, paymentSettings } = useApp();
+  const { 
+    plans, 
+    activePlan: contextActivePlan, 
+    subscribePlan, 
+    showToast, 
+    pendingDeposit, 
+    pendingPlan, 
+    isUserActivated, 
+    canUserEarn, 
+    paymentSettings,
+    hasUsedTrialPlan,
+    hasUsedTrialWithdrawal,
+    freeTrialStatus
+  } = useApp();
 
   const activePlan = contextActivePlan !== undefined ? contextActivePlan : (plans || []).find((p) => p.status === 'active');
 
@@ -96,9 +110,18 @@ export default function PlansView({ onOpenDeposit, onWithdrawPrincipal }) {
   const handleProceedToPayment = (e) => {
     if (e && e.preventDefault) e.preventDefault();
     const amount = Number(customAmount);
-    if (!amount || amount < 2000) {
-      showToast('Minimum membership deposit is ₹2,000', 'error');
-      return;
+    const isTrialSelected = selectedLockin.id === 'trial_3d' || amount === 300;
+
+    if (isTrialSelected) {
+      if (hasUsedTrialPlan) {
+        showToast('The ₹300 3-Day Trial Plan is limited to once per mobile number. This number has already availed the trial.', 'error');
+        return;
+      }
+    } else {
+      if (!amount || amount < 2000) {
+        showToast('Minimum membership deposit for regular plans is ₹2,000 (or select ₹300 3-Day Trial)', 'error');
+        return;
+      }
     }
 
     if (activePlan && amount <= activePlan.amount) {
@@ -123,11 +146,14 @@ export default function PlansView({ onOpenDeposit, onWithdrawPrincipal }) {
     }
 
     const amount = Number(customAmount);
+    const isTrialSelected = selectedLockin.id === 'trial_3d' || amount === 300;
+
     subscribePlan({
       amount,
       lockinPeriod: selectedLockin,
-      title: planTitle.trim() || `${selectedLockin.label} Membership Tier`,
+      title: planTitle.trim() || (isTrialSelected ? '⚡ 3-Day Special Trial Pass' : `${selectedLockin.label} Membership Tier`),
       utrNumber: cleanUtr,
+      isTrial: isTrialSelected,
     });
 
     setUserUtr('');
@@ -228,6 +254,100 @@ export default function PlansView({ onOpenDeposit, onWithdrawPrincipal }) {
           </span>
         </div>
       )}
+
+      {/* 3-DAY TRIAL SPECIAL CARD (₹300 - ONCE PER MOBILE NUMBER) */}
+      <div
+        className="glass-card"
+        style={{
+          padding: '1.5rem',
+          marginBottom: '2rem',
+          background: 'linear-gradient(135deg, rgba(236, 72, 153, 0.16) 0%, rgba(168, 85, 247, 0.14) 50%, rgba(15, 23, 42, 0.95) 100%)',
+          border: '1.5px solid rgba(236, 72, 153, 0.5)',
+          borderRadius: '16px',
+          position: 'relative',
+          overflow: 'hidden',
+          boxShadow: '0 8px 30px rgba(236, 72, 153, 0.15)'
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1.25rem' }}>
+          <div style={{ flex: '1 1 340px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
+              <span className="badge" style={{ background: '#ec4899', color: '#ffffff', fontWeight: 800 }}>
+                ⚡ New User Exclusive Trial
+              </span>
+              <span className="badge badge-gold">1× Per Mobile Number</span>
+              <span className="badge badge-emerald">Zero Min. Withdrawal</span>
+            </div>
+            <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#fdf2f8', marginBottom: '0.35rem' }}>
+              3-Day Fast-Track Trial Plan — ₹300
+            </h3>
+            <p style={{ fontSize: '0.85rem', color: '#fbcfe8', lineHeight: 1.5, marginBottom: '0.85rem' }}>
+              Test everything with zero risk! Enjoy <strong>identical task rewards and daily login streak as the ₹2,000 plan</strong> for 3 days. Plus, trial members have <strong>NO minimum withdrawal threshold</strong> — withdraw whatever you want directly to your UPI (allowed once in a lifetime)!
+            </p>
+            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', fontSize: '0.78rem', color: '#cbd5e1' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                <CheckCircle size={15} color="#34d399" /> <span>3 Days Full Earning Pass</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                <CheckCircle size={15} color="#34d399" /> <span>1.0× ₹2,000 Plan Reward Rates</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                <CheckCircle size={15} color="#34d399" /> <span>No Minimum Withdrawal Limit (1× Lifetime)</span>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center', minWidth: '180px' }}>
+            <div style={{ fontSize: '1.9rem', fontWeight: 900, color: '#ec4899', marginBottom: '0.5rem' }}>
+              ₹300 <span style={{ fontSize: '0.85rem', color: '#94a3b8', fontWeight: 500 }}>/ 3 Days</span>
+            </div>
+            {hasUsedTrialPlan ? (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                disabled
+                style={{ opacity: 0.65, cursor: 'not-allowed', fontSize: '0.82rem', padding: '0.55rem 1rem' }}
+              >
+                <Lock size={15} /> Already Availed (1 per Mobile)
+              </button>
+            ) : activePlan ? (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                disabled
+                style={{ opacity: 0.65, cursor: 'not-allowed', fontSize: '0.82rem', padding: '0.55rem 1rem' }}
+              >
+                <Check size={15} /> Active Membership Held
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="btn btn-gold btn-lg"
+                onClick={() => {
+                  setSelectedLockin(TRIAL_PLAN);
+                  setSelectedAmount(300);
+                  setCustomAmount('300');
+                  setPlanTitle('3-Day Special Trial Pass');
+                  setStep(2);
+                  const el = document.getElementById('subscription-terminal');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                }}
+                style={{
+                  background: 'linear-gradient(135deg, #ec4899 0%, #db2777 100%)',
+                  borderColor: '#f472b6',
+                  color: '#ffffff',
+                  fontWeight: 800,
+                  fontSize: '0.9rem',
+                  padding: '0.65rem 1.3rem',
+                  boxShadow: '0 4px 15px rgba(236, 72, 153, 0.4)'
+                }}
+              >
+                <Sparkles size={16} /> Activate ₹300 Trial Pass →
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* Interactive Simulator & Subscription Terminal */}
       <div
@@ -367,13 +487,53 @@ export default function PlansView({ onOpenDeposit, onWithdrawPrincipal }) {
                   <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Duration Tier</span>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.65rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.65rem' }}>
+                  {/* Special 3-Day Trial Card */}
+                  <div
+                    onClick={() => {
+                      if (hasUsedTrialPlan) {
+                        showToast('The ₹300 3-Day Trial Plan is limited to once per mobile number.', 'warning');
+                        return;
+                      }
+                      setSelectedLockin(TRIAL_PLAN);
+                      setSelectedAmount(300);
+                      setCustomAmount('300');
+                    }}
+                    style={{
+                      padding: '0.85rem',
+                      borderRadius: 'var(--radius-md)',
+                      background: selectedLockin.id === 'trial_3d' ? 'rgba(236, 72, 153, 0.18)' : 'rgba(255, 255, 255, 0.03)',
+                      border: `1.5px solid ${selectedLockin.id === 'trial_3d' ? '#ec4899' : 'var(--border-subtle)'}`,
+                      cursor: hasUsedTrialPlan ? 'not-allowed' : 'pointer',
+                      opacity: hasUsedTrialPlan ? 0.5 : 1,
+                      transition: 'var(--transition)'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
+                      <span style={{ fontWeight: 700, fontSize: '0.92rem', color: selectedLockin.id === 'trial_3d' ? '#ec4899' : '#f1f5f9' }}>
+                        3 Days (₹300 Trial)
+                      </span>
+                      <span className="badge" style={{ background: 'rgba(236, 72, 153, 0.25)', color: '#f472b6', fontSize: '0.62rem' }}>
+                        {hasUsedTrialPlan ? 'Availed' : '1× per mobile'}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: '#cbd5e1' }}>
+                      3-day trial pass. ₹2,000 base rate rewards + 1 flexible lifetime withdrawal!
+                    </div>
+                  </div>
+
                   {LOCKIN_PERIODS.map((period) => {
                     const isSelected = selectedLockin.id === period.id;
                     return (
                       <div
                         key={period.id}
-                        onClick={() => setSelectedLockin(period)}
+                        onClick={() => {
+                          setSelectedLockin(period);
+                          if (selectedAmount < 2000) {
+                            setSelectedAmount(2000);
+                            setCustomAmount('2000');
+                          }
+                        }}
                         style={{
                           padding: '0.85rem',
                           borderRadius: 'var(--radius-md)',
@@ -483,7 +643,7 @@ export default function PlansView({ onOpenDeposit, onWithdrawPrincipal }) {
                 type="submit"
                 className="btn btn-primary btn-lg"
                 style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
-                disabled={isDowngradeAttempt || numAmount < 2000}
+                disabled={isDowngradeAttempt || (selectedLockin.id !== 'trial_3d' && numAmount < 2000 && numAmount !== 300)}
               >
                 {activePlan ? (
                   <>

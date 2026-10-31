@@ -1,6 +1,21 @@
 {
   "allUsers": [
     {
+      "id": "USR-8999",
+      "name": "Trial User 99",
+      "email": "trial99@earnflow.app",
+      "phone": "9966554433",
+      "password": "password123",
+      "referralCode": "TRIA956",
+      "joinedDate": "2026-10-31T07:56:54.762Z",
+      "status": "ACTIVE",
+      "isActivated": true,
+      "suspensionReason": "",
+      "isVerified": true,
+      "totalDeposited": 300,
+      "walletBalance": 0
+    },
+    {
       "id": "USR-8725",
       "name": "Prasanta User",
       "email": "9811223344@earnflow.app",
@@ -166,10 +181,44 @@
       "joinedDate": "2026-10-29T16:17:32.809Z",
       "totalDeposited": 2000,
       "walletBalance": 0,
-      "referralCode": "UPI123"
+      "referralCode": "UPI123",
+      "suspensionReason": ""
+    },
+    {
+      "id": "USR-8153",
+      "name": "Trial User 99",
+      "email": "trial99@earnflow.app",
+      "phone": "9966554433",
+      "password": "password123",
+      "referralCode": "TRIA956",
+      "joinedDate": "2026-10-31T07:56:54.750Z",
+      "status": "ACTIVE",
+      "isActivated": true,
+      "suspensionReason": "",
+      "isVerified": true,
+      "totalDeposited": 300,
+      "walletBalance": 0
     }
   ],
   "depositRequests": [
+    {
+      "id": "DEP-3523",
+      "userId": "USR-8153",
+      "userName": "Trial User 99",
+      "userPhone": "9966554433",
+      "amount": 300,
+      "planMonths": 0.1,
+      "planDays": 3,
+      "planTitle": "3-Day Special Trial Pass",
+      "isUpgrade": false,
+      "isTrial": true,
+      "previousPlanId": null,
+      "utr": "UTR300TRIAL99",
+      "submittedAt": "2026-10-31T07:57:52.198Z",
+      "status": "APPROVED",
+      "rejectionReason": "",
+      "userEmail": "trial99@earnflow.app"
+    },
     {
       "id": "DEP-5822",
       "userId": "USR-5896",
@@ -414,6 +463,23 @@
       "submittedAt": "2026-10-29T16:03:17.684Z",
       "status": "PENDING",
       "rejectionReason": ""
+    },
+    {
+      "id": "DEP-2079",
+      "userId": "USR-9370",
+      "userName": "Hdudj",
+      "userPhone": "1112223330",
+      "userEmail": "1112223330@earnflow.app",
+      "amount": 3500,
+      "planMonths": 1,
+      "planDays": 30,
+      "planTitle": "30 Days Membership Tier",
+      "isUpgrade": false,
+      "previousPlanId": null,
+      "utr": "567886654566",
+      "submittedAt": "2026-10-31T06:17:00.607Z",
+      "status": "APPROVED",
+      "rejectionReason": ""
     }
   ],
   "withdrawalRequests": [
@@ -540,9 +606,47 @@
       "status": "RESOLVED",
       "resolvedAt": "2026-10-29T06:55:06.555Z",
       "tempPassword": "Task@8394"
+    },
+    {
+      "id": "REQ-632859",
+      "userId": "USR-4604",
+      "userName": "Prasanta Das",
+      "userPhone": "8900001292",
+      "requestedAt": "2026-10-29T14:33:19.901Z",
+      "status": "PENDING"
+    },
+    {
+      "id": "REQ-743250",
+      "userId": "USR-4604",
+      "userName": "Prasanta Das",
+      "userPhone": "8900001292",
+      "requestedAt": "2026-10-29T10:17:53.137Z",
+      "status": "RESOLVED",
+      "resolvedAt": "2026-10-29T14:11:37.527Z",
+      "tempPassword": "Task@1555"
     }
   ],
   "plans": [
+    {
+      "id": "PLN-1708",
+      "userId": "USR-8153",
+      "userName": "Trial User 99",
+      "userPhone": "9966554433",
+      "title": "3-Day Special Trial Pass",
+      "amount": 300,
+      "months": 0.1,
+      "days": 3,
+      "startDate": "2026-10-31T07:58:32.750Z",
+      "maturityDate": "2026-11-03T07:58:32.750Z",
+      "totalExpectedGain": 11,
+      "dailyQuota": 3.67,
+      "earnedSoFar": 0,
+      "status": "active",
+      "isUpgrade": false,
+      "isTrial": true,
+      "depositRef": "DEP-3523",
+      "utr": "UTR300TRIAL99"
+    },
     {
       "id": "PLN-6160",
       "userId": "USR-5896",
@@ -874,6 +978,110 @@
       "isUpgrade": false,
       "depositRef": "DEP-4044",
       "utr": "UTR3289797684"
+    },
+    {
+      "id": "PLN-2356",
+      "userId": "USR-5896",
+      "userName": "UPI User",
+      "userPhone": "9922334455",
+      "title": "30 Days Membership Tier",
+      "amount": 2000,
+      "months": 1,
+      "days": 30,
+      "startDate": "2026-10-29T16:19:04.927Z",
+      "maturityDate": "2026-11-28T16:19:04.927Z",
+      "totalExpectedGain": 2000,
+      "estimatedTotalIncome": 2000,
+      "dailyQuota": 66.67,
+      "earnedSoFar": 0,
+      "status": "active",
+      "isUpgrade": false,
+      "depositRef": "DEP-5822",
+      "utr": "429381729055"
+    },
+    {
+      "id": "PLN-1765",
+      "userId": "USR-9370",
+      "userName": "Hdudj",
+      "userPhone": "1112223330",
+      "title": "30 Days Membership Tier",
+      "amount": 3500,
+      "months": 1,
+      "days": 30,
+      "startDate": "2026-10-31T06:17:00.607Z",
+      "maturityDate": "2026-11-30T06:17:00.607Z",
+      "totalExpectedGain": 192,
+      "estimatedTotalIncome": 192,
+      "dailyQuota": 6.4,
+      "estimatedDailyQuota": 6.4,
+      "earnedSoFar": 0,
+      "status": "pending_approval",
+      "isUpgrade": false,
+      "depositRef": "DEP-2079",
+      "utr": "567886654566"
+    },
+    {
+      "id": "PLN-2142",
+      "userId": "USR-9370",
+      "userName": "Hdudj",
+      "userPhone": "1112223330",
+      "title": "30 Days Membership Tier",
+      "amount": 3500,
+      "months": 1,
+      "days": 30,
+      "startDate": "2026-10-31T06:17:41.585Z",
+      "maturityDate": "2026-11-30T06:17:41.585Z",
+      "totalExpectedGain": 3500,
+      "estimatedTotalIncome": 3500,
+      "dailyQuota": 116.67,
+      "earnedSoFar": 0,
+      "status": "active",
+      "isUpgrade": false,
+      "depositRef": "DEP-2079",
+      "utr": "567886654566"
+    },
+    {
+      "id": "PLN-6949",
+      "userId": "USR-8153",
+      "userName": "Trial User 99",
+      "userPhone": "9966554433",
+      "title": "3-Day Special Trial Pass",
+      "amount": 300,
+      "months": 0.1,
+      "days": 3,
+      "startDate": "2026-10-31T07:58:32.711Z",
+      "maturityDate": "2026-11-03T07:58:32.711Z",
+      "totalExpectedGain": 11,
+      "estimatedTotalIncome": 11,
+      "dailyQuota": 3.67,
+      "earnedSoFar": 0,
+      "status": "active",
+      "isUpgrade": false,
+      "isTrial": true,
+      "depositRef": "DEP-3523",
+      "utr": "UTR300TRIAL99"
+    },
+    {
+      "id": "PLN-6921",
+      "userId": "USR-8153",
+      "userName": "Trial User 99",
+      "userPhone": "9966554433",
+      "title": "3-Day Special Trial Pass",
+      "amount": 300,
+      "months": 0.1,
+      "days": 3,
+      "startDate": "2026-10-31T07:57:52.198Z",
+      "maturityDate": "2026-11-03T07:57:52.198Z",
+      "totalExpectedGain": 11,
+      "estimatedTotalIncome": 11,
+      "dailyQuota": 3.67,
+      "estimatedDailyQuota": 3.67,
+      "earnedSoFar": 0,
+      "status": "pending_approval",
+      "isUpgrade": false,
+      "isTrial": true,
+      "depositRef": "DEP-3523",
+      "utr": "UTR300TRIAL99"
     }
   ],
   "transactions": [],
@@ -896,6 +1104,16 @@
     "updatedAt": "2026-10-29T14:46:14.068Z"
   },
   "adminPassword": "admin123",
+  "planMultipliers": {
+    "300": 1,
+    "2000": 1,
+    "3500": 1.75,
+    "5000": 2.5,
+    "7500": 3.75,
+    "10000": 5.5,
+    "25000": 12.5,
+    "50000": 25
+  },
   "version": 1,
-  "lastUpdated": 1793290744956
+  "lastUpdated": 1793435058163
 }

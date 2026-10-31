@@ -38,6 +38,16 @@ const DEFAULT_STATE = {
     updatedAt: new Date().toISOString(),
   },
   adminPassword: 'admin123',
+  planMultipliers: {
+    300: 1.0,
+    2000: 1.0,
+    3500: 1.75,
+    5000: 2.5,
+    7500: 3.75,
+    10000: 5.0,
+    25000: 12.5,
+    50000: 25.0,
+  },
   version: 1,
   lastUpdated: Date.now(),
 };
@@ -155,6 +165,9 @@ export const db = {
     if (incoming.adminPassword) {
       memoryDb.adminPassword = incoming.adminPassword;
     }
+    if (incoming.planMultipliers) {
+      memoryDb.planMultipliers = { ...current.planMultipliers, ...incoming.planMultipliers };
+    }
 
     saveDb();
     return memoryDb;
@@ -262,6 +275,7 @@ export const db = {
       planDays: depositData.planDays || 30,
       planTitle: depositData.planTitle || 'Tier Plan',
       isUpgrade: Boolean(depositData.isUpgrade),
+      isTrial: Boolean(depositData.isTrial || depositData.amount === 300),
       previousPlanId: depositData.previousPlanId || null,
       utr: depositData.utr || `UTR${Date.now().toString().slice(-10)}`,
       submittedAt: new Date().toISOString(),
@@ -286,6 +300,8 @@ export const db = {
       const maturityDate = new Date();
       maturityDate.setDate(startDate.getDate() + totalDays);
 
+      const isTrial = Boolean(req.isTrial || req.amount === 300 || req.planDays === 3);
+
       const approvedPlan = {
         id: `PLN-${Math.floor(1000 + Math.random() * 9000)}`,
         userId: req.userId,
@@ -297,11 +313,12 @@ export const db = {
         days: totalDays,
         startDate: startDate.toISOString(),
         maturityDate: maturityDate.toISOString(),
-        totalExpectedGain: req.amount * (req.planMonths * 0.15 + 1),
-        dailyQuota: (req.amount * 0.15) / 30,
+        totalExpectedGain: isTrial ? 11 : req.amount * (req.planMonths * 0.15 + 1),
+        dailyQuota: isTrial ? 3.67 : (req.amount * 0.15) / 30,
         earnedSoFar: 0,
         status: 'active',
         isUpgrade: req.isUpgrade,
+        isTrial: isTrial,
         depositRef: req.id,
         utr: req.utr,
       };

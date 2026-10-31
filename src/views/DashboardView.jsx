@@ -51,6 +51,7 @@ export default function DashboardView({
     pendingDeposit,
     isUserActivated,
     canUserEarn,
+    freeTrialStatus,
     showToast
   } = useApp();
 
@@ -90,8 +91,53 @@ export default function DashboardView({
       {/* Slim Admin Announcement Strip (Dismissible) */}
       <AdminAnnouncementBanner />
 
-      {/* PENDING ACTIVATION / PAYMENT APPROVAL BANNER */}
-      {(!canUserEarn || user?.status === 'PENDING_ACTIVATION' || pendingDeposit) && (
+      {/* FREE REGISTRATION 2-DAY PASS ACTIVE BANNER */}
+      {freeTrialStatus?.canEarn && !activePlan && (
+        <div 
+          className="glass-card" 
+          style={{ 
+            padding: '1.25rem', 
+            marginBottom: '1.25rem', 
+            background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.18) 0%, rgba(234, 88, 12, 0.14) 100%)', 
+            border: '1.5px solid rgba(245, 158, 11, 0.5)',
+            borderRadius: '14px'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.85rem' }}>
+            <div style={{ width: 42, height: 42, borderRadius: '10px', background: 'rgba(245, 158, 11, 0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fbbf24', flexShrink: 0 }}>
+              <Clock size={24} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.35rem' }}>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#fbbf24', margin: 0 }}>
+                  🎁 New User Free Pass Active (Day {freeTrialStatus.dayNumber} of 2)
+                </h3>
+                <span className="badge badge-gold" style={{ fontSize: '0.65rem' }}>
+                  Earning Unlocked!
+                </span>
+                <span className="badge badge-emerald" style={{ fontSize: '0.65rem' }}>
+                  1.0× ₹2,000 Reward Rates
+                </span>
+              </div>
+              <p style={{ fontSize: '0.84rem', color: '#cbd5e1', lineHeight: 1.5, marginBottom: '0.75rem' }}>
+                You have 2 consecutive days of free task rewards and login streak bonuses! To withdraw your earnings directly to UPI, activate the <strong>₹300 3-Day Trial Plan</strong> (once per mobile) or a regular Membership Plan.
+              </p>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <button 
+                  className="btn btn-primary btn-sm"
+                  onClick={() => setActiveTab('plans')}
+                  style={{ fontWeight: 700, fontSize: '0.82rem', padding: '0.4rem 0.85rem', background: 'linear-gradient(135deg, #ec4899 0%, #db2777 100%)', borderColor: '#f472b6' }}
+                >
+                  ⚡ View ₹300 Trial Pass (Unlock Withdrawals) →
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PENDING ACTIVATION / PAYMENT APPROVAL BANNER (Only when cannot earn) */}
+      {!canUserEarn && (
         <div 
           className="glass-card" 
           style={{ 
@@ -109,7 +155,7 @@ export default function DashboardView({
             <div style={{ flex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.35rem' }}>
                 <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#fbbf24', margin: 0 }}>
-                  {pendingDeposit ? '⏳ Payment Approval in Progress' : '⚠️ Account Pending Activation / Payment Approval'}
+                  {pendingDeposit ? '⏳ Payment Approval in Progress' : freeTrialStatus?.isExpired ? '⏰ 2-Day Free Trial Ended' : '⚠️ Account Pending Activation / Payment Approval'}
                 </h3>
                 <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.3)', color: '#fef08a', fontSize: '0.65rem' }}>
                   Earning Locked
@@ -118,7 +164,9 @@ export default function DashboardView({
               <p style={{ fontSize: '0.84rem', color: '#cbd5e1', lineHeight: 1.5, marginBottom: '0.85rem' }}>
                 {pendingDeposit 
                   ? `Your payment of ₹${pendingDeposit.amount?.toLocaleString()} (UTR: ${pendingDeposit.utr}) has been submitted. Admin verification takes 5–15 minutes. Once approved, your membership plan and daily earning tasks will be unlocked!`
-                  : 'Without an approved membership deposit (min ₹2,000), you cannot earn daily task rewards, login streak bonuses, or skill game prizes. Subscribe to a plan and submit your payment UTR for instant Admin activation.'}
+                  : freeTrialStatus?.isExpired
+                    ? 'Your 2-Day Free Registration Pass has ended. Please subscribe to the ₹300 3-Day Trial Plan or a regular Membership Plan to continue earning.'
+                    : 'Without an approved membership deposit, you cannot earn daily task rewards, login streak bonuses, or skill game prizes. Subscribe to a plan and submit your payment UTR for instant Admin activation.'}
               </p>
               <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                 <button 

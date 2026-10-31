@@ -460,6 +460,8 @@ h1, h2, h3, h4, .font-display {
   gap: 0.65rem;
   text-decoration: none;
   color: var(--text-main);
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .brand-icon {
@@ -472,6 +474,14 @@ h1, h2, h3, h4, .font-display {
   justify-content: center;
   color: #ffffff;
   box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+  flex-shrink: 0;
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .brand-text h1 {
@@ -479,6 +489,8 @@ h1, h2, h3, h4, .font-display {
   font-weight: 800;
   letter-spacing: -0.03em;
   line-height: 1;
+  white-space: nowrap !important;
+  word-break: keep-all !important;
 }
 
 .brand-tag {
@@ -749,15 +761,26 @@ h1, h2, h3, h4, .font-display {
 
   .brand {
     gap: 0.45rem;
+    flex-shrink: 0 !important;
+    white-space: nowrap !important;
   }
 
   .brand-icon {
     width: 30px;
     height: 30px;
+    flex-shrink: 0 !important;
+  }
+
+  .brand-text {
+    flex-shrink: 0 !important;
+    white-space: nowrap !important;
   }
 
   .brand-text h1 {
     font-size: 1.05rem !important;
+    white-space: nowrap !important;
+    word-break: keep-all !important;
+    margin: 0 !important;
   }
 
   .brand-tag {

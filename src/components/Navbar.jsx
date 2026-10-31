@@ -17,7 +17,9 @@ import {
   GitBranch,
   LogOut,
   Clock,
-  Globe
+  Globe,
+  ChevronDown,
+  Check
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { formatINR } from '../utils/finance';
@@ -39,6 +41,31 @@ export default function Navbar({ activeTab, setActiveTab, onOpenAuth, onOpenPayo
     t,
     LANGUAGE_OPTIONS
   } = useApp();
+
+  const [isLangOpen, setIsLangOpen] = React.useState(false);
+  const langRef = React.useRef(null);
+
+  // Close language dropdown on outside click
+  React.useEffect(() => {
+    function handleClickOutside(event) {
+      if (langRef.current && !langRef.current.contains(event.target)) {
+        setIsLangOpen(false);
+      }
+    }
+    if (isLangOpen) {
+      document.addEventListener('pointerdown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('pointerdown', handleClickOutside);
+    };
+  }, [isLangOpen]);
+
+  const activeLangOption = (LANGUAGE_OPTIONS || []).find((o) => o.code === language) || {
+    code: 'en',
+    label: 'English',
+    native: 'English',
+    flag: '🇬🇧',
+  };
 
   const [secretClicks, setSecretClicks] = React.useState(0);
 
@@ -95,17 +122,17 @@ export default function Navbar({ activeTab, setActiveTab, onOpenAuth, onOpenPayo
               if (currentRole === 'admin') switchRole('investor');
               setActiveTab('dashboard');
             }} 
-            style={{ cursor: 'pointer' }}
+            style={{ cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap' }}
           >
-            <div className="brand-icon">
+            <div className="brand-icon" style={{ flexShrink: 0 }}>
               <TrendingUp size={24} />
             </div>
-            <div className="brand-text">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <h1 className="gradient-text-emerald">TaskCoin</h1>
+            <div className="brand-text" style={{ flexShrink: 0, whiteSpace: 'nowrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'nowrap', whiteSpace: 'nowrap' }}>
+                <h1 className="gradient-text-emerald" style={{ whiteSpace: 'nowrap', margin: 0, wordBreak: 'keep-all', display: 'inline-block' }}>TaskCoin</h1>
                 <span 
                   className="badge badge-emerald" 
-                  style={{ fontSize: '0.65rem', cursor: 'pointer', userSelect: 'none' }}
+                  style={{ fontSize: '0.62rem', cursor: 'pointer', userSelect: 'none', padding: '1px 5px', flexShrink: 0 }}
                   onClick={handleSecretTrigger}
                   title="TaskCoin Pro Verified Network"
                 >
@@ -171,47 +198,110 @@ export default function Navbar({ activeTab, setActiveTab, onOpenAuth, onOpenPayo
 
           {/* Right Header Controls */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', flexShrink: 0 }}>
-            {/* Multi-Language Selector (English / हिंदी / বাংলা) */}
-            <div 
-              style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                background: 'rgba(255, 255, 255, 0.05)', 
-                borderRadius: '20px', 
-                padding: '2px', 
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                gap: '2px'
-              }}
-              aria-label="Language Selector"
-            >
-              <div style={{ display: 'flex', alignItems: 'center', padding: '0 4px', color: '#94a3b8' }}>
-                <Globe size={13} />
-              </div>
-              {(LANGUAGE_OPTIONS || []).map((opt) => (
-                <button
-                  key={opt.code}
-                  type="button"
-                  onClick={() => setLanguage && setLanguage(opt.code)}
+            {/* Compact Multi-Language Dropdown Selector */}
+            <div style={{ position: 'relative', flexShrink: 0 }} ref={langRef}>
+              <button
+                type="button"
+                onClick={() => setIsLangOpen(!isLangOpen)}
+                className="lang-globe-btn"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                  padding: '0.35rem 0.65rem',
+                  borderRadius: '20px',
+                  background: isLangOpen ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                  border: isLangOpen ? '1px solid rgba(16, 185, 129, 0.5)' : '1px solid rgba(255, 255, 255, 0.12)',
+                  color: isLangOpen ? '#34d399' : '#cbd5e1',
+                  cursor: 'pointer',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  transition: 'all 0.18s ease',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0
+                }}
+                title="Change Language / ভাষা পরিবর্তন করুন"
+                aria-label="Change Language"
+              >
+                <Globe size={15} color="#34d399" />
+                <span style={{ fontSize: '0.85rem' }}>{activeLangOption.flag}</span>
+                <span style={{ textTransform: 'uppercase', fontSize: '0.72rem', letterSpacing: '0.5px' }}>
+                  {activeLangOption.code}
+                </span>
+                <ChevronDown 
+                  size={12} 
+                  style={{ 
+                    transform: isLangOpen ? 'rotate(180deg)' : 'none', 
+                    transition: 'transform 0.2s ease',
+                    opacity: 0.7 
+                  }} 
+                />
+              </button>
+
+              {/* Dropdown Menu */}
+              {isLangOpen && (
+                <div 
+                  className="lang-dropdown-menu"
                   style={{
-                    border: 'none',
-                    background: language === opt.code ? 'rgba(16, 185, 129, 0.28)' : 'transparent',
-                    color: language === opt.code ? '#34d399' : '#94a3b8',
-                    fontWeight: language === opt.code ? 700 : 500,
-                    fontSize: '0.72rem',
-                    padding: '0.2rem 0.45rem',
-                    borderRadius: '14px',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
+                    position: 'absolute',
+                    top: 'calc(100% + 8px)',
+                    right: 0,
+                    minWidth: 175,
+                    background: '#0f172a',
+                    border: '1px solid rgba(16, 185, 129, 0.35)',
+                    borderRadius: '12px',
+                    padding: '0.4rem',
+                    boxShadow: '0 12px 30px rgba(0, 0, 0, 0.75), 0 0 15px rgba(16, 185, 129, 0.15)',
+                    zIndex: 1100,
                     display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.2rem',
+                    flexDirection: 'column',
+                    gap: '0.2rem'
                   }}
-                  title={opt.label}
                 >
-                  <span style={{ fontSize: '0.75rem' }}>{opt.flag}</span>
-                  <span>{opt.native}</span>
-                </button>
-              ))}
+                  <div style={{ fontSize: '0.65rem', color: '#94a3b8', padding: '0.3rem 0.5rem 0.2rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Select Language / ভাষা
+                  </div>
+                  {(LANGUAGE_OPTIONS || []).map((opt) => {
+                    const isCurrent = language === opt.code;
+                    return (
+                      <button
+                        key={opt.code}
+                        type="button"
+                        onClick={() => {
+                          if (setLanguage) setLanguage(opt.code);
+                          setIsLangOpen(false);
+                        }}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: '0.55rem',
+                          width: '100%',
+                          padding: '0.5rem 0.65rem',
+                          borderRadius: '8px',
+                          border: isCurrent ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid transparent',
+                          background: isCurrent ? 'rgba(16, 185, 129, 0.15)' : 'transparent',
+                          color: isCurrent ? '#34d399' : '#f8fafc',
+                          cursor: 'pointer',
+                          fontSize: '0.82rem',
+                          fontWeight: isCurrent ? 800 : 500,
+                          textAlign: 'left',
+                          transition: 'background 0.15s ease'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span style={{ fontSize: '1.05rem' }}>{opt.flag}</span>
+                          <div>
+                            <div style={{ fontSize: '0.82rem', lineHeight: 1.2 }}>{opt.native}</div>
+                            <div style={{ fontSize: '0.65rem', color: '#94a3b8' }}>{opt.label}</div>
+                          </div>
+                        </div>
+                        {isCurrent && <Check size={14} color="#34d399" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* Quick Wallet Pill (Investor Mode) */}

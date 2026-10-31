@@ -55,6 +55,7 @@ import {
   Smartphone,
   Wallet,
   Edit3,
+  ArrowRight,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { formatINR, formatDate, DEFAULT_PLAN_MULTIPLIERS } from '../utils/finance';

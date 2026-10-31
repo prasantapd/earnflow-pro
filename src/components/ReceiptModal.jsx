@@ -1,8 +1,10 @@
 import React from 'react';
-import { X, CheckCircle, Download, Share2, ShieldCheck, ArrowDownCircle } from 'lucide-react';
+import { X, CheckCircle, Download } from 'lucide-react';
 import { formatINR, formatDate } from '../utils/finance';
+import { useApp } from '../context/AppContext';
 
 export default function ReceiptModal({ isOpen, onClose, txn }) {
+  const { t } = useApp();
   if (!isOpen || !txn) return null;
 
   return (
@@ -22,10 +24,10 @@ export default function ReceiptModal({ isOpen, onClose, txn }) {
         </div>
 
         <h3 style={{ fontSize: '1.35rem', fontWeight: 800, marginBottom: '0.25rem' }}>
-          Payout Dispatched Successfully!
+          {t ? t('receipt_title') : 'Official Payment Receipt'}
         </h3>
         <p style={{ fontSize: '0.82rem', color: '#94a3b8', marginBottom: '1.5rem' }}>
-          Your fund settlement transfer has been initiated via automated IMPS gateway.
+          {t ? t('receipt_subtitle') : 'Verified Cryptographic Transaction Record'}
         </p>
 
         {/* Amount Box */}
@@ -39,13 +41,13 @@ export default function ReceiptModal({ isOpen, onClose, txn }) {
           }}
         >
           <div style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Amount Transferred
+            {t ? t('withdrawal_gross') : 'Amount Transferred'}
           </div>
           <div style={{ fontSize: '2rem', fontWeight: 800, color: '#34d399', margin: '0.25rem 0' }}>
             {formatINR(txn.amount)}
           </div>
           <span className="badge badge-emerald" style={{ fontSize: '0.7rem' }}>
-            STATUS: COMPLETED
+            {t ? t('receipt_status_cleared') : 'STATUS: COMPLETED'}
           </span>
         </div>
 
@@ -71,7 +73,7 @@ export default function ReceiptModal({ isOpen, onClose, txn }) {
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.4rem 0', borderBottom: '1px solid var(--border-subtle)' }}>
-            <span style={{ color: '#94a3b8' }}>Settlement Destination:</span>
+            <span style={{ color: '#94a3b8' }}>{t ? t('receipt_transferred_to') : 'Settlement Destination'}:</span>
             <span style={{ fontWeight: 600, color: '#22d3ee' }}>{txn.meta}</span>
           </div>
 
@@ -93,7 +95,7 @@ export default function ReceiptModal({ isOpen, onClose, txn }) {
             style={{ flex: 1 }}
             onClick={onClose}
           >
-            Done
+            {t ? t('receipt_btn_close') : 'Close'}
           </button>
           <button 
             type="button" 
@@ -101,7 +103,7 @@ export default function ReceiptModal({ isOpen, onClose, txn }) {
             onClick={() => window.print()}
             title="Print or Save Receipt"
           >
-            <Download size={16} /> Print Receipt
+            <Download size={16} /> {t ? t('receipt_btn_print') : 'Print Receipt'}
           </button>
         </div>
       </div>

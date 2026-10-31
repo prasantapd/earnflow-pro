@@ -26,7 +26,8 @@ export default function MlmNetworkView() {
     setPreferredLeg, 
     addDownlineMember, 
     showToast,
-    user 
+    user,
+    t
   } = useApp();
 
   const [copied, setCopied] = useState(false);
@@ -58,7 +59,7 @@ export default function MlmNetworkView() {
   const handleCopyLink = () => {
     navigator.clipboard.writeText(referralLink);
     setCopied(true);
-    showToast('Referral link copied to clipboard!');
+    showToast(t ? t('dash_copied') : 'Referral link copied to clipboard!');
     setTimeout(() => setCopied(false), 2500);
   };
 
@@ -101,12 +102,12 @@ export default function MlmNetworkView() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1.5rem' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
-              <span className="badge badge-indigo">Binary Marketing 2:1</span>
-              <span className="badge badge-emerald">Lifetime Matching Bonus</span>
+              <span className="badge badge-indigo">{t ? t('mlm_binary_marketing') : 'Binary Marketing 2:1'}</span>
+              <span className="badge badge-emerald">{t ? t('mlm_lifetime_bonus_badge') : 'Lifetime Matching Bonus'}</span>
             </div>
-            <h2 style={{ fontSize: '1.9rem', fontWeight: 800 }}>Binary Referral & MLM Network</h2>
+            <h2 style={{ fontSize: '1.9rem', fontWeight: 800 }}>{t ? t('mlm_title') : 'Binary Referral & MLM Network'}</h2>
             <p style={{ fontSize: '0.9rem', color: '#cbd5e1', maxWidth: '680px', marginTop: '0.3rem' }}>
-              Market-standard <strong>2:1 or 1:2 Binary Pair Matching</strong> system. When your Left and Right teams form deposit volume pairs, you receive instant lifetime matching bonuses credited directly to your wallet!
+              {t ? t('mlm_desc') : 'Market-standard 2:1 or 1:2 Binary Pair Matching system. When your Left and Right teams form deposit volume pairs, you receive instant lifetime matching bonuses credited directly to your wallet!'}
             </p>
           </div>
 
@@ -120,13 +121,13 @@ export default function MlmNetworkView() {
             }}
           >
             <div style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>
-              Lifetime Binary Bonus
+              {t ? t('mlm_lifetime_earned') : 'Lifetime Binary Bonus'}
             </div>
             <div style={{ fontSize: '2rem', fontWeight: 800, color: '#34d399', margin: '0.2rem 0' }}>
               {formatINR(mlm.lifetimeMlmEarned)}
             </div>
             <div style={{ fontSize: '0.78rem', color: '#cbd5e1' }}>
-              Total Matched: <strong>{mlm.totalPairsMatched} Pairs</strong>
+              {t ? t('mlm_total_matched_pairs', { pairs: mlm.totalPairsMatched }) : `Total Matched: ${mlm.totalPairsMatched} Pairs`}
             </div>
           </div>
         </div>
@@ -135,10 +136,10 @@ export default function MlmNetworkView() {
         <div style={{ marginTop: '1.5rem', paddingTop: '1.25rem', borderTop: '1px solid var(--border-subtle)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.82rem', marginBottom: '0.45rem' }}>
             <span style={{ color: '#cbd5e1' }}>
-              Today's Payout Capping: <strong>{formatINR(mlm.dailyCappedToday)} / {formatINR(mlm.dailyCapLimit)} Limit</strong>
+              {t ? t('mlm_today_capping', { capped: formatINR(mlm.dailyCappedToday), limit: formatINR(mlm.dailyCapLimit) }) : `Today's Payout Capping: ${formatINR(mlm.dailyCappedToday)} / ${formatINR(mlm.dailyCapLimit)} Limit`}
             </span>
             <span style={{ fontWeight: 700, color: '#34d399' }}>
-              {capPercentage}% Used • Platform Liquidity Protected
+              {t ? t('mlm_liquidity_protected', { pct: capPercentage }) : `${capPercentage}% Used • Platform Liquidity Protected`}
             </span>
           </div>
 
@@ -167,9 +168,9 @@ export default function MlmNetworkView() {
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
           <div>
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 700 }}>Your Referral Link & Placement Control</h3>
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 700 }}>{t ? t('mlm_placement_title') : 'Your Referral Link & Placement Control'}</h3>
             <p style={{ fontSize: '0.82rem', color: '#94a3b8' }}>
-              Choose which binary leg new members will join, or set to Auto-Balance to maximize your 2:1 pair matches.
+              {t ? t('mlm_placement_desc') : 'Choose which binary leg new members will join, or set to Auto-Balance to maximize your 2:1 pair matches.'}
             </p>
           </div>
 
@@ -180,7 +181,7 @@ export default function MlmNetworkView() {
               style={{ fontSize: '0.78rem', borderRadius: 'var(--radius-full)', padding: '0.3rem 0.85rem' }}
               onClick={() => setPreferredLeg('LEFT')}
             >
-              👈 Left Leg
+              {t ? t('mlm_left_leg_btn') : '👈 Left Leg'}
             </button>
             <button
               type="button"
@@ -188,7 +189,7 @@ export default function MlmNetworkView() {
               style={{ fontSize: '0.78rem', borderRadius: 'var(--radius-full)', padding: '0.3rem 0.85rem' }}
               onClick={() => setPreferredLeg('AUTO')}
             >
-              ⚖️ Auto-Balance
+              {t ? t('mlm_auto_balance_btn') : '⚖️ Auto-Balance'}
             </button>
             <button
               type="button"
@@ -196,7 +197,7 @@ export default function MlmNetworkView() {
               style={{ fontSize: '0.78rem', borderRadius: 'var(--radius-full)', padding: '0.3rem 0.85rem' }}
               onClick={() => setPreferredLeg('RIGHT')}
             >
-              👉 Right Leg
+              {t ? t('mlm_right_leg_btn') : '👉 Right Leg'}
             </button>
           </div>
         </div>
@@ -219,7 +220,7 @@ export default function MlmNetworkView() {
             style={{ minWidth: '120px' }}
           >
             {copied ? <CheckCircle2 size={16} /> : <Copy size={16} />}
-            <span>{copied ? 'Copied!' : 'Copy Link'}</span>
+            <span>{copied ? (t ? t('dash_copied') : 'Copied!') : (t ? t('dash_copy_link') : 'Copy Link')}</span>
           </button>
           <button
             type="button"
@@ -250,15 +251,15 @@ export default function MlmNetworkView() {
               <div style={{ width: 36, height: 36, borderRadius: '10px', background: 'rgba(59, 130, 246, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#60a5fa' }}>
                 👈
               </div>
-              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#60a5fa' }}>LEFT TEAM</h3>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#60a5fa' }}>{t ? t('mlm_left_team_title') : 'LEFT TEAM'}</h3>
             </div>
             <span className="badge badge-indigo">
-              {(mlm.leftMembers || []).length} Members
+              {t ? t('mlm_members_count', { count: (mlm.leftMembers || []).length }) : `${(mlm.leftMembers || []).length} Members`}
             </span>
           </div>
 
           <div style={{ marginBottom: '1.25rem' }}>
-            <div style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase' }}>Total Business Volume</div>
+            <div style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase' }}>{t ? t('mlm_total_bv') : 'Total Business Volume'}</div>
             <div style={{ fontSize: '2rem', fontWeight: 800, color: '#ffffff' }}>
               {formatINR(mlm.leftVolume)}
             </div>
@@ -266,11 +267,11 @@ export default function MlmNetworkView() {
 
           <div style={{ padding: '0.85rem', background: 'rgba(59, 130, 246, 0.1)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(59, 130, 246, 0.25)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Active Carry-Forward:</div>
+              <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>{t ? t('mlm_active_carry') : 'Active Carry-Forward:'}</div>
               <div style={{ fontWeight: 800, color: '#60a5fa', fontSize: '1.1rem' }}>{formatINR(mlm.leftCarry)}</div>
             </div>
             <span className="badge" style={{ background: 'rgba(59, 130, 246, 0.2)', color: '#93c5fd' }}>
-              Ready to Pair
+              {t ? t('mlm_ready_to_pair') : 'Ready to Pair'}
             </span>
           </div>
         </div>
@@ -289,15 +290,15 @@ export default function MlmNetworkView() {
               <div style={{ width: 36, height: 36, borderRadius: '10px', background: 'rgba(16, 185, 129, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#34d399' }}>
                 👉
               </div>
-              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#34d399' }}>RIGHT TEAM</h3>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#34d399' }}>{t ? t('mlm_right_team_title') : 'RIGHT TEAM'}</h3>
             </div>
             <span className="badge badge-emerald">
-              {(mlm.rightMembers || []).length} Members
+              {t ? t('mlm_members_count', { count: (mlm.rightMembers || []).length }) : `${(mlm.rightMembers || []).length} Members`}
             </span>
           </div>
 
           <div style={{ marginBottom: '1.25rem' }}>
-            <div style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase' }}>Total Business Volume</div>
+            <div style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase' }}>{t ? t('mlm_total_bv') : 'Total Business Volume'}</div>
             <div style={{ fontSize: '2rem', fontWeight: 800, color: '#ffffff' }}>
               {formatINR(mlm.rightVolume)}
             </div>
@@ -305,11 +306,11 @@ export default function MlmNetworkView() {
 
           <div style={{ padding: '0.85rem', background: 'rgba(16, 185, 129, 0.1)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(16, 185, 129, 0.25)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Active Carry-Forward:</div>
+              <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>{t ? t('mlm_active_carry') : 'Active Carry-Forward:'}</div>
               <div style={{ fontWeight: 800, color: '#34d399', fontSize: '1.1rem' }}>{formatINR(mlm.rightCarry)}</div>
             </div>
             <span className="badge badge-emerald">
-              Ready to Pair
+              {t ? t('mlm_ready_to_pair') : 'Ready to Pair'}
             </span>
           </div>
         </div>
@@ -327,28 +328,28 @@ export default function MlmNetworkView() {
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
           <ShieldCheck size={20} color="#fbbf24" />
-          <h3 style={{ fontSize: '1.2rem', fontWeight: 800 }}>How the 2:1 Binary Math Works & Guarantees Platform Solvency</h3>
+          <h3 style={{ fontSize: '1.2rem', fontWeight: 800 }}>{t ? t('mlm_how_works_title') : 'How the 2:1 Binary Math Works & Guarantees Platform Solvency'}</h3>
         </div>
         <p style={{ fontSize: '0.85rem', color: '#cbd5e1', lineHeight: 1.5, marginBottom: '1.25rem' }}>
-          In binary MLM, 1 Pair requires either <strong>2 Units Left : 1 Unit Right</strong> (₹2,000 : ₹1,000) or <strong>1 Unit Left : 2 Units Right</strong> (₹1,000 : ₹2,000). For every matched ₹3,000 paired volume, the referrer receives <strong>₹150 (5.0%)</strong> instant matching bonus, while unmatched amounts carry forward!
+          {t ? t('mlm_how_works_desc') : 'In binary MLM, 1 Pair requires either 2 Units Left : 1 Unit Right (₹2,000 : ₹1,000) or 1 Unit Left : 2 Units Right (₹1,000 : ₹2,000). For every matched ₹3,000 paired volume, the referrer receives ₹150 (5.0%) instant matching bonus, while unmatched amounts carry forward!'}
         </p>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem', fontSize: '0.82rem' }}>
           <div style={{ padding: '0.85rem', background: 'rgba(255, 255, 255, 0.03)', borderRadius: 'var(--radius-md)' }}>
-            <div style={{ color: '#94a3b8' }}>1 Binary Pair Requirement:</div>
+            <div style={{ color: '#94a3b8' }}>{t ? t('mlm_req_title') : '1 Binary Pair Requirement:'}</div>
             <div style={{ fontWeight: 700, color: '#ffffff', fontSize: '0.95rem', margin: '0.2rem 0' }}>₹2,000 : ₹1,000 (2:1 or 1:2)</div>
-            <div style={{ color: '#34d399' }}>Total Paired Volume: ₹3,000</div>
+            <div style={{ color: '#34d399' }}>{t ? t('mlm_paired_vol') : 'Total Paired Volume: ₹3,000'}</div>
           </div>
 
           <div style={{ padding: '0.85rem', background: 'rgba(16, 185, 129, 0.08)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(16, 185, 129, 0.25)' }}>
-            <div style={{ color: '#94a3b8' }}>Matching Bonus Payout:</div>
-            <div style={{ fontWeight: 800, color: '#34d399', fontSize: '1.1rem', margin: '0.2rem 0' }}>+₹150.00 / Pair</div>
+            <div style={{ color: '#94a3b8' }}>{t ? t('mlm_bonus_payout') : 'Matching Bonus Payout:'}</div>
+            <div style={{ fontWeight: 800, color: '#34d399', fontSize: '1.1rem', margin: '0.2rem 0' }}>{t ? t('mlm_bonus_rate') : '+₹150.00 / Pair'}</div>
             <div style={{ color: '#cbd5e1' }}>5.0% on paired volume</div>
           </div>
 
           <div style={{ padding: '0.85rem', background: 'rgba(6, 182, 212, 0.08)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(6, 182, 212, 0.25)' }}>
-            <div style={{ color: '#94a3b8' }}>Platform Treasury Guard:</div>
-            <div style={{ fontWeight: 700, color: '#22d3ee', fontSize: '0.95rem', margin: '0.2rem 0' }}>₹3,000 Daily Cap Limit</div>
+            <div style={{ color: '#94a3b8' }}>{t ? t('mlm_treasury_guard') : 'Platform Treasury Guard:'}</div>
+            <div style={{ fontWeight: 700, color: '#22d3ee', fontSize: '0.95rem', margin: '0.2rem 0' }}>{t ? t('mlm_treasury_cap') : '₹3,000 Daily Cap Limit'}</div>
             <div style={{ color: '#cbd5e1' }}>Protects against deficit risks</div>
           </div>
         </div>
@@ -369,9 +370,9 @@ export default function MlmNetworkView() {
             <UserPlus size={22} />
           </div>
           <div>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Interactive Downline Referral Simulator</h3>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 700 }}>{t ? t('mlm_sim_title') : 'Interactive Downline Referral Simulator'}</h3>
             <p style={{ fontSize: '0.82rem', color: '#94a3b8' }}>
-              Test adding new downline members on Left or Right legs and watch the 2:1 pair matching trigger live bonuses!
+              {t ? t('mlm_sim_desc') : 'Test adding new downline members on Left or Right legs and watch the 2:1 pair matching trigger live bonuses!'}
             </p>
           </div>
         </div>
@@ -380,7 +381,7 @@ export default function MlmNetworkView() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '1.25rem' }}>
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label">
-                <span>Member Name</span>
+                <span>{t ? t('mlm_member_name') : 'Member Name'}</span>
               </label>
               <input
                 type="text"
@@ -393,22 +394,22 @@ export default function MlmNetworkView() {
 
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label">
-                <span>Placement Leg</span>
+                <span>{t ? t('mlm_placement_leg') : 'Placement Leg'}</span>
               </label>
               <select
                 className="input-field"
                 value={simLeg}
                 onChange={(e) => setSimLeg(e.target.value)}
               >
-                <option value="AUTO">⚖️ Auto-Balance (Weaker Leg)</option>
-                <option value="LEFT">👈 Left Leg</option>
-                <option value="RIGHT">👉 Right Leg</option>
+                <option value="AUTO">{t ? t('mlm_leg_auto') : '⚖️ Auto-Balance'}</option>
+                <option value="LEFT">{t ? t('mlm_left_leg_btn') : '👈 Left Leg'}</option>
+                <option value="RIGHT">{t ? t('mlm_right_leg_btn') : '👉 Right Leg'}</option>
               </select>
             </div>
 
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label">
-                <span>Deposit Volume (₹)</span>
+                <span>{t ? t('mlm_deposit_volume') : 'Deposit Volume (₹)'}</span>
               </label>
               <select
                 className="input-field"
@@ -425,7 +426,7 @@ export default function MlmNetworkView() {
           </div>
 
           <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>
-            <Sparkles size={16} /> Simulate Downline Deposit & Calculate 2:1 Match
+            <Sparkles size={16} /> {t ? t('mlm_btn_simulate') : 'Simulate Downline Deposit & Calculate 2:1 Match'}
           </button>
         </form>
       </div>
@@ -433,10 +434,10 @@ export default function MlmNetworkView() {
       {/* Visual Binary Genealogy Tree */}
       <div className="glass-card" style={{ padding: '2rem', marginBottom: '2.5rem', textAlign: 'center' }}>
         <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '0.35rem' }}>
-          Binary Genealogy Tree Hierarchy
+          {t ? t('mlm_tree_title') : 'Binary Genealogy Tree Hierarchy'}
         </h3>
         <p style={{ fontSize: '0.82rem', color: '#94a3b8', marginBottom: '2rem' }}>
-          Two-leg structure mapping all direct and indirect downline volume.
+          {t ? t('mlm_tree_desc') : 'Two-leg structure mapping all direct and indirect downline volume.'}
         </p>
 
         {/* Tree Root */}
@@ -451,7 +452,7 @@ export default function MlmNetworkView() {
               minWidth: '180px'
             }}
           >
-            <div style={{ fontSize: '0.75rem', opacity: 0.9, textTransform: 'uppercase' }}>Root Sponsor</div>
+            <div style={{ fontSize: '0.75rem', opacity: 0.9, textTransform: 'uppercase' }}>{t ? t('mlm_root_sponsor') : 'Root Sponsor'}</div>
             <div style={{ fontWeight: 800, fontSize: '1.05rem' }}>{user?.name || user?.phone || 'Investor Account'}</div>
             <div style={{ fontSize: '0.72rem', opacity: 0.9, fontFamily: 'monospace' }}>{mlm.referralCode}</div>
           </div>
@@ -480,7 +481,7 @@ export default function MlmNetworkView() {
                 minWidth: '160px'
               }}
             >
-              <div style={{ fontSize: '0.7rem', color: '#60a5fa', textTransform: 'uppercase' }}>Left Team Lead</div>
+              <div style={{ fontSize: '0.7rem', color: '#60a5fa', textTransform: 'uppercase' }}>{t ? t('mlm_left_lead') : 'Left Team Lead'}</div>
               <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>
                 {(mlm.leftMembers && mlm.leftMembers[0]?.name) || 'Kabir Verma'}
               </div>
@@ -489,7 +490,7 @@ export default function MlmNetworkView() {
               </div>
             </div>
             <span className="badge badge-indigo" style={{ marginTop: '0.5rem', fontSize: '0.65rem' }}>
-              {(mlm.leftMembers || []).length} Downlines
+              {t ? t('mlm_downlines_count', { count: (mlm.leftMembers || []).length }) : `${(mlm.leftMembers || []).length} Downlines`}
             </span>
           </div>
 
@@ -505,7 +506,7 @@ export default function MlmNetworkView() {
                 minWidth: '160px'
               }}
             >
-              <div style={{ fontSize: '0.7rem', color: '#34d399', textTransform: 'uppercase' }}>Right Team Lead</div>
+              <div style={{ fontSize: '0.7rem', color: '#34d399', textTransform: 'uppercase' }}>{t ? t('mlm_right_lead') : 'Right Team Lead'}</div>
               <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>
                 {(mlm.rightMembers && mlm.rightMembers[0]?.name) || 'Manish Gupta'}
               </div>
@@ -514,7 +515,7 @@ export default function MlmNetworkView() {
               </div>
             </div>
             <span className="badge badge-emerald" style={{ marginTop: '0.5rem', fontSize: '0.65rem' }}>
-              {(mlm.rightMembers || []).length} Downlines
+              {t ? t('mlm_downlines_count', { count: (mlm.rightMembers || []).length }) : `${(mlm.rightMembers || []).length} Downlines`}
             </span>
           </div>
         </div>
@@ -523,20 +524,20 @@ export default function MlmNetworkView() {
       {/* Downline Member Directory */}
       <div className="glass-card" style={{ padding: '1.5rem', overflowX: 'auto' }}>
         <h3 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '0.35rem' }}>
-          Downline Team Roster ({((mlm.leftMembers || []).length) + ((mlm.rightMembers || []).length)})
+          {t ? t('mlm_roster_title', { count: ((mlm.leftMembers || []).length) + ((mlm.rightMembers || []).length) }) : `Downline Team Roster (${((mlm.leftMembers || []).length) + ((mlm.rightMembers || []).length)})`}
         </h3>
         <p style={{ fontSize: '0.82rem', color: '#94a3b8', marginBottom: '1.25rem' }}>
-          All active referrals mapped by binary leg and deposit volume.
+          {t ? t('mlm_roster_desc') : 'All active referrals mapped by binary leg and deposit volume.'}
         </p>
 
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.86rem' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border-subtle)', color: '#94a3b8' }}>
-              <th style={{ padding: '0.75rem' }}>Member Name</th>
-              <th style={{ padding: '0.75rem' }}>Leg Placement</th>
-              <th style={{ padding: '0.75rem' }}>Deposit Volume</th>
-              <th style={{ padding: '0.75rem' }}>Joined Date</th>
-              <th style={{ padding: '0.75rem', textAlign: 'center' }}>Pairing Status</th>
+              <th style={{ padding: '0.75rem' }}>{t ? t('mlm_th_name') : 'Member Name'}</th>
+              <th style={{ padding: '0.75rem' }}>{t ? t('mlm_th_placement') : 'Leg Placement'}</th>
+              <th style={{ padding: '0.75rem' }}>{t ? t('mlm_th_volume') : 'Deposit Volume'}</th>
+              <th style={{ padding: '0.75rem' }}>{t ? t('mlm_th_joined') : 'Joined Date'}</th>
+              <th style={{ padding: '0.75rem', textAlign: 'center' }}>{t ? t('mlm_th_status') : 'Pairing Status'}</th>
             </tr>
           </thead>
           <tbody>
@@ -549,7 +550,7 @@ export default function MlmNetworkView() {
 
                 <td style={{ padding: '0.85rem 0.75rem' }}>
                   <span className={`badge ${member.leg === 'LEFT' ? 'badge-indigo' : 'badge-emerald'}`}>
-                    {member.leg === 'LEFT' ? '👈 Left Leg' : '👉 Right Leg'}
+                    {member.leg === 'LEFT' ? (t ? t('mlm_left_leg_btn') : '👈 Left Leg') : (t ? t('mlm_right_leg_btn') : '👉 Right Leg')}
                   </span>
                 </td>
 
@@ -563,7 +564,7 @@ export default function MlmNetworkView() {
 
                 <td style={{ padding: '0.85rem 0.75rem', textAlign: 'center' }}>
                   <span className="badge badge-emerald" style={{ fontSize: '0.62rem' }}>
-                    Matched & Compounding
+                    {t ? t('mlm_matched_compounding') : 'Matched & Compounding'}
                   </span>
                 </td>
               </tr>

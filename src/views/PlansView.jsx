@@ -42,7 +42,8 @@ export default function PlansView({ onOpenDeposit, onWithdrawPrincipal }) {
     paymentSettings,
     hasUsedTrialPlan,
     hasUsedTrialWithdrawal,
-    freeTrialStatus
+    freeTrialStatus,
+    t
   } = useApp();
 
   const activePlan = contextActivePlan !== undefined ? contextActivePlan : (plans || []).find((p) => p.status === 'active');
@@ -171,12 +172,12 @@ export default function PlansView({ onOpenDeposit, onWithdrawPrincipal }) {
       {/* Header */}
       <div style={{ marginBottom: '2rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
-          <span className="badge badge-emerald">Membership Tiers</span>
+          <span className="badge badge-emerald">{t ? t('nav_plans') : 'Membership Tiers'}</span>
           <span className="badge badge-indigo">1 Active Plan Limit</span>
         </div>
-        <h2 style={{ fontSize: '1.8rem', fontWeight: 800 }}>Membership Tiers & Earning Plans</h2>
+        <h2 style={{ fontSize: '1.8rem', fontWeight: 800 }}>{t ? t('plan_title') : 'Membership Duration Tiers Overview'}</h2>
         <p style={{ fontSize: '0.9rem', color: '#94a3b8', maxWidth: '750px' }}>
-          Choose your active membership tier (₹2,000 up to ₹50,000). Each account can maintain <strong>1 active plan at a time</strong>. You can upgrade to a higher tier anytime to unlock higher estimated daily task earnings, but downgrading is not permitted. Principal is eligible for withdrawal upon lock-in maturity.
+          {t ? t('plan_subtitle') : 'Choose your active membership tier (₹2,000 up to ₹50,000). Each account can maintain 1 active plan at a time. You can upgrade to a higher tier anytime to unlock higher estimated daily task earnings, but downgrading is not permitted. Principal is eligible for withdrawal upon lock-in maturity.'}
         </p>
       </div>
 
@@ -588,12 +589,12 @@ export default function PlansView({ onOpenDeposit, onWithdrawPrincipal }) {
               {/* Plan Title (Optional) */}
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label">
-                  <span>Custom Plan Name (Optional)</span>
+                  <span>{t ? t('plan_custom_name') : 'Custom Plan Name (Optional)'}</span>
                 </label>
                 <input
                   type="text"
                   className="input-field"
-                  placeholder={`e.g. My ${selectedLockin.label} Growth Plan`}
+                  placeholder={t ? t('plan_custom_name_placeholder') : `e.g. My ${selectedLockin.label} Growth Plan`}
                   value={planTitle}
                   onChange={(e) => setPlanTitle(e.target.value)}
                 />
@@ -615,37 +616,37 @@ export default function PlansView({ onOpenDeposit, onWithdrawPrincipal }) {
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: '1px solid var(--border-subtle)' }}>
                   <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#34d399' }}>
-                    Estimated Task Earning Projection
+                    {t ? t('plan_projection_title') : 'Estimated Task Earning Projection'}
                   </span>
                   <span className="badge badge-emerald" style={{ fontSize: '0.65rem' }}>
-                    Task Performance Model
+                    {t ? t('plan_model_badge') : 'TASK PERFORMANCE MODEL'}
                   </span>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.25rem', marginBottom: '1.25rem' }}>
                   <div>
-                    <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Subscription Principal</div>
+                    <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{t ? t('plan_principal') : 'Subscription Principal'}</div>
                     <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#ffffff' }}>
                       {formatINR(calculation.principal)}
                     </div>
                   </div>
 
                   <div>
-                    <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Estimated Total Task Income</div>
+                    <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{t ? t('plan_total_income') : 'Estimated Total Task Income'}</div>
                     <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#34d399' }}>
                       +{formatINR(calculation.estimatedTotalIncome)}
                     </div>
                   </div>
 
                   <div>
-                    <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Estimated Daily Task Quota</div>
+                    <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{t ? t('plan_daily_quota') : 'Estimated Daily Task Quota'}</div>
                     <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#fbbf24' }}>
                       ~{formatINR(calculation.estimatedDailyIncome)} / day
                     </div>
                   </div>
 
                   <div>
-                    <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Estimated 30 Days Potential</div>
+                    <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{t ? t('plan_potential_days', { days: 30 }) : 'Estimated 30 Days Potential'}</div>
                     <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#22d3ee' }}>
                       ~{formatINR(calculation.estimatedMonthlyIncome)} / 30 days
                     </div>
@@ -653,13 +654,13 @@ export default function PlansView({ onOpenDeposit, onWithdrawPrincipal }) {
                 </div>
 
                 <div style={{ padding: '0.85rem', background: 'rgba(16, 185, 129, 0.08)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(16, 185, 129, 0.25)', marginBottom: '1.25rem' }}>
-                  <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Estimated Total Value at Maturity (Principal + Income)</div>
+                  <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{t ? t('plan_maturity_value') : 'Estimated Total Value at Maturity (Principal + Income)'}</div>
                   <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#34d399' }}>
                     {formatINR(calculation.estimatedMaturityValue)}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', color: '#cbd5e1', marginTop: '0.25rem' }}>
                     <ShieldCheck size={14} color="#34d399" />
-                    <span>Original deposit {formatINR(calculation.principal)} eligible for full withdrawal after {selectedLockin.days || selectedLockin.months * 30} days</span>
+                    <span>{t ? t('plan_withdrawal_notice', { amount: calculation.principal.toLocaleString(), days: selectedLockin.days || selectedLockin.months * 30 }) : `Original deposit ${formatINR(calculation.principal)} eligible for full withdrawal after ${selectedLockin.days || selectedLockin.months * 30} days`}</span>
                   </div>
                 </div>
               </div>
@@ -672,15 +673,15 @@ export default function PlansView({ onOpenDeposit, onWithdrawPrincipal }) {
               >
                 {pendingDeposit && pendingDeposit.status === 'PENDING' ? (
                   <>
-                    <Clock size={18} /> Payment Verification Pending (UTR: {pendingDeposit.utr})
+                    <Clock size={18} /> {t ? t('plan_pending_verification', { utr: pendingDeposit.utr }) : `Payment Verification Pending (UTR: ${pendingDeposit.utr})`}
                   </>
                 ) : activePlan ? (
                   <>
-                    <ArrowRight size={18} /> Proceed to Upgrade Payment ({formatINR(numAmount)})
+                    <ArrowRight size={18} /> {t ? t('action_upgrade') : 'Proceed to Upgrade Payment'} ({formatINR(numAmount)})
                   </>
                 ) : (
                   <>
-                    <ArrowRight size={18} /> Confirm Plan & Proceed to UPI Payment ({formatINR(numAmount)})
+                    <ArrowRight size={18} /> {t ? t('plan_proceed_payment') : `Confirm Plan & Proceed to UPI Payment (${formatINR(numAmount)})`}
                   </>
                 )}
               </button>
@@ -701,14 +702,14 @@ export default function PlansView({ onOpenDeposit, onWithdrawPrincipal }) {
               className="btn btn-secondary btn-sm"
               style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.45rem 0.85rem' }}
             >
-              <ArrowLeft size={16} /> Back / Change Plan
+              <ArrowLeft size={16} /> {t ? t('plan_back_step') : 'Back / Change Plan'}
             </button>
             <div>
               <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#f8fafc' }}>
-                UPI Deposit Gateway & UTR Verification
+                {t ? t('plan_payment_gateway_title') : 'UPI Deposit Gateway & UTR Verification'}
               </h3>
               <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
-                Pay ₹{numAmount.toLocaleString()} via UPI or Bank, then submit the 12-digit UTR for Admin activation
+                {t ? t('plan_payment_gateway_desc') : `Pay ₹${numAmount.toLocaleString()} via UPI or Bank, then submit the 12-digit UTR for Admin activation`}
               </p>
             </div>
           </div>
@@ -917,7 +918,7 @@ export default function PlansView({ onOpenDeposit, onWithdrawPrincipal }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.75rem' }}>
             <FileText size={20} color="#34d399" />
             <h4 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#f8fafc' }}>
-              Submit 12-Digit UTR / UPI Reference Number
+              {t ? t('plan_enter_utr') : 'Submit 12-Digit UTR / UPI Reference Number'}
             </h4>
           </div>
           <p style={{ fontSize: '0.82rem', color: '#94a3b8', marginBottom: '1.25rem' }}>
@@ -930,7 +931,7 @@ export default function PlansView({ onOpenDeposit, onWithdrawPrincipal }) {
               maxLength={24}
               value={userUtr}
               onChange={(e) => setUserUtr(e.target.value.replace(/[^0-9a-zA-Z]/g, ''))}
-              placeholder="Paste 12-digit UTR No. here (e.g. 429381729012)"
+              placeholder={t ? t('plan_utr_placeholder') : 'Paste 12-digit UTR No. here (e.g. 565656565656)'}
               className="input-field"
               style={{
                 fontSize: '1.2rem',
@@ -954,7 +955,7 @@ export default function PlansView({ onOpenDeposit, onWithdrawPrincipal }) {
               className="btn btn-secondary btn-lg"
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
-              <ArrowLeft size={16} /> Back / Change Plan
+              <ArrowLeft size={16} /> {t ? t('plan_back_step') : 'Back / Change Plan'}
             </button>
 
             <button
@@ -974,7 +975,7 @@ export default function PlansView({ onOpenDeposit, onWithdrawPrincipal }) {
               }}
             >
               <CheckCircle2 size={20} />
-              <span>Submit Payment Verification (₹{numAmount.toLocaleString()})</span>
+              <span>{t ? t('plan_submit_verification') : `Submit Payment Verification (₹${numAmount.toLocaleString()})`}</span>
             </button>
           </div>
         </div>

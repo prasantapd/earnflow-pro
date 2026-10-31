@@ -52,7 +52,8 @@ export default function DashboardView({
     isUserActivated,
     canUserEarn,
     freeTrialStatus,
-    showToast
+    showToast,
+    t
   } = useApp();
 
   const [copiedLink, setCopiedLink] = useState(false);
@@ -118,17 +119,17 @@ export default function DashboardView({
             <div style={{ flex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.35rem' }}>
                 <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#fbbf24', margin: 0 }}>
-                  🎁 New User Free Pass Active (Day {freeTrialStatus.dayNumber} of 2)
+                  {t ? t('dash_free_pass_title', { day: freeTrialStatus.dayNumber }) : `🎁 New User Free Pass Active (Day ${freeTrialStatus.dayNumber} of 2)`}
                 </h3>
                 <span className="badge badge-gold" style={{ fontSize: '0.65rem' }}>
-                  Earning Unlocked!
+                  {t ? t('dash_earning_unlocked') : 'Earning Unlocked!'}
                 </span>
                 <span className="badge badge-emerald" style={{ fontSize: '0.65rem' }}>
                   1.0× ₹2,000 Reward Rates
                 </span>
               </div>
               <p style={{ fontSize: '0.84rem', color: '#cbd5e1', lineHeight: 1.5, marginBottom: '0.75rem' }}>
-                You have 2 consecutive days of free task rewards and login streak bonuses! To withdraw your earnings directly to UPI, activate the <strong>₹300 3-Day Trial Plan</strong> (once per mobile) or a regular Membership Plan.
+                {t ? t('dash_free_pass_desc') : 'You have 2 consecutive days of free task rewards and login streak bonuses! To withdraw your earnings directly to UPI, activate the ₹300 3-Day Trial Plan (once per mobile) or a regular Membership Plan.'}
               </p>
               <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                 <button 
@@ -136,7 +137,7 @@ export default function DashboardView({
                   onClick={() => setActiveTab('plans')}
                   style={{ fontWeight: 700, fontSize: '0.82rem', padding: '0.4rem 0.85rem', background: 'linear-gradient(135deg, #ec4899 0%, #db2777 100%)', borderColor: '#f472b6' }}
                 >
-                  ⚡ View ₹300 Trial Pass (Unlock Withdrawals) →
+                  {t ? t('dash_view_trial') : '⚡ View ₹300 Trial Pass (Unlock Withdrawals) →'}
                 </button>
               </div>
             </div>
@@ -163,18 +164,18 @@ export default function DashboardView({
             <div style={{ flex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.35rem' }}>
                 <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#fbbf24', margin: 0 }}>
-                  {pendingDeposit ? '⏳ Payment Approval in Progress' : freeTrialStatus?.isExpired ? '⏰ 2-Day Free Trial Ended' : '⚠️ Account Pending Activation / Payment Approval'}
+                  {pendingDeposit ? (t ? t('dash_pending_approval_title') : '⏳ Payment Approval in Progress') : freeTrialStatus?.isExpired ? '⏰ 2-Day Free Trial Ended' : (t ? t('account_pending') : '⚠️ Account Pending Activation / Payment Approval')}
                 </h3>
                 <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.3)', color: '#fef08a', fontSize: '0.65rem' }}>
-                  Earning Locked
+                  {t ? t('dash_earning_locked') : 'Earning Locked'}
                 </span>
               </div>
               <p style={{ fontSize: '0.84rem', color: '#cbd5e1', lineHeight: 1.5, marginBottom: '0.85rem' }}>
                 {pendingDeposit 
-                  ? `Your payment of ₹${pendingDeposit.amount?.toLocaleString()} (UTR: ${pendingDeposit.utr}) has been submitted. Admin verification takes 5–15 minutes. Once approved, your membership plan and daily earning tasks will be unlocked!`
+                  ? (t ? t('dash_pending_deposit_desc', { amount: pendingDeposit.amount?.toLocaleString(), utr: pendingDeposit.utr }) : `Your payment of ₹${pendingDeposit.amount?.toLocaleString()} (UTR: ${pendingDeposit.utr}) has been submitted. Admin verification takes 5–15 minutes. Once approved, your membership plan and daily earning tasks will be unlocked!`)
                   : freeTrialStatus?.isExpired
                     ? 'Your 2-Day Free Registration Pass has ended. Please subscribe to the ₹300 3-Day Trial Plan or a regular Membership Plan to continue earning.'
-                    : 'Without an approved membership deposit, you cannot earn daily task rewards, login streak bonuses, or skill game prizes. Subscribe to a plan and submit your payment UTR for instant Admin activation.'}
+                    : (t ? t('dash_pending_generic_desc') : 'Without an approved membership deposit, you cannot earn daily task rewards, login streak bonuses, or skill game prizes. Subscribe to a plan and submit your payment UTR for instant Admin activation.')}
               </p>
               <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                 <button 
@@ -182,7 +183,7 @@ export default function DashboardView({
                   onClick={() => setActiveTab('plans')}
                   style={{ fontWeight: 700, fontSize: '0.82rem', padding: '0.4rem 0.85rem' }}
                 >
-                  {pendingDeposit ? 'Check Plans & Status →' : '👉 Choose Plan & Activate Account'}
+                  {pendingDeposit ? (t ? t('dash_check_plans_status') : 'Check Plans & Status →') : (t ? t('dash_choose_plan') : '👉 Choose Plan & Activate Account')}
                 </button>
               </div>
             </div>
@@ -218,15 +219,15 @@ export default function DashboardView({
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.25rem' }}>
                 <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#ffffff', margin: 0, letterSpacing: '-0.02em' }}>
-                  Hello, {user?.name || 'Member'}! 👋
+                  {t ? t('dash_hello', { name: user?.name || 'Member' }) : `Hello, ${user?.name || 'Member'}! 👋`}
                 </h2>
                 {canUserEarn ? (
                   <span className="badge badge-emerald" style={{ fontSize: '0.65rem', padding: '2px 8px' }}>
-                    <ShieldCheck size={12} style={{ display: 'inline', marginRight: 2 }} /> Active Member
+                    <ShieldCheck size={12} style={{ display: 'inline', marginRight: 2 }} /> {t ? t('badge_active_member') : 'Active Member'}
                   </span>
                 ) : (
                   <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.25)', color: '#fbbf24', border: '1px solid rgba(245, 158, 11, 0.4)', fontSize: '0.65rem', padding: '2px 8px' }}>
-                    <Clock size={12} style={{ display: 'inline', marginRight: 2 }} /> Pending Activation
+                    <Clock size={12} style={{ display: 'inline', marginRight: 2 }} /> {t ? t('badge_pending_activation') : 'Pending Activation'}
                   </span>
                 )}
                 <span className={`badge ${userMembershipTier?.badgeClass || 'badge-cyan'}`} style={{ fontSize: '0.65rem', padding: '2px 8px' }}>
@@ -237,7 +238,7 @@ export default function DashboardView({
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', fontSize: '0.8rem', color: '#94a3b8' }}>
                 <span style={{ color: '#34d399', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
                   <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981', display: 'inline-block', boxShadow: '0 0 8px #10b981' }} />
-                  24/7 Instant UPI Payouts Active
+                  {t ? t('badge_instant_upi') : '24/7 Instant UPI Payouts Active'}
                 </span>
                 <span>•</span>
                 <span>{formatFullReadableDate(getLocalDateString(0))}</span>
@@ -249,7 +250,7 @@ export default function DashboardView({
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
             <div style={{ textAlign: 'right', minWidth: '130px' }}>
               <div style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>
-                Reward Wallet
+                {t ? t('wallet_task_rewards') : 'Reward Wallet'}
               </div>
               <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#34d399', letterSpacing: '-0.02em' }}>
                 {formatINR(rewardWallet)}
@@ -265,7 +266,7 @@ export default function DashboardView({
                 title={rewardWallet < 100 ? 'Min. withdrawal is ₹100' : 'Instant UPI Payout'}
               >
                 <ArrowDownCircle size={16} />
-                <span>Withdraw</span>
+                <span>{t ? t('action_withdraw') : 'Withdraw'}</span>
               </button>
 
               <button 
@@ -282,7 +283,7 @@ export default function DashboardView({
                 }}
               >
                 {pendingDeposit?.status === 'PENDING' ? <Clock size={16} /> : <PlusCircle size={16} />}
-                <span>{pendingDeposit?.status === 'PENDING' ? 'Under Review' : (activePlans.length > 0 ? 'Upgrade' : 'Deposit')}</span>
+                <span>{pendingDeposit?.status === 'PENDING' ? (t ? t('dash_pending_approval_title') : 'Under Review') : (activePlans.length > 0 ? (t ? t('action_upgrade') : 'Upgrade') : (t ? t('action_deposit') : 'Deposit'))}</span>
               </button>
             </div>
           </div>
@@ -303,7 +304,7 @@ export default function DashboardView({
             {pendingDeposit?.status === 'PENDING' ? <Clock size={22} /> : <PlusCircle size={22} />}
           </div>
           <div className="quick-action-title">
-            {pendingDeposit?.status === 'PENDING' ? 'Deposit Under Review' : (activePlans.length > 0 ? 'Upgrade Plan' : 'Add Capital')}
+            {pendingDeposit?.status === 'PENDING' ? (t ? t('dash_pending_approval_title') : 'Deposit Under Review') : (activePlans.length > 0 ? (t ? t('action_upgrade') : 'Upgrade Plan') : (t ? t('dash_qa_deposit') : 'Add Capital'))}
           </div>
           <div className="quick-action-desc" style={{ color: pendingDeposit?.status === 'PENDING' ? '#fbbf24' : '#94a3b8' }}>
             {pendingDeposit?.status === 'PENDING' ? `UTR: ${pendingDeposit.utr} Pending` : '100% Refundable at maturity'}
@@ -321,7 +322,7 @@ export default function DashboardView({
           <div className="quick-action-icon" style={{ background: 'rgba(251, 191, 36, 0.15)', color: '#fbbf24' }}>
             <PlayCircle size={22} />
           </div>
-          <div className="quick-action-title">Daily Task Center</div>
+          <div className="quick-action-title">{t ? t('dash_qa_daily_tasks') : 'Daily Task Center'}</div>
           <div className="quick-action-desc" style={{ color: completedTaskCount < activeTodayTasks.length ? '#fde047' : '#94a3b8' }}>
             {completedTaskCount >= activeTodayTasks.length && activeTodayTasks.length > 0
               ? '✅ All Done Today'
@@ -339,7 +340,7 @@ export default function DashboardView({
           <div className="quick-action-icon" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#34d399' }}>
             <ArrowDownCircle size={22} />
           </div>
-          <div className="quick-action-title">Instant Payout</div>
+          <div className="quick-action-title">{t ? t('dash_qa_withdraw') : 'Instant Payout'}</div>
           <div className="quick-action-desc">24/7 UPI • Min ₹100</div>
         </div>
 
@@ -353,7 +354,7 @@ export default function DashboardView({
           <div className="quick-action-icon" style={{ background: 'rgba(37, 211, 102, 0.15)', color: '#25D366' }}>
             <Share2 size={22} />
           </div>
-          <div className="quick-action-title">WhatsApp Invite</div>
+          <div className="quick-action-title">{t ? t('dash_share_whatsapp') : 'WhatsApp Invite'}</div>
           <div className="quick-action-desc">Earn 5% Matching Bonus</div>
         </div>
       </div>
@@ -364,7 +365,7 @@ export default function DashboardView({
         <div className="glass-card card-interactive" style={{ padding: '1.25rem', borderLeft: '4px solid #10b981' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
             <span style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.04em' }}>
-              Task Reward Wallet
+              {t ? t('wallet_task_rewards') : 'Task Reward Wallet'}
             </span>
             <div style={{ width: 32, height: 32, borderRadius: '8px', background: 'rgba(16, 185, 129, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#34d399' }}>
               <Wallet size={16} />
@@ -383,7 +384,7 @@ export default function DashboardView({
               disabled={rewardWallet < 100}
               style={{ fontSize: '0.72rem', padding: '0.2rem 0.6rem' }}
             >
-              Payout →
+              {t ? t('action_withdraw') : 'Payout'} →
             </button>
           </div>
         </div>
@@ -392,7 +393,7 @@ export default function DashboardView({
         <div className="glass-card card-interactive" style={{ padding: '1.25rem', borderLeft: '4px solid #06b6d4' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
             <span style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.04em' }}>
-              Subscription Principal
+              {t ? t('plan_principal') : 'Subscription Principal'}
             </span>
             <div style={{ width: 32, height: 32, borderRadius: '8px', background: 'rgba(6, 182, 212, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#22d3ee' }}>
               <Lock size={16} />
@@ -403,7 +404,7 @@ export default function DashboardView({
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.75rem' }}>
             <span style={{ color: '#94a3b8' }}>
-              {activePlans.length > 0 ? `${activePlans.length} Active Plan` : 'No Active Plan'}
+              {activePlans.length > 0 ? `${activePlans.length} Active Plan` : (t ? t('dash_no_active_plans') : 'No Active Plan')}
             </span>
             <span className="badge badge-cyan" style={{ fontSize: '0.62rem', padding: '1px 5px' }}>
               Refundable at Maturity
@@ -415,7 +416,7 @@ export default function DashboardView({
         <div className="glass-card card-interactive" style={{ padding: '1.25rem', borderLeft: '4px solid #f59e0b' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
             <span style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.04em' }}>
-              Estimated Daily Quota
+              {t ? t('plan_daily_quota') : 'Estimated Daily Quota'}
             </span>
             <div style={{ width: 32, height: 32, borderRadius: '8px', background: 'rgba(245, 158, 11, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fbbf24' }}>
               <Sparkles size={16} />
@@ -434,7 +435,7 @@ export default function DashboardView({
               onClick={() => setActiveTab('tasks')}
               style={{ fontSize: '0.72rem', padding: '0.2rem 0.6rem' }}
             >
-              Start Tasks
+              {t ? t('task_start') : 'Start Tasks'}
             </button>
           </div>
         </div>
@@ -443,7 +444,7 @@ export default function DashboardView({
         <div className="glass-card card-interactive" style={{ padding: '1.25rem', borderLeft: '4px solid #8b5cf6' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
             <span style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.04em' }}>
-              Total Cleared Payouts
+              {t ? t('dash_total_withdrawn') : 'Total Cleared Payouts'}
             </span>
             <div style={{ width: 32, height: 32, borderRadius: '8px', background: 'rgba(139, 92, 246, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#a78bfa' }}>
               <ArrowDownCircle size={16} />
@@ -536,7 +537,7 @@ export default function DashboardView({
                 <Users size={18} />
               </div>
               <div>
-                <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#ffffff', margin: 0 }}>2:1 Binary MLM Network</h3>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#ffffff', margin: 0 }}>{t ? t('mlm_title') : '2:1 Binary MLM Network'}</h3>
                 <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
                   Earn 5% (₹150/pair) binary matching bonuses
                 </div>
@@ -553,7 +554,7 @@ export default function DashboardView({
           </div>
 
           <p style={{ fontSize: '0.78rem', color: '#cbd5e1', marginBottom: '0.75rem' }}>
-            Invite friends using your unique sponsor link. When your left & right teams subscribe, you unlock 2:1 paired commission directly to your wallet!
+            {t ? t('dash_referral_desc') : 'Invite friends using your unique sponsor link. When your left & right teams subscribe, you unlock 2:1 paired commission directly to your wallet!'}
           </p>
 
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
@@ -581,7 +582,7 @@ export default function DashboardView({
               style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.78rem', padding: '0.45rem 0.85rem' }}
             >
               {copiedLink ? <Check size={14} /> : <Copy size={14} />}
-              <span>{copiedLink ? 'Copied!' : 'Copy Link'}</span>
+              <span>{copiedLink ? (t ? t('dash_copied') : 'Copied!') : (t ? t('dash_copy_link') : 'Copy Link')}</span>
             </button>
 
             <button 
@@ -606,7 +607,7 @@ export default function DashboardView({
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 800 }}>My Active Membership Plan</h3>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 800 }}>{t ? t('dash_active_plans_title') : 'My Active Membership Plan'}</h3>
               <span className="badge badge-indigo" style={{ fontSize: '0.62rem' }}>1 Active Plan Limit</span>
             </div>
             <p style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
@@ -619,7 +620,7 @@ export default function DashboardView({
             onClick={() => setActiveTab('plans')}
             style={{ fontSize: '0.78rem' }}
           >
-            Browse All Plans <ArrowUpRight size={14} />
+            {t ? t('dash_unlock_earnings') : 'Browse All Plans'} <ArrowUpRight size={14} />
           </button>
         </div>
 
@@ -637,7 +638,7 @@ export default function DashboardView({
               <Lock size={22} />
             </div>
             <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#ffffff', marginBottom: '0.35rem' }}>
-              No Active Membership Plan Yet
+              {t ? t('dash_no_active_plans') : 'No Active Membership Plan Yet'}
             </h4>
             <p style={{ fontSize: '0.82rem', color: '#94a3b8', maxWidth: '440px', margin: '0 auto 1.25rem', lineHeight: 1.5 }}>
               Choose a 1-Month to 1-Year plan starting from ₹2,000 to unlock your guaranteed daily tasks and 24/7 withdrawals. Principal is 100% refundable at maturity!
@@ -647,7 +648,7 @@ export default function DashboardView({
               onClick={onOpenDeposit}
               style={{ fontWeight: 700, padding: '0.55rem 1.4rem' }}
             >
-              <PlusCircle size={16} /> Explore Plans & Deposit
+              <PlusCircle size={16} /> {t ? t('action_deposit') : 'Explore Plans & Deposit'}
             </button>
           </div>
         ) : (
@@ -668,19 +669,19 @@ export default function DashboardView({
         {/* Recent Ledger Activity */}
         <div className="glass-card" style={{ padding: '1.25rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-            <h3 style={{ fontSize: '1.05rem', fontWeight: 800 }}>Recent Ledger Activity</h3>
+            <h3 style={{ fontSize: '1.05rem', fontWeight: 800 }}>{t ? t('dash_recent_activity') : 'Recent Ledger Activity'}</h3>
             <button 
               className="btn btn-secondary btn-sm"
               onClick={() => setActiveTab('history')}
               style={{ fontSize: '0.72rem', padding: '0.2rem 0.5rem' }}
             >
-              View All
+              {t ? t('dash_view_all_history') : 'View All'}
             </button>
           </div>
 
           {recentTransactions.length === 0 ? (
             <div style={{ padding: '2rem 1rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.82rem' }}>
-              No transactions recorded yet. Complete daily tasks or deposit to see activity here!
+              {t ? t('dash_no_transactions') : 'No transactions recorded yet.'}
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>

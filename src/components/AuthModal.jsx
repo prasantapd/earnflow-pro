@@ -3,7 +3,7 @@ import { X, User, Mail, Phone, Lock, CheckCircle2, ShieldCheck } from 'lucide-re
 import { useApp } from '../context/AppContext';
 
 export default function AuthModal({ isOpen, onClose }) {
-  const { user, registerUser, requestPasswordReset, showToast } = useApp();
+  const { user, registerUser, requestPasswordReset, showToast, t } = useApp();
   const [isRegisterMode, setIsRegisterMode] = useState(false);
   const [formData, setFormData] = useState({
     name: user?.name || '',
@@ -41,10 +41,10 @@ export default function AuthModal({ isOpen, onClose }) {
             </div>
             <div>
               <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>
-                {isRegisterMode ? 'Create New Account' : 'User Account & Profile'}
+                {isRegisterMode ? (t ? t('auth_register_title') : 'Create New Account') : (t ? t('user_profile') : 'User Account & Profile')}
               </h2>
               <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
-                {isRegisterMode ? 'Register to start depositing and earning daily rewards' : 'Manage your verified investor identity'}
+                {isRegisterMode ? (t ? t('auth_subtitle_register') : 'Register to start depositing and earning daily rewards') : 'Manage your verified investor identity'}
               </p>
             </div>
           </div>
@@ -96,7 +96,7 @@ export default function AuthModal({ isOpen, onClose }) {
           {/* Full Name */}
           <div className="form-group">
             <label className="form-label">
-              <span>Full Name</span>
+              <span>{t ? t('auth_full_name') : 'Full Name'}</span>
               <span style={{ fontSize: '0.72rem', color: '#10b981' }}>Required</span>
             </label>
             <div style={{ position: 'relative' }}>
@@ -116,7 +116,7 @@ export default function AuthModal({ isOpen, onClose }) {
           {/* Email Address */}
           <div className="form-group">
             <label className="form-label">
-              <span>Email Address</span>
+              <span>{t ? t('auth_email_optional') : 'Email Address'}</span>
               <span style={{ fontSize: '0.72rem', color: '#10b981' }}>Account Notifications</span>
             </label>
             <div style={{ position: 'relative' }}>
@@ -136,8 +136,8 @@ export default function AuthModal({ isOpen, onClose }) {
           {/* Phone Number */}
           <div className="form-group">
             <label className="form-label">
-              <span>Phone Number</span>
-              <span style={{ fontSize: '0.72rem', color: '#10b981' }}>UPI / OTP Authentication</span>
+              <span>{t ? t('auth_phone_label') : 'Phone Number'}</span>
+              <span style={{ fontSize: '0.72rem', color: '#10b981' }}>UPI / SMS</span>
             </label>
             <div style={{ position: 'relative' }}>
               <Phone size={16} color="#94a3b8" style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)' }} />
@@ -145,7 +145,7 @@ export default function AuthModal({ isOpen, onClose }) {
                 type="tel"
                 className="input-field"
                 style={{ paddingLeft: '2.5rem' }}
-                placeholder="+91 98765 43210"
+                placeholder={t ? t('auth_phone_placeholder') : "e.g. 9876543210"}
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 required
@@ -157,7 +157,7 @@ export default function AuthModal({ isOpen, onClose }) {
           <div className="form-group">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
               <label className="form-label" style={{ margin: 0 }}>
-                <span>Security Password</span>
+                <span>{t ? t('auth_password_label') : 'Security Password'}</span>
               </label>
               <button
                 type="button"
@@ -178,7 +178,7 @@ export default function AuthModal({ isOpen, onClose }) {
                   padding: 0
                 }}
               >
-                Forgot / Reset Password?
+                {t ? t('auth_forgot_password') : 'Forgot / Reset Password?'}
               </button>
             </div>
             <div style={{ position: 'relative' }}>
@@ -187,7 +187,7 @@ export default function AuthModal({ isOpen, onClose }) {
                 type="password"
                 className="input-field"
                 style={{ paddingLeft: '2.5rem' }}
-                placeholder="Enter password"
+                placeholder={t ? t('auth_password_placeholder') : "Enter password"}
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               />
@@ -196,7 +196,7 @@ export default function AuthModal({ isOpen, onClose }) {
 
           <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem' }}>
             <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>
-              {isRegisterMode ? 'Complete Registration' : 'Save Profile Changes'}
+              {isRegisterMode ? (t ? t('auth_btn_register') : 'Complete Registration') : (t ? t('action_submit') : 'Save Profile Changes')}
             </button>
             {isRegisterMode && (
               <button 
@@ -204,7 +204,7 @@ export default function AuthModal({ isOpen, onClose }) {
                 className="btn btn-secondary" 
                 onClick={() => setIsRegisterMode(false)}
               >
-                Cancel
+                {t ? t('action_cancel') : 'Cancel'}
               </button>
             )}
           </div>

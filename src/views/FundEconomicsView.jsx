@@ -15,8 +15,10 @@ import {
   Building
 } from 'lucide-react';
 import { formatINR } from '../utils/finance';
+import { useApp } from '../context/AppContext';
 
 export default function FundEconomicsView() {
+  const { t } = useApp();
   const [simulatedPoolCapital, setSimulatedPoolCapital] = useState(1000000); // 10 Lakhs
 
   const monthlyGrossRevenue = Math.round(simulatedPoolCapital * 0.10); 
@@ -31,9 +33,9 @@ export default function FundEconomicsView() {
           <span className="badge badge-emerald">Business & Monetization Model</span>
           <span className="badge badge-gold">Transparent Architecture</span>
         </div>
-        <h2 style={{ fontSize: '1.8rem', fontWeight: 800 }}>Platform Task Economics & Revenue Model</h2>
+        <h2 style={{ fontSize: '1.8rem', fontWeight: 800 }}>{t ? t('eco_title') : 'Platform Task Economics & Revenue Model'}</h2>
         <p style={{ fontSize: '0.9rem', color: '#94a3b8', maxWidth: '780px' }}>
-          Discover the sustainable monetization engine powering EarnFlow. How brand promotional campaigns and creator media budgets fund user task rewards while safeguarding treasury solvency.
+          {t ? t('eco_subtitle') : 'Discover the sustainable monetization engine powering EarnFlow. How brand promotional campaigns and creator media budgets fund user task rewards while safeguarding treasury solvency.'}
         </p>
       </div>
 

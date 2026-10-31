@@ -95,14 +95,14 @@ export default function Navbar({ activeTab, setActiveTab, onOpenAuth, onOpenPayo
           <div style={{ background: 'rgba(245, 158, 11, 0.15)', border: '1px solid rgba(245, 158, 11, 0.35)', borderRadius: 'var(--radius-md)', padding: '0.45rem 0.85rem', marginBottom: '0.65rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem', color: '#fbbf24', flexWrap: 'wrap', gap: '0.4rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <Clock size={15} style={{ flexShrink: 0 }} />
-              <span><strong>Account Pending Admin Activation:</strong> Payment approval is required before earning features and daily tasks unlock.</span>
+              <span><strong>{t ? t('account_pending') : 'Account Pending Admin Activation'}:</strong> {t ? t('nav_pending_notice') : 'Payment approval is required before earning features and daily tasks unlock.'}</span>
             </div>
             <button 
               type="button" 
               onClick={() => setActiveTab('plans')} 
               style={{ background: 'rgba(245, 158, 11, 0.25)', border: 'none', color: '#fef3c7', padding: '0.2rem 0.55rem', borderRadius: '4px', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}
             >
-              Check Plan / Deposit →
+              {t ? t('nav_check_plan') : 'Check Plan / Deposit →'}
             </button>
           </div>
         )}
@@ -112,7 +112,7 @@ export default function Navbar({ activeTab, setActiveTab, onOpenAuth, onOpenPayo
           <div style={{ background: 'rgba(239, 68, 68, 0.2)', border: '1px solid rgba(239, 68, 68, 0.4)', borderRadius: 'var(--radius-md)', padding: '0.5rem 1rem', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.82rem', color: '#fca5a5' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <ShieldAlert size={16} />
-              <span><strong>Account Suspended:</strong> {user.suspensionReason || 'Please contact platform support.'}</span>
+              <span><strong>{t ? t('account_suspended') : 'Account Suspended'}:</strong> {user.suspensionReason || 'Please contact platform support.'}</span>
             </div>
             <span style={{ fontSize: '0.75rem', color: '#fca5a5', background: 'rgba(239, 68, 68, 0.25)', padding: '0.25rem 0.65rem', borderRadius: '4px', fontWeight: 600 }}>
               Support: support@taskcoin.in
@@ -145,7 +145,7 @@ export default function Navbar({ activeTab, setActiveTab, onOpenAuth, onOpenPayo
                   PRO
                 </span>
               </div>
-              <span className="brand-tag">Daily Task Rewards & Community Platform</span>
+              <span className="brand-tag">{t ? t('brand_tag') : 'Daily Task Rewards & Community Platform'}</span>
             </div>
           </div>
 
@@ -358,7 +358,7 @@ export default function Navbar({ activeTab, setActiveTab, onOpenAuth, onOpenPayo
                 title="Exit administrative mode"
               >
                 <ShieldCheck size={14} />
-                <span>Exit Admin</span>
+                <span>{t ? t('action_exit_admin') : 'Exit Admin'}</span>
               </button>
             )}
 
@@ -383,7 +383,7 @@ export default function Navbar({ activeTab, setActiveTab, onOpenAuth, onOpenPayo
                     flexShrink: 0,
                     cursor: 'pointer'
                   }}
-                  title={user?.status === 'PENDING_ACTIVATION' ? 'Account Pending Admin Activation' : `Logged in as ${user?.name || 'Member'}`}
+                  title={user?.status === 'PENDING_ACTIVATION' ? (t ? t('account_pending') : 'Account Pending Admin Activation') : `Logged in as ${user?.name || 'Member'}`}
                   aria-label="User Account Menu"
                 >
                   <div 
@@ -444,11 +444,11 @@ export default function Navbar({ activeTab, setActiveTab, onOpenAuth, onOpenPayo
                       <div style={{ marginTop: '0.45rem' }}>
                         {user?.status === 'PENDING_ACTIVATION' ? (
                           <span className="badge badge-amber" style={{ fontSize: '0.65rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
-                            <Clock size={11} /> Pending Admin Activation
+                            <Clock size={11} /> {t ? t('badge_pending_activation') : 'Pending Admin Activation'}
                           </span>
                         ) : (
                           <span className="badge badge-emerald" style={{ fontSize: '0.65rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
-                            <UserCheck size={11} /> Active Investor
+                            <UserCheck size={11} /> {t ? t('badge_active_member') : 'Active Member'}
                           </span>
                         )}
                       </div>
@@ -465,7 +465,7 @@ export default function Navbar({ activeTab, setActiveTab, onOpenAuth, onOpenPayo
                         }}
                       >
                         <User size={15} color="#34d399" />
-                        <span>Account Profile & Security</span>
+                        <span>{t ? t('user_profile') : 'Account Profile & Security'}</span>
                       </button>
 
                       <button
@@ -479,7 +479,7 @@ export default function Navbar({ activeTab, setActiveTab, onOpenAuth, onOpenPayo
                       >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                           <Wallet size={15} color="#fbbf24" />
-                          <span>Wallet & Payouts</span>
+                          <span>{t ? t('nav_withdraw') : 'Wallet & Payouts'}</span>
                         </div>
                         <strong style={{ color: '#34d399', fontSize: '0.78rem' }}>{formatINR(rewardWallet)}</strong>
                       </button>
@@ -493,7 +493,7 @@ export default function Navbar({ activeTab, setActiveTab, onOpenAuth, onOpenPayo
                         }}
                       >
                         <Layers size={15} color="#60a5fa" />
-                        <span>My Membership Plans</span>
+                        <span>{t ? t('nav_plans') : 'My Membership Plans'}</span>
                       </button>
 
                       <button
@@ -505,7 +505,7 @@ export default function Navbar({ activeTab, setActiveTab, onOpenAuth, onOpenPayo
                         }}
                       >
                         <PlayCircle size={15} color="#fbbf24" />
-                        <span>Daily Earning Tasks</span>
+                        <span>{t ? t('nav_tasks') : 'Daily Earning Tasks'}</span>
                       </button>
 
                       <button
@@ -517,7 +517,7 @@ export default function Navbar({ activeTab, setActiveTab, onOpenAuth, onOpenPayo
                         }}
                       >
                         <GitBranch size={15} color="#a78bfa" />
-                        <span>Referral & Team Network</span>
+                        <span>{t ? t('nav_network') : 'Referral & Team Network'}</span>
                       </button>
                     </div>
 
@@ -533,7 +533,7 @@ export default function Navbar({ activeTab, setActiveTab, onOpenAuth, onOpenPayo
                         style={{ color: '#f87171' }}
                       >
                         <LogOut size={14} color="#f87171" />
-                        <span>Log Out of Account</span>
+                        <span>{t ? t('action_logout') : 'Log Out of Account'}</span>
                       </button>
                     </div>
                   </div>
@@ -546,7 +546,7 @@ export default function Navbar({ activeTab, setActiveTab, onOpenAuth, onOpenPayo
                 style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontWeight: 700, fontSize: '0.78rem', padding: '0.32rem 0.65rem', whiteSpace: 'nowrap', flexShrink: 0 }}
               >
                 <UserCheck size={14} />
-                <span>Log In</span>
+                <span>{t ? t('action_login') : 'Log In'}</span>
               </button>
             )}
           </div>

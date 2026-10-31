@@ -11,7 +11,7 @@ import {
 import { useApp } from '../context/AppContext';
 
 export default function PayoutDetailsModal({ isOpen, onClose, onSaved }) {
-  const { payoutMethod, savePayoutMethod, user, showToast } = useApp();
+  const { payoutMethod, savePayoutMethod, user, showToast, t } = useApp();
   const [activeType, setActiveType] = useState(payoutMethod?.type || 'upi_id');
 
   // Form states
@@ -87,9 +87,9 @@ export default function PayoutDetailsModal({ isOpen, onClose, onSaved }) {
               <CreditCard size={22} />
             </div>
             <div>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Payout Withdrawal Method</h2>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>{t ? t('payout_modal_title') : 'Payout Withdrawal Method'}</h2>
               <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
-                Setup where your Sunday rewards and matured principal are deposited
+                {t ? t('payout_modal_subtitle') : 'Setup where your Sunday rewards and matured principal are deposited'}
               </p>
             </div>
           </div>
@@ -121,7 +121,7 @@ export default function PayoutDetailsModal({ isOpen, onClose, onSaved }) {
             }}
           >
             <Smartphone size={18} />
-            <span>UPI VPA ID</span>
+            <span>{t ? t('payout_tab_upi_id') : 'UPI VPA ID'}</span>
           </button>
 
           <button
@@ -145,7 +145,7 @@ export default function PayoutDetailsModal({ isOpen, onClose, onSaved }) {
             }}
           >
             <Smartphone size={18} />
-            <span>UPI Phone</span>
+            <span>{t ? t('payout_tab_upi_phone') : 'UPI Phone'}</span>
           </button>
 
           <button
@@ -169,7 +169,7 @@ export default function PayoutDetailsModal({ isOpen, onClose, onSaved }) {
             }}
           >
             <Building2 size={18} />
-            <span>Bank Account</span>
+            <span>{t ? t('payout_tab_bank') : 'Bank Account'}</span>
           </button>
         </div>
 
@@ -337,10 +337,10 @@ export default function PayoutDetailsModal({ isOpen, onClose, onSaved }) {
 
           <div style={{ display: 'flex', gap: '0.75rem' }}>
             <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>
-              <CheckCircle2 size={16} /> Save & Verify Payout Method
+              <CheckCircle2 size={16} /> {t ? t('payout_btn_save') : 'Save & Verify Payout Method'}
             </button>
             <button type="button" className="btn btn-secondary" onClick={onClose}>
-              Cancel
+              {t ? t('action_cancel') : 'Cancel'}
             </button>
           </div>
         </form>

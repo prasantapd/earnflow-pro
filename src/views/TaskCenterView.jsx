@@ -274,17 +274,17 @@ export default function TaskCenterView({ onOpenWithdraw, onOpenDeposit, setActiv
             <div style={{ flex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.35rem' }}>
                 <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#fbbf24', margin: 0 }}>
-                  🎁 New User Free Pass (Day {freeTrialStatus.dayNumber} of 2 Active)
+                  {t ? t('dash_free_pass_title', { day: freeTrialStatus.dayNumber }) : `🎁 New User Free Pass (Day ${freeTrialStatus.dayNumber} of 2 Active)`}
                 </h3>
                 <span className="badge badge-gold" style={{ fontSize: '0.65rem' }}>
-                  Daily Tasks & Bonus Unlocked!
+                  {t ? t('dash_earning_unlocked') : 'Daily Tasks & Bonus Unlocked!'}
                 </span>
                 <span className="badge badge-emerald" style={{ fontSize: '0.65rem' }}>
                   1.0× ₹2,000 Reward Rates
                 </span>
               </div>
               <p style={{ fontSize: '0.84rem', color: '#cbd5e1', lineHeight: 1.5, marginBottom: '0.65rem' }}>
-                Welcome to TaskCoin! As a newly registered member, you can complete all daily tasks and claim daily login bonuses for <strong>2 consecutive days</strong>. Earnings accumulate directly to your Task Wallet. To unlock withdrawals, activate the <strong>₹300 3-Day Trial Plan</strong> or a regular Membership Plan!
+                {t ? t('dash_free_pass_desc') : 'Welcome to TaskCoin! As a newly registered member, you can complete all daily tasks and claim daily login bonuses for 2 consecutive days. Earnings accumulate directly to your Task Wallet. To unlock withdrawals, activate the ₹300 3-Day Trial Plan or a regular Membership Plan!'}
               </p>
               <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                 <button 
@@ -292,7 +292,7 @@ export default function TaskCenterView({ onOpenWithdraw, onOpenDeposit, setActiv
                   onClick={() => setActiveTab('plans')}
                   style={{ fontWeight: 700, fontSize: '0.82rem', padding: '0.4rem 0.85rem', background: 'linear-gradient(135deg, #ec4899 0%, #db2777 100%)', borderColor: '#f472b6' }}
                 >
-                  ⚡ View ₹300 Trial Pass (Withdrawal Unlock) →
+                  {t ? t('dash_view_trial') : '⚡ View ₹300 Trial Pass (Withdrawal Unlock) →'}
                 </button>
               </div>
             </div>
@@ -319,18 +319,18 @@ export default function TaskCenterView({ onOpenWithdraw, onOpenDeposit, setActiv
             <div style={{ flex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.35rem' }}>
                 <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#fbbf24', margin: 0 }}>
-                  {pendingDeposit ? '⏳ Payment Approval in Progress' : freeTrialStatus?.isExpired ? '⏰ 2-Day Free Trial Ended' : '⚠️ Account Pending Activation / Payment Approval'}
+                  {pendingDeposit ? (t ? t('dash_pending_approval_title') : '⏳ Payment Approval in Progress') : freeTrialStatus?.isExpired ? '⏰ 2-Day Free Trial Ended' : (t ? t('account_pending') : '⚠️ Account Pending Activation / Payment Approval')}
                 </h3>
                 <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.3)', color: '#fef08a', fontSize: '0.65rem' }}>
-                  Daily Tasks Locked
+                  {t ? t('dash_earning_locked') : 'Daily Tasks Locked'}
                 </span>
               </div>
               <p style={{ fontSize: '0.84rem', color: '#cbd5e1', lineHeight: 1.5, marginBottom: '0.85rem' }}>
                 {pendingDeposit 
-                  ? `Your payment of ₹${pendingDeposit.amount?.toLocaleString()} (UTR: ${pendingDeposit.utr}) has been submitted. Admin verification takes 5–15 minutes. Once approved, all daily task cash rewards will unlock!`
+                  ? (t ? t('dash_pending_deposit_desc', { amount: pendingDeposit.amount?.toLocaleString(), utr: pendingDeposit.utr }) : `Your payment of ₹${pendingDeposit.amount?.toLocaleString()} (UTR: ${pendingDeposit.utr}) has been submitted. Admin verification takes 5–15 minutes. Once approved, all daily task cash rewards will unlock!`)
                   : freeTrialStatus?.isExpired
                     ? 'Your 2-Day Free Registration Pass has expired. Subscribe to the ₹300 3-Day Trial Plan or a regular Membership Plan to continue earning daily task rewards and unlock withdrawals.'
-                    : 'Without an approved membership deposit, you cannot earn daily task rewards, login streak bonuses, or skill game prizes. Subscribe to a plan and submit your payment UTR for instant Admin activation.'}
+                    : (t ? t('dash_pending_generic_desc') : 'Without an approved membership deposit, you cannot earn daily task rewards, login streak bonuses, or skill game prizes. Subscribe to a plan and submit your payment UTR for instant Admin activation.')}
               </p>
               <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                 <button 
@@ -338,7 +338,7 @@ export default function TaskCenterView({ onOpenWithdraw, onOpenDeposit, setActiv
                   onClick={() => setActiveTab('plans')}
                   style={{ fontWeight: 700, fontSize: '0.82rem', padding: '0.4rem 0.85rem' }}
                 >
-                  {pendingDeposit ? 'Check Plans & Status →' : '👉 Choose Plan & Activate Account'}
+                  {pendingDeposit ? (t ? t('dash_check_plans_status') : 'Check Plans & Status →') : (t ? t('dash_choose_plan') : '👉 Choose Plan & Activate Account')}
                 </button>
               </div>
             </div>

@@ -58,7 +58,7 @@ export default function MobileBottomNav({ activeTab, setActiveTab, onOpenAuth })
         }}
       >
         <GitBranch size={20} />
-        <span>{t ? t('nav_network') : '2:1 MLM'}</span>
+        <span>{t ? t('mobile_nav_network') : 'Network'}</span>
       </button>
 
       {currentRole === 'admin' ? (
@@ -71,7 +71,7 @@ export default function MobileBottomNav({ activeTab, setActiveTab, onOpenAuth })
           style={{ color: '#f87171' }}
         >
           <ShieldCheck size={20} color="#f87171" />
-          <span>Exit Admin</span>
+          <span>{t ? t('action_exit_admin') : 'Exit Admin'}</span>
         </button>
       ) : (
         <button 

@@ -27,7 +27,8 @@ export default function WithdrawView({ onOpenWithdraw, onOpenPayout, onWithdrawP
     plans,
     activePlan,
     hasUsedTrialWithdrawal,
-    freeTrialStatus
+    freeTrialStatus,
+    t
   } = useApp();
 
   const maturedPlans = plans.filter((p) => p.status === 'matured');
@@ -43,27 +44,27 @@ export default function WithdrawView({ onOpenWithdraw, onOpenPayout, onWithdrawP
       {/* Header */}
       <div style={{ marginBottom: '2rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem', flexWrap: 'wrap' }}>
-          <span className="badge badge-emerald">⚡ 24/7 Instant Payouts Active</span>
+          <span className="badge badge-emerald">⚡ {t ? t('withdrawal_instant_gateway') : '24/7 Instant Payouts Active'}</span>
           {isTrialMember && (
             <span className="badge" style={{ background: '#ec4899', color: '#ffffff', fontWeight: 700 }}>
-              ⚡ 3-Day Trial Pass: Zero Min. Withdrawal
+              {t ? t('zero_min_badge') : '⚡ 3-Day Trial Pass: Zero Min. Withdrawal'}
             </span>
           )}
           {isFreeTrialOnly && (
             <span className="badge badge-amber">
-              🎁 2-Day Free Pass: Withdrawals Locked
+              {t ? t('free_pass_locked') : '🎁 2-Day Free Pass: Withdrawals Locked'}
             </span>
           )}
           <span className="badge badge-gold">Instant IMPS Disbursal</span>
         </div>
-        <h2 style={{ fontSize: '1.8rem', fontWeight: 800 }}>Withdrawal & Settlement Center</h2>
+        <h2 style={{ fontSize: '1.8rem', fontWeight: 800 }}>{t ? t('with_title') : 'Withdrawal & Settlement Center'}</h2>
         <p style={{ fontSize: '0.9rem', color: '#94a3b8', maxWidth: '750px' }}>
           {isZeroMinEligible ? (
             <>As a <strong>3-Day Trial Member</strong>, you have <strong>no minimum withdrawal requirement</strong>! Withdraw whatever you want directly to your UPI (allowed once in a lifetime).</>
           ) : isFreeTrialOnly ? (
             <>Welcome to the 2-Day Free Trial! You can earn daily login bonuses and complete tasks for 2 days. <strong>Withdrawal unlocks upon activating the ₹300 Trial Plan or a regular Membership Plan.</strong></>
           ) : (
-            <>Withdraw your accumulated task rewards anytime, any day directly to your UPI or Bank Account (Min. ₹100 • 1 payout per 24 hours). Matured plan principals are unlocked automatically after their lock-in period.</>
+            t ? t('with_subtitle') : <>Withdraw your accumulated task rewards anytime, any day directly to your UPI or Bank Account (Min. ₹100 • 1 payout per 24 hours). Matured plan principals are unlocked automatically after their lock-in period.</>
           )}
         </p>
       </div>
@@ -85,10 +86,10 @@ export default function WithdrawView({ onOpenWithdraw, onOpenPayout, onWithdrawP
           <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
               <span style={{ fontSize: '0.78rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700 }}>
-                Accumulated Task Rewards
+                {t ? t('wallet_task_rewards') : 'Accumulated Task Rewards'}
               </span>
               <span className={`badge ${isZeroMinEligible ? 'badge-pink' : 'badge-emerald'}`}>
-                {isZeroMinEligible ? '⚡ Zero Min Limit (1× Lifetime)' : '🟢 24/7 Instant Payouts'}
+                {isZeroMinEligible ? (t ? t('zero_min_badge') : '⚡ Zero Min Limit (1× Lifetime)') : `🟢 ${t ? t('withdrawal_instant_gateway') : '24/7 Instant Payouts'}`}
               </span>
             </div>
 
@@ -113,7 +114,7 @@ export default function WithdrawView({ onOpenWithdraw, onOpenPayout, onWithdrawP
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem', color: isZeroMinEligible ? '#ec4899' : '#34d399' }}>
                 <Clock size={16} />
                 <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>
-                  {isZeroMinEligible ? '⚡ Trial Pass Instant Disbursal' : '24/7 Instant IMPS Disbursal Engine'}
+                  {isZeroMinEligible ? '⚡ Trial Pass Instant Disbursal' : (t ? t('withdrawal_instant_gateway') : '24/7 Instant IMPS Disbursal Engine')}
                 </span>
               </div>
               <div style={{ fontSize: '0.78rem', color: '#94a3b8', lineHeight: 1.5 }}>
@@ -182,7 +183,7 @@ export default function WithdrawView({ onOpenWithdraw, onOpenPayout, onWithdrawP
                 disabled={rewardWallet < 100}
               >
                 <ArrowDownCircle size={18} />
-                <span>Withdraw Task Rewards ({formatINR(rewardWallet)})</span>
+                <span>{t ? t('action_withdraw') : 'Withdraw Earnings'} ({formatINR(rewardWallet)})</span>
               </button>
             )}
 
@@ -203,13 +204,13 @@ export default function WithdrawView({ onOpenWithdraw, onOpenPayout, onWithdrawP
         <div className="glass-card" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-              <h3 style={{ fontSize: '1.2rem', fontWeight: 700 }}>Configured Payout Destination</h3>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 700 }}>{t ? t('wallet_payout_destination') : 'Configured Payout Destination'}</h3>
               <button 
                 className="btn btn-secondary btn-sm"
                 onClick={onOpenPayout}
                 style={{ fontSize: '0.78rem' }}
               >
-                {payoutMethod ? 'Edit Details' : 'Configure'}
+                {payoutMethod ? (t ? t('with_btn_change') : 'Edit Details') : (t ? t('with_btn_configure') : 'Configure')}
               </button>
             </div>
 

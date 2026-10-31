@@ -15,7 +15,7 @@ import { useApp } from '../context/AppContext';
 import { formatINR, formatDate } from '../utils/finance';
 
 export default function HistoryView({ onOpenReceipt }) {
-  const { transactions } = useApp();
+  const { transactions, t } = useApp();
   const [filterType, setFilterType] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -39,9 +39,9 @@ export default function HistoryView({ onOpenReceipt }) {
           <span className="badge badge-emerald">Audited Ledger</span>
           <span className="badge badge-cyan">Real-time Records</span>
         </div>
-        <h2 style={{ fontSize: '1.8rem', fontWeight: 800 }}>Transaction History & Receipts</h2>
+        <h2 style={{ fontSize: '1.8rem', fontWeight: 800 }}>{t ? t('hist_title') : 'Transaction History & Receipts'}</h2>
         <p style={{ fontSize: '0.9rem', color: '#94a3b8' }}>
-          Complete transparent log of all deposits, daily task credits, weekly Sunday payouts, and principal returns.
+          {t ? t('hist_subtitle') : 'Complete transparent log of all deposits, daily task credits, weekly Sunday payouts, and principal returns.'}
         </p>
       </div>
 
@@ -61,11 +61,11 @@ export default function HistoryView({ onOpenReceipt }) {
         {/* Category Pills */}
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
           {[
-            { id: 'ALL', label: 'All Transactions' },
-            { id: 'TASK_REWARD', label: 'Task Earnings' },
-            { id: 'WITHDRAWAL', label: 'Sunday Withdrawals' },
-            { id: 'DEPOSIT', label: 'Plan Deposits' },
-            { id: 'PRINCIPAL_WITHDRAWAL', label: 'Principal Refunds' },
+            { id: 'ALL', label: t ? t('hist_filter_all') : 'All Transactions' },
+            { id: 'TASK_REWARD', label: t ? t('hist_filter_tasks') : 'Task Earnings' },
+            { id: 'WITHDRAWAL', label: t ? t('hist_filter_withdrawals') : 'Withdrawals' },
+            { id: 'DEPOSIT', label: t ? t('hist_filter_deposits') : 'Plan Deposits' },
+            { id: 'PRINCIPAL_WITHDRAWAL', label: t ? t('with_principal_return_title') : 'Principal Refunds' },
           ].map((cat) => (
             <button
               key={cat.id}
@@ -86,7 +86,7 @@ export default function HistoryView({ onOpenReceipt }) {
             type="text"
             className="input-field"
             style={{ paddingLeft: '2.25rem', fontSize: '0.85rem', padding: '0.45rem 0.85rem 0.45rem 2.25rem' }}
-            placeholder="Search by ID, title, UPI..."
+            placeholder={t ? t('hist_search_placeholder') : 'Search by ID, title, UPI...'}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -98,7 +98,7 @@ export default function HistoryView({ onOpenReceipt }) {
         {filtered.length === 0 ? (
           <div style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>
             <History size={36} style={{ margin: '0 auto 0.75rem', opacity: 0.5 }} />
-            <p>No transactions found matching your criteria.</p>
+            <p>{t ? t('hist_no_records') : 'No transactions found matching your criteria.'}</p>
           </div>
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.88rem' }}>

@@ -50,6 +50,18 @@ describe('Unit Tests: Multi-Language Translation System (English, Hindi, Bengali
         'streak_day',
         'task_claim_reward',
         'task_completed',
+        'mlm_title',
+        'mlm_binary_marketing',
+        'mlm_lifetime_earned',
+        'mlm_placement_title',
+        'with_amount_label',
+        'with_pay_per_completion',
+        'payout_modal_title',
+        'payout_btn_save',
+        'auth_login_title',
+        'auth_register_title',
+        'receipt_title',
+        'eco_title',
       ];
 
       essentialKeys.forEach((key) => {

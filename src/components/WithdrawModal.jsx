@@ -25,7 +25,8 @@ export default function WithdrawModal({ isOpen, onClose, onOpenPayoutSetup, onOp
     showToast,
     activePlan,
     hasUsedTrialWithdrawal,
-    freeTrialStatus
+    freeTrialStatus,
+    t
   } = useApp();
 
   const [withdrawAmount, setWithdrawAmount] = useState('');
@@ -103,9 +104,9 @@ export default function WithdrawModal({ isOpen, onClose, onOpenPayoutSetup, onOp
               <ArrowDownCircle size={22} />
             </div>
             <div>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>24/7 Instant Reward Withdrawal</h2>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>{t ? t('withdrawal_title') : '24/7 Instant Reward Withdrawal'}</h2>
               <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
-                Instant IMPS / UPI payout anytime, any day (Min ₹100 • 1 withdrawal / 24h)
+                {t ? t('withdrawal_subtitle') : 'Instant IMPS / UPI payout anytime, any day (Min ₹100 • 1 withdrawal / 24h)'}
               </p>
             </div>
           </div>
@@ -131,10 +132,10 @@ export default function WithdrawModal({ isOpen, onClose, onOpenPayoutSetup, onOp
             <CheckCircle size={20} color={isZeroMinEligible ? '#ec4899' : isFreeTrialOnly ? '#fbbf24' : '#34d399'} />
             <div>
               <span style={{ fontWeight: 700, color: isZeroMinEligible ? '#ec4899' : isFreeTrialOnly ? '#fbbf24' : '#34d399', fontSize: '0.9rem' }}>
-                {isZeroMinEligible ? '⚡ Trial Pass: Zero Min Requirement' : isFreeTrialOnly ? '🔒 Free Pass: Withdrawals Locked' : '24/7 Payout Gateway Active'}
+                {isZeroMinEligible ? (t ? t('zero_min_badge') : '⚡ Trial Pass: Zero Min Requirement') : isFreeTrialOnly ? (t ? t('free_pass_locked') : '🔒 Free Pass: Withdrawals Locked') : (t ? t('withdrawal_instant_gateway') : '24/7 Payout Gateway Active')}
               </span>
               <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
-                {isZeroMinEligible ? 'Withdraw whatever amount you want • 1 Lifetime Payout' : isFreeTrialOnly ? 'Activate ₹300 Trial or Membership Plan to cash out' : 'Instant IMPS Disbursal • Min ₹100 • 1 Payout / 24h'}
+                {isZeroMinEligible ? (t ? t('zero_min_desc') : 'Withdraw whatever amount you want • 1 Lifetime Payout') : isFreeTrialOnly ? (t ? t('free_pass_locked_desc') : 'Activate ₹300 Trial or Membership Plan to cash out') : 'Instant IMPS Disbursal • Min ₹100 • 1 Payout / 24h'}
               </div>
             </div>
           </div>
@@ -160,7 +161,7 @@ export default function WithdrawModal({ isOpen, onClose, onOpenPayoutSetup, onOp
               <CreditCard size={18} />
             </div>
             <div>
-              <div style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>Payout Destination</div>
+              <div style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>{t ? t('wallet_payout_destination') : 'Payout Destination'}</div>
               {payoutMethod ? (
                 <div style={{ fontWeight: 700, fontSize: '0.92rem', color: '#ffffff' }}>
                   {payoutMethod.type === 'upi_id' && `UPI: ${payoutMethod.upiId}`}
@@ -169,7 +170,7 @@ export default function WithdrawModal({ isOpen, onClose, onOpenPayoutSetup, onOp
                 </div>
               ) : (
                 <div style={{ color: '#fbbf24', fontSize: '0.85rem', fontWeight: 600 }}>
-                  ⚠️ No Payout Method Configured
+                  {t ? t('with_no_payout_configured') : '⚠️ No Payout Method Configured'}
                 </div>
               )}
             </div>
@@ -181,7 +182,7 @@ export default function WithdrawModal({ isOpen, onClose, onOpenPayoutSetup, onOp
             onClick={onOpenPayoutSetup}
             style={{ fontSize: '0.78rem' }}
           >
-            {payoutMethod ? 'Change' : 'Setup Now'}
+            {payoutMethod ? (t ? t('action_change') : 'Change') : (t ? t('with_setup_now') : 'Setup Now')}
           </button>
         </div>
 
@@ -189,16 +190,16 @@ export default function WithdrawModal({ isOpen, onClose, onOpenPayoutSetup, onOp
           {/* Amount input */}
           <div style={{ marginBottom: '1.25rem' }}>
             <div className="form-label">
-              <span>Withdrawal Amount</span>
+              <span>{t ? t('with_amount_label') : 'Withdrawal Amount'}</span>
               <span style={{ color: '#34d399', fontWeight: 700 }}>
-                Available: {formatINR(currentBal)}
+                {t ? t('with_available_label', { amount: formatINR(currentBal) }) : `Available: ${formatINR(currentBal)}`}
               </span>
             </div>
 
             <div style={{ padding: '0.6rem 0.85rem', background: 'rgba(59, 130, 246, 0.08)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(59, 130, 246, 0.25)', marginBottom: '0.85rem', fontSize: '0.75rem', color: '#cbd5e1', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <ShieldCheck size={16} color="#60a5fa" style={{ flexShrink: 0 }} />
               <span>
-                <strong>Pay-Per-Completion Rule:</strong> Payout is strictly eligible only for tasks you have completed. Incomplete or skipped daily tasks generate <strong style={{ color: '#f87171' }}>₹0.00</strong> and are never counted.
+                {t ? t('with_pay_per_completion') : 'Pay-Per-Completion Rule: Payout is strictly eligible only for tasks you have completed. Incomplete or skipped daily tasks generate ₹0.00 and are never counted.'}
               </span>
             </div>
 
@@ -213,7 +214,7 @@ export default function WithdrawModal({ isOpen, onClose, onOpenPayoutSetup, onOp
                 step="1"
                 className="input-field"
                 style={{ paddingLeft: '2.5rem', fontSize: '1.2rem', fontWeight: 700 }}
-                placeholder={isZeroMinEligible ? "Enter any amount (Zero minimum requirement!)" : "Enter amount (min ₹100)"}
+                placeholder={isZeroMinEligible ? (t ? t('with_placeholder_zero') : "Enter any amount (Zero minimum requirement!)") : (t ? t('with_placeholder') : "Enter amount (min ₹100)")}
                 value={withdrawAmount}
                 onChange={(e) => setWithdrawAmount(e.target.value)}
                 required
@@ -230,7 +231,7 @@ export default function WithdrawModal({ isOpen, onClose, onOpenPayoutSetup, onOp
                   onClick={() => handleQuickPercent(pct)}
                   style={{ fontWeight: 600, fontSize: '0.82rem' }}
                 >
-                  {pct === 100 ? 'Full (100%)' : `${pct}%`}
+                  {pct === 100 ? (t ? t('with_full_100') : 'Full (100%)') : `${pct}%`}
                 </button>
               ))}
             </div>
@@ -247,19 +248,19 @@ export default function WithdrawModal({ isOpen, onClose, onOpenPayoutSetup, onOp
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem', color: '#94a3b8' }}>
-              <span>Gross Withdrawal:</span>
+              <span>{t ? t('withdrawal_gross') : 'Gross Withdrawal'}:</span>
               <span style={{ color: '#ffffff', fontWeight: 600 }}>{formatINR(numAmount)}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem', color: '#94a3b8' }}>
-              <span>Processing Platform Fee:</span>
+              <span>{t ? t('withdrawal_fee') : 'Platform Fee'}:</span>
               <span style={{ color: '#34d399', fontWeight: 600 }}>₹0.00 (Zero Fee)</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem', color: '#94a3b8' }}>
-              <span>Remaining Task Wallet:</span>
+              <span>{t ? t('withdrawal_remaining_wallet') : 'Remaining Task Wallet'}:</span>
               <span style={{ color: '#ffffff', fontWeight: 600 }}>{formatINR(remainingBal)}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '0.5rem', borderTop: '1px solid var(--border-subtle)', fontWeight: 700 }}>
-              <span style={{ color: '#34d399' }}>Net Disbursed to Account:</span>
+              <span style={{ color: '#34d399' }}>{t ? t('withdrawal_net') : 'Net Disbursed to Account'}:</span>
               <span style={{ color: '#34d399', fontSize: '1.05rem' }}>{formatINR(numAmount)}</span>
             </div>
           </div>
@@ -271,10 +272,10 @@ export default function WithdrawModal({ isOpen, onClose, onOpenPayoutSetup, onOp
               style={{ flex: 1 }}
               disabled={numAmount <= 0 || numAmount > currentBal || !isWithdrawalAllowed || isProcessing}
             >
-              {isProcessing ? 'Processing Payout...' : `Confirm & Withdraw ${formatINR(numAmount)}`}
+              {isProcessing ? (t ? t('with_processing') : 'Processing Payout...') : (t ? t('with_btn_confirm', { amount: formatINR(numAmount) }) : `Confirm & Withdraw ${formatINR(numAmount)}`)}
             </button>
             <button type="button" className="btn btn-secondary" onClick={onClose}>
-              Cancel
+              {t ? t('action_cancel') : 'Cancel'}
             </button>
           </div>
         </form>

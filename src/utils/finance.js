@@ -77,16 +77,24 @@ export const DEFAULT_PLAN_MULTIPLIERS = {
 export function calculateEarnings(principal, months, factor, days = null, customMultiplier = null) {
   const p = Number(principal) || 2000;
   const isTrial = p === 300 || days === 3;
-  const m = isTrial ? 0.1 : (Number(months) || 1);
+  
+  // If months is passed as a custom multiplier (e.g. calculateEarnings(10000, 5.5))
+  let m = Number(months) || (isTrial ? 0.1 : 1);
+  let effectiveCustomMult = customMultiplier;
+  if (factor === undefined && typeof months === 'number' && (months > 1.2 || months === 5.5 || months === 6.0)) {
+    effectiveCustomMult = months;
+    m = 1;
+  }
+
   const f = Number(factor) || (m === 1 ? 0.055 : m === 3 ? 0.060 : m === 6 ? 0.065 : 0.070);
 
   // If a custom multiplier is given (e.g. 5.5x or 6.0x for 10000 vs baseline 5.0x),
   // boost proportional gain accordingly
   let boostFactor = 1.0;
-  if (!isTrial && customMultiplier && customMultiplier > 0 && p >= 2000) {
+  if (!isTrial && effectiveCustomMult && effectiveCustomMult > 0 && p >= 2000) {
     const baselineMult = p / 2000;
     if (baselineMult > 0) {
-      boostFactor = customMultiplier / baselineMult;
+      boostFactor = effectiveCustomMult / baselineMult;
     }
   }
 
@@ -98,9 +106,19 @@ export function calculateEarnings(principal, months, factor, days = null, custom
   const estimatedMonthlyIncome = +(estimatedDailyIncome * 30).toFixed(2);
   const estimatedWeeklyIncome = +(estimatedDailyIncome * 7).toFixed(2);
 
+  const calculatedMult = effectiveCustomMult || (isTrial ? 1.0 : +(p / 2000).toFixed(2));
+  // Standard member task capacity is 10 tasks/day * (₹10 * mult) = 100 * mult
+  const dailyTaskEarnings = +(100 * Number(calculatedMult)).toFixed(2);
+  const monthlyTaskEarnings = +(dailyTaskEarnings * 30).toFixed(2);
+
   return {
     principal: p,
     months: m,
+    multiplier: Number(calculatedMult) || 1.0,
+    daily: dailyTaskEarnings,
+    monthly: monthlyTaskEarnings,
+    tasksPerDay: 10,
+    perTask: +(dailyTaskEarnings / 10).toFixed(2),
     totalEarnings: estimatedTotalIncome,
     estimatedTotalIncome,
     estimatedMaturityValue,
@@ -122,6 +140,14 @@ export function formatINR(val) {
     currency: 'INR',
     maximumFractionDigits: 2,
   }).format(num);
+}
+
+export function formatCompactINR(val) {
+  const num = Number(val) || 0;
+  if (num >= 10000000) return `₹${(num / 10000000).toFixed(1).replace(/\.0$/, '')}Cr`;
+  if (num >= 100000) return `₹${(num / 100000).toFixed(1).replace(/\.0$/, '')}L`;
+  if (num >= 1000) return `₹${(num / 1000).toFixed(1).replace(/\.0$/, '')}K`;
+  return `₹${num}`;
 }
 
 export function formatDate(dateInput) {
@@ -163,13 +189,77 @@ export function getNextSundayStatus() {
   const seconds = Math.floor((diffMs % (1000 * 60)) / 1000);
 
   return {
+    isOpen: isSunday,
     isSunday,
+    nextSunday,
     nextSundayDate: nextSunday,
+    windowStart: 'Sunday 00:00 IST',
+    windowEnd: 'Sunday 23:59 IST',
     hours,
     minutes,
     seconds,
     daysUntilSunday,
     formattedCountdown: `${hours}h ${minutes}m ${seconds}s`,
+    timeRemaining: `${hours}h ${minutes}m ${seconds}s`,
+  };
+}
+
+/**
+ * Validates withdrawal eligibility against Sunday window, trial exemption, and minimum threshold.
+ */
+export function canUserWithdrawToday({
+  isTrialMember = false,
+  trialWithdrawalClaimed = false,
+  balance = 0,
+  hasNeverDeposited = false,
+  overrideSundayCheck = false,
+} = {}) {
+  const sundayInfo = getNextSundayStatus();
+  const isDayAllowed = overrideSundayCheck || sundayInfo.isSunday;
+
+  if (!isDayAllowed) {
+    return {
+      allowed: false,
+      reason: 'Withdrawals are open exclusively on Sundays (00:00 - 23:59 IST).',
+      sundayInfo,
+    };
+  }
+
+  if (hasNeverDeposited) {
+    return {
+      allowed: false,
+      reason: 'Withdrawal Locked: Free registration allows 2 days of earning, but withdrawal requires activating the ₹300 Trial Pass or a Membership Plan.',
+    };
+  }
+
+  if (isTrialMember) {
+    if (trialWithdrawalClaimed) {
+      return {
+        allowed: false,
+        reason: 'Trial Pass withdrawal can be used only once in a lifetime.',
+      };
+    }
+    return {
+      allowed: balance > 0,
+      isTrialExemption: true,
+      minRequired: 0,
+      reason: balance > 0 ? 'Eligible for instant withdrawal (Zero Minimum Requirement)' : 'Insufficient wallet balance',
+    };
+  }
+
+  const minRequired = 500;
+  if (balance < minRequired) {
+    return {
+      allowed: false,
+      minRequired,
+      reason: `Minimum withdrawal amount is ${formatINR(minRequired)}. Your current balance is ${formatINR(balance)}.`,
+    };
+  }
+
+  return {
+    allowed: true,
+    minRequired,
+    reason: 'Eligible for withdrawal',
   };
 }
 
@@ -196,17 +286,40 @@ export function getMembershipTier(activePlan, freeTrialStatus = null, planMultip
   multipliers[2000] = 1.0;
   multipliers[300] = 1.0;
 
-  // 1. Active Paid Plan
-  if (activePlan && activePlan.status === 'active') {
-    const amount = Number(activePlan.amount) || 2000;
+  // Check if trial pass passed via trial status
+  const isTrialActiveFromStatus = Boolean(
+    freeTrialStatus && (freeTrialStatus.isTrialActive || (freeTrialStatus.trialPlan && (freeTrialStatus.trialPlan.price === 300 || freeTrialStatus.trialPlan.amount === 300)))
+  );
+  if (isTrialActiveFromStatus) {
+    return {
+      tierKey: 'trial_300',
+      tierName: '⚡ 3-Day Trial Member (₹300)',
+      name: '⚡ 3-Day Trial Pass Member',
+      tierBadge: '⚡ 3-Day Trial (₹300)',
+      depositAmount: 300,
+      multiplier: 1.0,
+      loginMultiplier: 1.0, // EXACT SAME AS ₹2,000 PLAN
+      taskMultiplier: 1.0,  // EXACT SAME AS ₹2,000 PLAN
+      color: '#ec4899',
+      badgeClass: 'badge-pink',
+      isTrial: true,
+      description: '3-Day Trial Member: Full ₹2,000 base rate rewards active (1.0× multiplier). Flexible 1-time lifetime withdrawal with ZERO minimum requirement!',
+    };
+  }
+
+  // 1. Active Paid Plan (or active trial pass)
+  if (activePlan && activePlan.status !== 'inactive' && activePlan.status !== 'expired') {
+    const amount = Number(activePlan.amount ?? activePlan.price) || 2000;
     const isTrial = Boolean(activePlan.isTrial || amount === 300 || (activePlan.id && String(activePlan.id).includes('trial')));
 
     if (isTrial) {
       return {
         tierKey: 'trial_300',
         tierName: '⚡ 3-Day Trial Member (₹300)',
+        name: '⚡ 3-Day Trial Pass Member',
         tierBadge: '⚡ 3-Day Trial (₹300)',
         depositAmount: 300,
+        multiplier: 1.0,
         loginMultiplier: 1.0, // EXACT SAME AS ₹2,000 PLAN
         taskMultiplier: 1.0,  // EXACT SAME AS ₹2,000 PLAN
         color: '#ec4899',
@@ -270,8 +383,10 @@ export function getMembershipTier(activePlan, freeTrialStatus = null, planMultip
     return {
       tierKey,
       tierName: `${tierBadge} • ${finalMultiplier}× Multiplier`,
+      name: `${tierBadge} • ${finalMultiplier}× Multiplier`,
       tierBadge,
       depositAmount: amount,
+      multiplier: finalMultiplier,
       loginMultiplier: finalMultiplier,
       taskMultiplier: finalMultiplier,
       color,
@@ -284,9 +399,11 @@ export function getMembershipTier(activePlan, freeTrialStatus = null, planMultip
   if (freeTrialStatus && freeTrialStatus.canEarn) {
     return {
       tierKey: 'free_trial_2d',
-      tierName: `🎁 New User Pass (Day ${freeTrialStatus.dayNumber} of 2)`,
-      tierBadge: `🎁 Free Pass (Day ${freeTrialStatus.dayNumber}/2)`,
+      tierName: `🎁 New User Pass (Day ${freeTrialStatus.dayNumber || 1} of 2)`,
+      name: `🎁 New User Pass (Day ${freeTrialStatus.dayNumber || 1} of 2)`,
+      tierBadge: `🎁 Free Pass (Day ${freeTrialStatus.dayNumber || 1}/2)`,
       depositAmount: 0,
+      multiplier: 1.0,
       loginMultiplier: 1.0, // EXACT SAME AS ₹2,000 PLAN
       taskMultiplier: 1.0,  // EXACT SAME AS ₹2,000 PLAN
       color: '#f59e0b',
@@ -300,8 +417,10 @@ export function getMembershipTier(activePlan, freeTrialStatus = null, planMultip
   return {
     tierKey: 'starter',
     tierName: 'Free Visitor (No Plan)',
+    name: 'Free Visitor (No Plan)',
     tierBadge: 'No Active Plan',
     depositAmount: 0,
+    multiplier: 1.0,
     loginMultiplier: 1.0,
     taskMultiplier: 1.0,
     color: '#94a3b8',
@@ -309,4 +428,5 @@ export function getMembershipTier(activePlan, freeTrialStatus = null, planMultip
     description: 'Subscribe to the ₹300 3-Day Trial or a regular plan (min ₹2,000) to activate daily login streak and task rewards.',
   };
 }
+
 

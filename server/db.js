@@ -168,6 +168,9 @@ export const db = {
     if (incoming.planMultipliers) {
       memoryDb.planMultipliers = { ...current.planMultipliers, ...incoming.planMultipliers };
     }
+    if (incoming.tasks && Array.isArray(incoming.tasks)) {
+      memoryDb.tasks = incoming.tasks;
+    }
 
     saveDb();
     return memoryDb;

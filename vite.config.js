@@ -42,4 +42,9 @@ function apiDevPlugin() {
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), apiDevPlugin()],
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: './src/test/setup.js',
+  },
 });

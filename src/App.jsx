@@ -96,7 +96,7 @@ function MainApp() {
     window.addEventListener('keydown', handleKeyDown);
 
     return () => {
-      window.removeEventListener('popstate', checkAdminQuery);
+      window.removeEventListener('popstate', checkQueries);
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, []);

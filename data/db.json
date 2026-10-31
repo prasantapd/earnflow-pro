@@ -198,6 +198,36 @@
       "isVerified": true,
       "totalDeposited": 300,
       "walletBalance": 0
+    },
+    {
+      "id": "USR-6024",
+      "name": "Pata",
+      "email": "2580258025@earnflow.app",
+      "phone": "2580258025",
+      "password": "111111",
+      "referralCode": "PATA113",
+      "joinedDate": "2026-10-31T12:15:48.597Z",
+      "status": "PENDING_ACTIVATION",
+      "isActivated": false,
+      "suspensionReason": "",
+      "isVerified": false,
+      "totalDeposited": 0,
+      "walletBalance": 0
+    },
+    {
+      "id": "USR-7886",
+      "name": "Pankaj Shaw",
+      "email": "7699618772@earnflow.app",
+      "phone": "7699618772",
+      "password": "251292",
+      "referralCode": "PANK332",
+      "joinedDate": "2026-10-31T12:16:07.598Z",
+      "status": "ACTIVE",
+      "isActivated": true,
+      "suspensionReason": "",
+      "isVerified": true,
+      "totalDeposited": 4000,
+      "walletBalance": 0
     }
   ],
   "depositRequests": [
@@ -478,6 +508,23 @@
       "previousPlanId": null,
       "utr": "567886654566",
       "submittedAt": "2026-10-31T06:17:00.607Z",
+      "status": "APPROVED",
+      "rejectionReason": ""
+    },
+    {
+      "id": "DEP-1707",
+      "userId": "USR-7886",
+      "userName": "Pankaj Shaw",
+      "userPhone": "7699618772",
+      "userEmail": "7699618772@earnflow.app",
+      "amount": 2000,
+      "planMonths": 3,
+      "planDays": 90,
+      "planTitle": "90 Days Membership Tier",
+      "isUpgrade": false,
+      "previousPlanId": null,
+      "utr": "256324780852",
+      "submittedAt": "2026-10-31T12:19:24.301Z",
       "status": "APPROVED",
       "rejectionReason": ""
     }
@@ -1123,6 +1170,27 @@
       "isUpgrade": false,
       "depositRef": "DEP-9969",
       "utr": "UTR3289753762"
+    },
+    {
+      "id": "PLN-7455",
+      "userId": "USR-7886",
+      "userName": "Pankaj Shaw",
+      "userPhone": "7699618772",
+      "title": "90 Days Membership Tier",
+      "amount": 2000,
+      "months": 3,
+      "days": 90,
+      "startDate": "2026-10-31T12:24:43.172Z",
+      "maturityDate": "2027-01-29T12:24:43.172Z",
+      "totalExpectedGain": 14000,
+      "estimatedTotalIncome": 14000,
+      "dailyQuota": 155.56,
+      "earnedSoFar": 0,
+      "status": "active",
+      "isUpgrade": false,
+      "isTrial": false,
+      "depositRef": "DEP-1707",
+      "utr": "256324780852"
     }
   ],
   "transactions": [],
@@ -1156,7 +1224,7 @@
     "50000": 25
   },
   "version": 1,
-  "lastUpdated": 1793450879694,
+  "lastUpdated": 1793451042692,
   "tasks": [
     {
       "id": "task-test-custom",

@@ -2208,34 +2208,102 @@ export function AppProvider({ children }) {
   const activateUser = (userId) => {
     let updatedCurUser = state.user;
     const targetUser = (state.allUsers || []).find((u) => u.id === userId);
-    const updatedUsers = (state.allUsers || []).map((u) =>
-      u.id === userId ? { ...u, status: 'ACTIVE', isActivated: true, suspensionReason: '' } : u
+    
+    // Check if user has a pending deposit awaiting verification
+    const userPendingDep = (state.depositRequests || []).find(
+      (d) => d.status === 'PENDING' && (
+        d.userId === userId ||
+        (targetUser && (d.userName === targetUser.name || (d.userPhone && targetUser.phone && d.userPhone === targetUser.phone)))
+      )
     );
-    const isCur = state.user?.id === userId || (targetUser && state.user?.email === targetUser.email);
+
+    const depositAmount = userPendingDep ? Number(userPendingDep.amount) || 0 : 0;
+
+    const updatedUsers = (state.allUsers || []).map((u) =>
+      u.id === userId ? {
+        ...u,
+        status: 'ACTIVE',
+        isActivated: true,
+        isVerified: true,
+        suspensionReason: '',
+        totalDeposited: (u.totalDeposited || 0) + depositAmount,
+      } : u
+    );
+
+    const isCur = state.user?.id === userId || (targetUser && (state.user?.email === targetUser.email || state.user?.phone === targetUser.phone));
     if (isCur) {
-      updatedCurUser = { ...state.user, status: 'ACTIVE', isActivated: true, suspensionReason: '' };
+      updatedCurUser = {
+        ...state.user,
+        status: 'ACTIVE',
+        isActivated: true,
+        isVerified: true,
+        suspensionReason: '',
+        totalDeposited: (state.user.totalDeposited || 0) + depositAmount,
+      };
     }
 
+    // Approve pending deposit in depositRequests queue
+    const updatedDeposits = (state.depositRequests || []).map((d) =>
+      userPendingDep && d.id === userPendingDep.id ? { ...d, status: 'APPROVED' } : d
+    );
+
     // Also activate any pending plan for this user
-    const updatedPlans = (state.plans || []).map((p) => {
-      if (p.status === 'pending_approval' && (isCur || p.depositRef)) {
-        return { ...p, status: 'active' };
+    let updatedPlans = (state.plans || []).map((p) => {
+      const belongs = p.userId === userId || (targetUser && (p.userName === targetUser.name || (p.userPhone && targetUser.phone && p.userPhone === targetUser.phone)));
+      if (p.status === 'pending_approval' && belongs) {
+        return { ...p, status: 'active', startDate: new Date().toISOString() };
       }
       return p;
     });
+
+    if (userPendingDep && !updatedPlans.some((p) => p.status === 'active' && (p.userId === userId || (targetUser && p.userName === targetUser.name)))) {
+      const calc = calculateEarnings(userPendingDep.amount, userPendingDep.planMonths || 1, 1.0);
+      const startDate = new Date();
+      const totalDays = userPendingDep.planDays || (userPendingDep.planMonths || 1) * 30;
+      const maturityDate = new Date(startDate.getTime() + totalDays * 86400000);
+      const isTrial = Boolean(userPendingDep.isTrial || userPendingDep.amount === 300 || totalDays === 3);
+
+      const approvedPlan = {
+        id: `PLN-${Math.floor(1000 + Math.random() * 9000)}`,
+        userId: userId,
+        userName: targetUser?.name || 'Member',
+        userPhone: targetUser?.phone || '',
+        title: userPendingDep.planTitle || `${totalDays} Days Membership Tier`,
+        amount: userPendingDep.amount,
+        months: userPendingDep.planMonths || 1,
+        days: totalDays,
+        startDate: startDate.toISOString(),
+        maturityDate: maturityDate.toISOString(),
+        totalExpectedGain: calc.estimatedTotalIncome,
+        estimatedTotalIncome: calc.estimatedTotalIncome,
+        dailyQuota: calc.estimatedDailyIncome,
+        earnedSoFar: 0,
+        status: 'active',
+        isUpgrade: Boolean(userPendingDep.isUpgrade),
+        isTrial: isTrial,
+        depositRef: userPendingDep.id,
+        utr: userPendingDep.utr,
+      };
+      updatedPlans = [approvedPlan, ...updatedPlans.filter((p) => p.depositRef !== userPendingDep.id)];
+    }
 
     setState((prev) => ({
       ...prev,
       allUsers: updatedUsers,
       user: updatedCurUser,
       plans: updatedPlans,
+      depositRequests: updatedDeposits,
     }));
 
     // Real-Time Broadcast & Backend Sync
-    broadcastState({ allUsers: updatedUsers, plans: updatedPlans });
+    broadcastState({ allUsers: updatedUsers, plans: updatedPlans, depositRequests: updatedDeposits });
     dispatchApi('/api/user/status', { userId, status: 'ACTIVE' });
+    if (userPendingDep) {
+      dispatchApi('/api/deposit/review', { depositId: userPendingDep.id, action: 'APPROVE' });
+    }
 
-    showToast(`User ${userId} successfully ACTIVATED by Admin!`);
+    const userName = targetUser?.name || 'User';
+    showToast(`User ${userName} successfully ACTIVATED with full earning access!${depositAmount > 0 ? ` (₹${depositAmount.toLocaleString()} plan unlocked)` : ''}`);
     triggerCelebration();
   };
 

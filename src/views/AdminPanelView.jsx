@@ -331,6 +331,7 @@ export default function AdminPanelView() {
   const [suspensionModal, setSuspensionModal] = useState({ isOpen: false, user: null, reason: '' });
   const [passwordResetModal, setPasswordResetModal] = useState({ isOpen: false, user: null, newPassword: '' });
   const [rejectModal, setRejectModal] = useState({ isOpen: false, type: '', id: '', reason: '' });
+  const [depositApprovalModal, setDepositApprovalModal] = useState({ isOpen: false, dep: null });
   const [approveWithdrawalModal, setApproveWithdrawalModal] = useState({
     isOpen: false,
     req: null,
@@ -1090,18 +1091,38 @@ export default function AdminPanelView() {
                       </td>
 
                       <td style={{ padding: '0.85rem 0.75rem' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                          {userPlan ? (
-                            <div>
-                              {userPlan.isTrial || userPlan.amount === 300 ? (
-                                <span className="badge badge-gold" style={{ fontSize: '0.66rem' }}>
-                                  🎁 ₹300 Trial Pass
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                          {/* Highlight pending deposit & chosen lock-in tier if awaiting verification */}
+                          {userPendingDep ? (
+                            <div style={{ background: 'rgba(245, 158, 11, 0.12)', border: '1px solid rgba(245, 158, 11, 0.35)', borderRadius: '6px', padding: '0.4rem 0.55rem' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontWeight: 800, color: '#fbbf24', fontSize: '0.74rem' }}>
+                                <Clock size={11} /> {userPendingDep.planTitle || 'Deposit Awaiting Verification'}
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.2rem', flexWrap: 'wrap' }}>
+                                <span className="badge badge-gold" style={{ fontSize: '0.62rem', fontWeight: 800 }}>
+                                  {formatINR(userPendingDep.amount)}
                                 </span>
-                              ) : (
-                                <span className="badge badge-indigo" style={{ fontSize: '0.66rem' }}>
-                                  ⭐ {userPlan.name || `₹${userPlan.amount} Plan`}
+                                <span className="badge badge-indigo" style={{ fontSize: '0.62rem', fontWeight: 800 }}>
+                                  ⏱️ {userPendingDep.planDays || userPendingDep.planMonths * 30} Days Lock-in
                                 </span>
-                              )}
+                              </div>
+                              <div style={{ fontSize: '0.65rem', color: '#cbd5e1', fontFamily: 'monospace', marginTop: '0.2rem' }}>
+                                UTR: {userPendingDep.utr}
+                              </div>
+                            </div>
+                          ) : userPlan ? (
+                            <div style={{ background: userPlan.status === 'active' || userPlan.status === 'ACTIVE' ? 'rgba(16, 185, 129, 0.08)' : 'rgba(255, 255, 255, 0.04)', border: userPlan.status === 'active' || userPlan.status === 'ACTIVE' ? '1px solid rgba(16, 185, 129, 0.25)' : '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '6px', padding: '0.3rem 0.45rem' }}>
+                              <div style={{ fontWeight: 800, color: '#f8fafc', fontSize: '0.76rem' }}>
+                                {userPlan.isTrial || userPlan.amount === 300 ? '🎁 ₹300 Trial Pass' : (userPlan.title || userPlan.name || `₹${userPlan.amount} Plan`)}
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', marginTop: '0.15rem' }}>
+                                <span style={{ fontWeight: 700, color: '#34d399', fontSize: '0.72rem' }}>
+                                  {formatINR(userPlan.amount)}
+                                </span>
+                                <span className="badge badge-indigo" style={{ fontSize: '0.6rem' }}>
+                                  ⏱️ {userPlan.days || userPlan.months * 30 || 30} Days Lock-in
+                                </span>
+                              </div>
                             </div>
                           ) : (
                             <div style={{ fontSize: '0.68rem', color: '#94a3b8', fontStyle: 'italic' }}>
@@ -1112,7 +1133,7 @@ export default function AdminPanelView() {
                           <div>
                             {isActive && (
                               <span className="badge badge-emerald" style={{ fontSize: '0.65rem' }}>
-                                <CheckCircle2 size={12} /> Active
+                                <CheckCircle2 size={12} /> Active Member
                               </span>
                             )}
                             {isPending && (
@@ -1152,16 +1173,16 @@ export default function AdminPanelView() {
 
                       <td style={{ padding: '0.85rem 0.75rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-                          {/* Approve Deposit shortcut if pending payment exists */}
+                          {/* Approve Deposit shortcut with full details if pending payment exists */}
                           {userPendingDep && (
                             <button
                               type="button"
                               className="btn btn-gold btn-sm"
-                              style={{ fontSize: '0.74rem', padding: '0.25rem 0.55rem', fontWeight: 700 }}
-                              onClick={() => approveDeposit(userPendingDep.id)}
-                              title={`Approve payment of ₹${userPendingDep.amount} (UTR: ${userPendingDep.utr}) and activate user`}
+                              style={{ fontSize: '0.74rem', padding: '0.25rem 0.55rem', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+                              onClick={() => setDepositApprovalModal({ isOpen: true, dep: userPendingDep })}
+                              title={`View & Approve payment of ₹${userPendingDep.amount} (${userPendingDep.planDays || userPendingDep.planMonths * 30} Days Lock-in)`}
                             >
-                              <CheckCircle2 size={12} /> Approve Payment (₹{userPendingDep.amount})
+                              <CheckCircle2 size={13} /> Approve (₹{userPendingDep.amount.toLocaleString()} • {userPendingDep.planDays || userPendingDep.planMonths * 30}D)
                             </button>
                           )}
 
@@ -1172,9 +1193,9 @@ export default function AdminPanelView() {
                               className="btn btn-primary btn-sm"
                               style={{ fontSize: '0.74rem', padding: '0.25rem 0.55rem', fontWeight: 700 }}
                               onClick={() => activateUser(u.id)}
-                              title="Activate user and grant full earning access"
+                              title={userPendingDep ? `Activate user and approve ₹${userPendingDep.amount} deposit` : "Activate user and grant full earning access"}
                             >
-                              <Unlock size={12} /> Activate Account
+                              <Unlock size={12} /> {userPendingDep ? 'Activate & Unlock Plan' : 'Activate Account'}
                             </button>
                           )}
 
@@ -1333,8 +1354,8 @@ export default function AdminPanelView() {
                             <button
                               type="button"
                               className="btn btn-primary btn-sm"
-                              style={{ fontSize: '0.72rem', padding: '0.25rem 0.65rem' }}
-                              onClick={() => approveDeposit(dep.id)}
+                              style={{ fontSize: '0.72rem', padding: '0.25rem 0.65rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontWeight: 700 }}
+                              onClick={() => setDepositApprovalModal({ isOpen: true, dep })}
                             >
                               <CheckCircle2 size={13} /> Approve
                             </button>
@@ -3880,6 +3901,110 @@ export default function AdminPanelView() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Verify & Approve Deposit Modal with full plan and lock-in details */}
+      {depositApprovalModal.isOpen && depositApprovalModal.dep && (() => {
+        const d = depositApprovalModal.dep;
+        const totalDays = d.planDays || (d.planMonths || 1) * 30;
+        const calc = calculateEarnings(d.amount, d.planMonths || 1, 1.0);
+        return (
+          <div className="modal-overlay" onClick={() => setDepositApprovalModal({ isOpen: false, dep: null })}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 540 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: '0.75rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <div style={{ width: 36, height: 36, borderRadius: '10px', background: 'rgba(16, 185, 129, 0.2)', border: '1px solid rgba(16, 185, 129, 0.4)', color: '#34d399', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <ShieldCheck size={20} />
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0, color: '#f8fafc' }}>
+                      Verify & Approve Investor Deposit
+                    </h3>
+                    <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                      Request ID: <span style={{ fontFamily: 'monospace', color: '#22d3ee' }}>{d.id}</span>
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setDepositApprovalModal({ isOpen: false, dep: null })}
+                  style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px' }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Main Info Box */}
+              <div style={{ background: 'rgba(15, 23, 42, 0.85)', border: '1px solid rgba(16, 185, 129, 0.35)', borderRadius: '12px', padding: '1rem', marginBottom: '1rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.85rem' }}>
+                  <div>
+                    <div style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Investor Name</div>
+                    <div style={{ fontWeight: 800, fontSize: '1rem', color: '#f8fafc' }}>{d.userName}</div>
+                    <div style={{ fontSize: '0.74rem', color: '#34d399', fontFamily: 'monospace' }}>{d.userPhone || d.userId}</div>
+                  </div>
+
+                  <div>
+                    <div style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Deposit Amount</div>
+                    <div style={{ fontWeight: 800, fontSize: '1.4rem', color: '#34d399' }}>{formatINR(d.amount)}</div>
+                    <span className="badge badge-emerald" style={{ fontSize: '0.62rem' }}>Verified Principal</span>
+                  </div>
+
+                  <div>
+                    <div style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Plan & Lock-in Period</div>
+                    <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#60a5fa' }}>{d.planTitle || `${totalDays} Days Tier`}</div>
+                    <span className="badge badge-indigo" style={{ fontSize: '0.65rem', marginTop: '0.15rem' }}>
+                      ⏱️ {totalDays} Days Lock-in
+                    </span>
+                  </div>
+
+                  <div>
+                    <div style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Payment 12-Digit UTR</div>
+                    <div style={{ fontWeight: 800, fontSize: '0.95rem', color: '#fbbf24', fontFamily: 'monospace', letterSpacing: '0.05em' }}>
+                      {d.utr}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Earning Projection Preview */}
+                <div style={{ marginTop: '0.85rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(255, 255, 255, 0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Daily Earning Quota: </span>
+                    <strong style={{ color: '#fbbf24', fontSize: '0.85rem' }}>~{formatINR(calc.estimatedDailyIncome)}/day</strong>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Est. Total at Maturity: </span>
+                    <strong style={{ color: '#34d399', fontSize: '0.88rem' }}>{formatINR(calc.estimatedMaturityValue)}</strong>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.25)', borderRadius: '8px', padding: '0.65rem 0.85rem', marginBottom: '1.25rem', fontSize: '0.78rem', color: '#fef3c7' }}>
+                ⚡ <strong>Instant Activation:</strong> Approving will immediately unlock user earning features, activate this {totalDays}-day plan, and credit {formatINR(d.amount)} active deposit.
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setDepositApprovalModal({ isOpen: false, dep: null })}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-gold"
+                  style={{ fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                  onClick={() => {
+                    approveDeposit(d.id);
+                    setDepositApprovalModal({ isOpen: false, dep: null });
+                  }}
+                >
+                  <CheckCircle2 size={15} /> Confirm & Activate Deposit ({formatINR(d.amount)})
+                </button>
+              </div>
             </div>
           </div>
         );

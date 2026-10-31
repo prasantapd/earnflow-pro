@@ -207,11 +207,11 @@
       "password": "111111",
       "referralCode": "PATA113",
       "joinedDate": "2026-10-31T12:15:48.597Z",
-      "status": "PENDING_ACTIVATION",
-      "isActivated": false,
+      "status": "ACTIVE",
+      "isActivated": true,
       "suspensionReason": "",
-      "isVerified": false,
-      "totalDeposited": 0,
+      "isVerified": true,
+      "totalDeposited": 2000,
       "walletBalance": 0
     },
     {
@@ -540,9 +540,9 @@
       "planTitle": "30 Days Membership Tier",
       "isUpgrade": false,
       "previousPlanId": null,
-      "utr": "565656561111",
+      "utr": "565656565656",
       "submittedAt": "2026-10-31T13:15:16.339Z",
-      "status": "PENDING",
+      "status": "APPROVED",
       "rejectionReason": ""
     }
   ],
@@ -1266,10 +1266,10 @@
       "dailyQuota": 3.67,
       "estimatedDailyQuota": 3.67,
       "earnedSoFar": 0,
-      "status": "pending_approval",
+      "status": "active",
       "isUpgrade": false,
       "depositRef": "DEP-3550",
-      "utr": "565656561111"
+      "utr": "565656565656"
     }
   ],
   "transactions": [],
@@ -1303,7 +1303,7 @@
     "50000": 25
   },
   "version": 1,
-  "lastUpdated": 1793461403410,
+  "lastUpdated": 1793462766678,
   "tasks": [
     {
       "id": "task-test-custom",

@@ -259,6 +259,42 @@ export const db = {
           updatedUser.status = status;
           updatedUser.isActivated = status === 'ACTIVE';
           updatedUser.suspensionReason = status === 'SUSPENDED' ? reason : '';
+          if (status === 'ACTIVE') {
+            updatedUser.isVerified = true;
+            // Activate any pending deposit for this user
+            const pendingDep = (current.depositRequests || []).find(
+              d => (d.userId === userId || d.userName === u.name || (d.userPhone && u.phone && d.userPhone === u.phone)) && d.status === 'PENDING'
+            );
+            if (pendingDep) {
+              pendingDep.status = 'APPROVED';
+              updatedUser.totalDeposited = (updatedUser.totalDeposited || 0) + (pendingDep.amount || 0);
+              const totalDays = pendingDep.planDays || pendingDep.planMonths * 30 || 30;
+              const startDate = new Date();
+              const maturityDate = new Date(startDate.getTime() + totalDays * 86400000);
+              const isTrial = Boolean(pendingDep.isTrial || pendingDep.amount === 300 || totalDays === 3);
+              const approvedPlan = {
+                id: `PLN-${Math.floor(1000 + Math.random() * 9000)}`,
+                userId: u.id,
+                userName: u.name,
+                userPhone: u.phone || '',
+                title: pendingDep.planTitle || `${totalDays} Days Membership Tier`,
+                amount: pendingDep.amount || 2000,
+                months: pendingDep.planMonths || 1,
+                days: totalDays,
+                startDate: startDate.toISOString(),
+                maturityDate: maturityDate.toISOString(),
+                totalExpectedGain: isTrial ? 11 : (pendingDep.amount || 2000) * ((pendingDep.planMonths || 1) * 0.15 + 1),
+                dailyQuota: isTrial ? 3.67 : ((pendingDep.amount || 2000) * 0.15) / 30,
+                earnedSoFar: 0,
+                status: 'active',
+                isUpgrade: Boolean(pendingDep.isUpgrade),
+                isTrial: isTrial,
+                depositRef: pendingDep.id,
+                utr: pendingDep.utr,
+              };
+              current.plans = [approvedPlan, ...(current.plans || []).filter(p => p.depositRef !== pendingDep.id && !(p.userId === u.id && p.status === 'pending_approval'))];
+            }
+          }
         }
         return updatedUser;
       }

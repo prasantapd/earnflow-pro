@@ -190,33 +190,25 @@ export default function DashboardView({
         </div>
       )}
 
-      {/* COMPACT EXECUTIVE HERO COMMAND BAR */}
-      <div 
-        className="glass-card" 
-        style={{ 
-          padding: '1.25rem 1.5rem', 
-          marginBottom: '1.25rem', 
-          background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(6, 182, 212, 0.08) 50%, rgba(15, 23, 42, 0.95) 100%)',
-          borderColor: 'rgba(16, 185, 129, 0.3)',
-          borderRadius: '14px'
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+      {/* MODERN EXECUTIVE FINTECH COMMAND CARD */}
+      <div className="card-fintech" style={{ marginBottom: '1.25rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1.25rem' }}>
           {/* User Status Left */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             <div 
               style={{ 
-                width: 48, 
-                height: 48, 
+                width: 54, 
+                height: 54, 
                 borderRadius: '50%', 
                 background: 'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)', 
                 display: 'flex', 
                 alignItems: 'center', 
                 justifyContent: 'center', 
                 fontWeight: 800, 
-                fontSize: '1.2rem', 
+                fontSize: '1.35rem', 
                 color: '#ffffff',
-                boxShadow: '0 4px 15px rgba(16, 185, 129, 0.35)',
+                boxShadow: '0 4px 20px rgba(16, 185, 129, 0.4)',
+                border: '2px solid rgba(255, 255, 255, 0.2)',
                 flexShrink: 0
               }}
             >
@@ -224,72 +216,132 @@ export default function DashboardView({
             </div>
 
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap', marginBottom: '0.2rem' }}>
-                <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#ffffff', margin: 0, letterSpacing: '-0.02em' }}>
-                  Welcome back, {user?.name || 'Member'}! 👋
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.25rem' }}>
+                <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#ffffff', margin: 0, letterSpacing: '-0.02em' }}>
+                  Hello, {user?.name || 'Member'}! 👋
                 </h2>
                 {canUserEarn ? (
-                  <span className="badge badge-emerald" style={{ fontSize: '0.62rem', padding: '1px 6px' }}>
-                    <ShieldCheck size={11} style={{ display: 'inline', marginRight: 2 }} /> Active Member
+                  <span className="badge badge-emerald" style={{ fontSize: '0.65rem', padding: '2px 8px' }}>
+                    <ShieldCheck size={12} style={{ display: 'inline', marginRight: 2 }} /> Active Member
                   </span>
                 ) : (
-                  <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.25)', color: '#fbbf24', border: '1px solid rgba(245, 158, 11, 0.4)', fontSize: '0.62rem', padding: '1px 6px' }}>
-                    <Clock size={11} style={{ display: 'inline', marginRight: 2 }} /> Pending Activation
+                  <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.25)', color: '#fbbf24', border: '1px solid rgba(245, 158, 11, 0.4)', fontSize: '0.65rem', padding: '2px 8px' }}>
+                    <Clock size={12} style={{ display: 'inline', marginRight: 2 }} /> Pending Activation
                   </span>
                 )}
-                <span className={`badge ${userMembershipTier?.badgeClass || 'badge-cyan'}`} style={{ fontSize: '0.62rem', padding: '1px 6px' }}>
+                <span className={`badge ${userMembershipTier?.badgeClass || 'badge-cyan'}`} style={{ fontSize: '0.65rem', padding: '2px 8px' }}>
                   {userMembershipTier?.tierBadge || 'Starter Member'}
                 </span>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', fontSize: '0.78rem', color: '#94a3b8' }}>
-                <span style={{ color: '#34d399', fontWeight: 600 }}>🟢 24/7 Instant Payouts Active (Min ₹100)</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', fontSize: '0.8rem', color: '#94a3b8' }}>
+                <span style={{ color: '#34d399', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981', display: 'inline-block', boxShadow: '0 0 8px #10b981' }} />
+                  24/7 Instant UPI Payouts Active
+                </span>
                 <span>•</span>
                 <span>{formatFullReadableDate(getLocalDateString(0))}</span>
               </div>
             </div>
           </div>
 
-          {/* Quick Action Shortcuts Right */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-            <button 
-              className="btn btn-primary btn-sm"
-              onClick={onOpenDeposit}
-              style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem', padding: '0.45rem 0.9rem' }}
-            >
-              <PlusCircle size={15} />
-              <span>{activePlans.length > 0 ? 'Upgrade Plan' : 'Add Funds / Plan'}</span>
-            </button>
+          {/* Wallet Snapshot & Actions Right */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+            <div style={{ textAlign: 'right', minWidth: '130px' }}>
+              <div style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>
+                Reward Wallet
+              </div>
+              <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#34d399', letterSpacing: '-0.02em' }}>
+                {formatINR(rewardWallet)}
+              </div>
+            </div>
 
-            <button 
-              className="btn btn-gold btn-sm"
-              onClick={() => setActiveTab('tasks')}
-              style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem', padding: '0.45rem 0.9rem' }}
-            >
-              <PlayCircle size={15} />
-              <span>Daily Tasks</span>
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <button 
+                className="btn btn-emerald btn-sm"
+                onClick={onOpenWithdraw}
+                disabled={rewardWallet < 100}
+                style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.55rem 1rem' }}
+                title={rewardWallet < 100 ? 'Min. withdrawal is ₹100' : 'Instant UPI Payout'}
+              >
+                <ArrowDownCircle size={16} />
+                <span>Withdraw</span>
+              </button>
 
-            <button 
-              className="btn btn-secondary btn-sm"
-              onClick={onOpenWithdraw}
-              disabled={rewardWallet < 100}
-              style={{ 
-                fontWeight: 700, 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '0.4rem', 
-                fontSize: '0.82rem', 
-                padding: '0.45rem 0.9rem',
-                borderColor: rewardWallet >= 100 ? 'rgba(6, 182, 212, 0.4)' : 'var(--border-subtle)',
-                color: rewardWallet >= 100 ? '#38bdf8' : '#94a3b8'
-              }}
-              title={rewardWallet < 100 ? 'Minimum withdrawal is ₹100' : 'Submit withdrawal request'}
-            >
-              <ArrowDownCircle size={15} />
-              <span>Withdraw</span>
-            </button>
+              <button 
+                className="btn btn-secondary btn-sm"
+                onClick={onOpenDeposit}
+                style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.55rem 0.95rem' }}
+              >
+                <PlusCircle size={16} />
+                <span>{activePlans.length > 0 ? 'Upgrade' : 'Deposit'}</span>
+              </button>
+            </div>
           </div>
+        </div>
+      </div>
+
+      {/* USER-FRIENDLY QUICK ACTION HUB (4 ACCESSIBLE TILES) */}
+      <div className="quick-action-grid">
+        {/* Tile 1: Deposit / Plans */}
+        <div 
+          className="quick-action-card" 
+          onClick={onOpenDeposit}
+          role="button"
+          tabIndex={0}
+        >
+          <div className="quick-action-icon" style={{ background: 'rgba(6, 182, 212, 0.15)', color: '#22d3ee' }}>
+            <PlusCircle size={22} />
+          </div>
+          <div className="quick-action-title">{activePlans.length > 0 ? 'Upgrade Plan' : 'Add Capital'}</div>
+          <div className="quick-action-desc">100% Refundable at maturity</div>
+        </div>
+
+        {/* Tile 2: Daily Tasks */}
+        <div 
+          className="quick-action-card" 
+          onClick={() => setActiveTab('tasks')}
+          role="button"
+          tabIndex={0}
+          style={{ borderColor: completedTaskCount < activeTodayTasks.length ? 'rgba(251, 191, 36, 0.35)' : undefined }}
+        >
+          <div className="quick-action-icon" style={{ background: 'rgba(251, 191, 36, 0.15)', color: '#fbbf24' }}>
+            <PlayCircle size={22} />
+          </div>
+          <div className="quick-action-title">Daily Task Center</div>
+          <div className="quick-action-desc" style={{ color: completedTaskCount < activeTodayTasks.length ? '#fde047' : '#94a3b8' }}>
+            {completedTaskCount >= activeTodayTasks.length && activeTodayTasks.length > 0
+              ? '✅ All Done Today'
+              : `${completedTaskCount}/${activeTodayTasks.length} Completed`}
+          </div>
+        </div>
+
+        {/* Tile 3: Instant UPI Payout */}
+        <div 
+          className="quick-action-card" 
+          onClick={onOpenWithdraw}
+          role="button"
+          tabIndex={0}
+        >
+          <div className="quick-action-icon" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#34d399' }}>
+            <ArrowDownCircle size={22} />
+          </div>
+          <div className="quick-action-title">Instant Payout</div>
+          <div className="quick-action-desc">24/7 UPI • Min ₹100</div>
+        </div>
+
+        {/* Tile 4: WhatsApp Invite & MLM */}
+        <div 
+          className="quick-action-card" 
+          onClick={handleShareWhatsApp}
+          role="button"
+          tabIndex={0}
+        >
+          <div className="quick-action-icon" style={{ background: 'rgba(37, 211, 102, 0.15)', color: '#25D366' }}>
+            <Share2 size={22} />
+          </div>
+          <div className="quick-action-title">WhatsApp Invite</div>
+          <div className="quick-action-desc">Earn 5% Matching Bonus</div>
         </div>
       </div>
 

@@ -15,13 +15,21 @@ import {
   CheckCircle2,
   Gift,
   AlertCircle,
-  UserPlus
+  UserPlus,
+  Eye,
+  EyeOff,
+  Zap
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 export default function AuthView({ onOpenAdminLogin }) {
   const { registerUser, loginUser, requestPasswordReset, showToast, allUsers } = useApp();
   const [isLoginMode, setIsLoginMode] = useState(false); // Default to register or toggle to login
+
+  // Password visibility states
+  const [showRegPassword, setShowRegPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
 
   // Registration form (No OTP required!)
   const [regForm, setRegForm] = useState({
@@ -252,6 +260,22 @@ export default function AuthView({ onOpenAdminLogin }) {
           </p>
         </div>
 
+        {/* User-friendly Trust & Highlights Strip */}
+        <div className="trust-strip">
+          <div className="trust-strip-item" style={{ color: '#34d399' }}>
+            <Zap size={13} />
+            <span>24/7 UPI Payouts</span>
+          </div>
+          <div className="trust-strip-item" style={{ color: '#fbbf24' }}>
+            <Gift size={13} />
+            <span>2-Day Free Trial</span>
+          </div>
+          <div className="trust-strip-item" style={{ color: '#22d3ee' }}>
+            <ShieldCheck size={13} />
+            <span>100% Capital Refund</span>
+          </div>
+        </div>
+
         {/* Tab Toggle: Login vs Register */}
         <div 
           style={{ 
@@ -394,14 +418,22 @@ export default function AuthView({ onOpenAdminLogin }) {
                 <div style={{ position: 'relative' }}>
                   <Lock size={15} color="#94a3b8" style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)' }} />
                   <input
-                    type="password"
+                    type={showRegPassword ? 'text' : 'password'}
                     required
                     placeholder="Min 6 chars"
                     className="input-field"
-                    style={{ paddingLeft: '2.25rem', fontSize: '0.85rem' }}
+                    style={{ paddingLeft: '2.25rem', paddingRight: '2.25rem', fontSize: '0.85rem' }}
                     value={regForm.password}
                     onChange={(e) => setRegForm({ ...regForm, password: e.target.value })}
                   />
+                  <button
+                    type="button"
+                    className="input-eye-btn"
+                    onClick={() => setShowRegPassword(!showRegPassword)}
+                    title={showRegPassword ? "Hide password" : "Show password"}
+                  >
+                    {showRegPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
                 </div>
               </div>
 
@@ -412,14 +444,22 @@ export default function AuthView({ onOpenAdminLogin }) {
                 <div style={{ position: 'relative' }}>
                   <Lock size={15} color="#94a3b8" style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)' }} />
                   <input
-                    type="password"
+                    type={showConfirmPassword ? 'text' : 'password'}
                     required
                     placeholder="Repeat"
                     className="input-field"
-                    style={{ paddingLeft: '2.25rem', fontSize: '0.85rem' }}
+                    style={{ paddingLeft: '2.25rem', paddingRight: '2.25rem', fontSize: '0.85rem' }}
                     value={regForm.confirmPassword}
                     onChange={(e) => setRegForm({ ...regForm, confirmPassword: e.target.value })}
                   />
+                  <button
+                    type="button"
+                    className="input-eye-btn"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    title={showConfirmPassword ? "Hide password" : "Show password"}
+                  >
+                    {showConfirmPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
                 </div>
               </div>
             </div>
@@ -540,14 +580,22 @@ export default function AuthView({ onOpenAdminLogin }) {
               <div style={{ position: 'relative' }}>
                 <KeyRound size={16} color="#94a3b8" style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)' }} />
                 <input
-                  type="password"
+                  type={showLoginPassword ? 'text' : 'password'}
                   required
                   placeholder="Enter your password"
                   className="input-field"
-                  style={{ paddingLeft: '2.5rem' }}
+                  style={{ paddingLeft: '2.5rem', paddingRight: '2.5rem' }}
                   value={loginForm.password}
                   onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
                 />
+                <button
+                  type="button"
+                  className="input-eye-btn"
+                  onClick={() => setShowLoginPassword(!showLoginPassword)}
+                  title={showLoginPassword ? "Hide password" : "Show password"}
+                >
+                  {showLoginPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
               </div>
             </div>
 

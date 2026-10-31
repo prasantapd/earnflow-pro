@@ -99,6 +99,7 @@ export default function TaskCenterView({ onOpenWithdraw, onOpenDeposit, setActiv
   const safeCompletedTasks = tasksCompletedToday || {};
   const completedCount = activeRosterTasks.filter((t) => t && safeCompletedTasks[t.id]).length;
   const totalCount = activeRosterTasks.length;
+  const progressPercent = totalCount > 0 ? Math.min(100, Math.round((completedCount / totalCount) * 100)) : 0;
   const getTaskMultiplier = (task) => {
     if (task && Number(task.multiplierOverride) > 0) {
       return Number(task.multiplierOverride);

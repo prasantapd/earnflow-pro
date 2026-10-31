@@ -1081,6 +1081,48 @@
       "isTrial": true,
       "depositRef": "DEP-3523",
       "utr": "UTR300TRIAL99"
+    },
+    {
+      "id": "PLN-8654",
+      "userId": "USR-9370",
+      "userName": "Hdudj",
+      "userPhone": "1112223330",
+      "title": "90 Days Membership Tier",
+      "amount": 3500,
+      "months": 3,
+      "days": 90,
+      "startDate": "2026-10-31T08:59:19.713Z",
+      "maturityDate": "2027-01-29T08:59:19.713Z",
+      "totalExpectedGain": 24500,
+      "estimatedTotalIncome": 24500,
+      "dailyQuota": 272.22,
+      "earnedSoFar": 0,
+      "status": "active",
+      "isUpgrade": false,
+      "isTrial": false,
+      "depositRef": "DEP-9969",
+      "utr": "UTR3289753762"
+    },
+    {
+      "id": "PLN-5335",
+      "userId": "USR-9370",
+      "userName": "Hdudj",
+      "userPhone": "1112223330",
+      "title": "90 Days Membership Tier",
+      "amount": 3500,
+      "months": 3,
+      "days": 90,
+      "startDate": "2026-10-29T16:02:33.762Z",
+      "maturityDate": "2027-01-27T16:02:33.762Z",
+      "totalExpectedGain": 669,
+      "estimatedTotalIncome": 669,
+      "dailyQuota": 7.43,
+      "estimatedDailyQuota": 7.43,
+      "earnedSoFar": 0,
+      "status": "pending_approval",
+      "isUpgrade": false,
+      "depositRef": "DEP-9969",
+      "utr": "UTR3289753762"
     }
   ],
   "transactions": [],
@@ -1114,7 +1156,7 @@
     "50000": 25
   },
   "version": 1,
-  "lastUpdated": 1793437723738,
+  "lastUpdated": 1793448110603,
   "tasks": [
     {
       "id": "task-test-custom",

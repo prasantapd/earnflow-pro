@@ -1332,15 +1332,26 @@ export function AppProvider({ children }) {
     }
 
     const newId = `USR-${Math.floor(1000 + Math.random() * 9000)}`;
-    const refCode = userData.name.replace(/[^a-zA-Z]/g, '').toUpperCase().slice(0, 4) + Math.floor(100 + Math.random() * 900);
+    const myOwnRefCode = (userData.name.replace(/[^a-zA-Z]/g, '').toUpperCase().slice(0, 4) || 'USER') + Math.floor(100 + Math.random() * 900);
     
+    // Find sponsor from referral code or referredBy
+    const sponsorCode = (userData.referredBy || userData.referralCode || '').trim().toUpperCase();
+    const sponsor = sponsorCode ? (state.allUsers || []).find(
+      (u) => (u.referralCode && u.referralCode.toUpperCase() === sponsorCode) || 
+             (u.phone && u.phone === sponsorCode) || 
+             (u.id && u.id.toUpperCase() === sponsorCode)
+    ) : null;
+
     const newUser = {
       id: newId,
       name: userData.name.trim(),
       email: emailLower,
       phone: phoneTrim,
       password: userData.password,
-      referralCode: userData.referralCode || refCode,
+      referralCode: myOwnRefCode, // Every user gets their OWN referral code
+      referredBy: sponsor ? sponsor.referralCode : (sponsorCode || null),
+      sponsorId: sponsor ? sponsor.id : null,
+      sponsorName: sponsor ? sponsor.name : null,
       joinedDate: new Date().toISOString(),
       status: 'PENDING_ACTIVATION',
       isActivated: false,
@@ -1350,11 +1361,36 @@ export function AppProvider({ children }) {
       walletBalance: 0.00,
     };
 
+    // If sponsor found, also add downline member to mlmNetwork!
+    let updatedMlm = state.mlmNetwork;
+    if (sponsor) {
+      const leg = (userData.leg ? userData.leg.toUpperCase() : (sponsor.preferredLeg || 'AUTO'));
+      const targetLeg = (leg === 'AUTO') 
+        ? (((state.mlmNetwork?.leftCarry || 0) <= (state.mlmNetwork?.rightCarry || 0)) ? 'LEFT' : 'RIGHT') 
+        : (leg === 'LEFT' ? 'LEFT' : 'RIGHT');
+      
+      const newMember = {
+        id: newId,
+        name: newUser.name,
+        amount: 0,
+        joinedAt: newUser.joinedDate,
+        leg: targetLeg,
+        status: 'PENDING_ACTIVATION',
+      };
+
+      updatedMlm = {
+        ...(state.mlmNetwork || {}),
+        leftMembers: targetLeg === 'LEFT' ? [newMember, ...(state.mlmNetwork?.leftMembers || [])] : (state.mlmNetwork?.leftMembers || []),
+        rightMembers: targetLeg === 'RIGHT' ? [newMember, ...(state.mlmNetwork?.rightMembers || [])] : (state.mlmNetwork?.rightMembers || []),
+      };
+    }
+
     const updatedUsers = [newUser, ...(state.allUsers || [])];
     setState((prev) => ({
       ...prev,
       user: newUser,
       allUsers: updatedUsers,
+      mlmNetwork: updatedMlm,
       rewardWallet: 0.00,
       totalWithdrawn: 0.00,
       tasksCompletedToday: {},
@@ -1362,10 +1398,14 @@ export function AppProvider({ children }) {
     }));
 
     // Real-Time Cross-Tab & Cross-Device broadcast
-    broadcastState({ allUsers: updatedUsers });
+    broadcastState({ allUsers: updatedUsers, mlmNetwork: updatedMlm });
     dispatchApi('/api/register', newUser);
 
-    showToast(`Registration successful! Account created. Please select an Investment Plan and submit payment for Admin activation.`, 'info');
+    if (sponsor) {
+      showToast(`Welcome ${newUser.name}! Registered under sponsor: ${sponsor.name} (${sponsor.referralCode}).`, 'success');
+    } else {
+      showToast(`Registration successful! Account created. Please select an Investment Plan and submit payment for Admin activation.`, 'info');
+    }
     triggerCelebration();
     return true;
   };

@@ -42,15 +42,37 @@ function MainApp() {
   // 1. URL parameter: ?portal=admin or ?admin=true or hash #admin
   // 2. Secret keyboard combo: Ctrl + Shift + A (Cmd + Shift + A on Mac)
   React.useEffect(() => {
-    const checkAdminQuery = () => {
-      const search = (window.location.search || '').toLowerCase();
-      const hash = (window.location.hash || '').toLowerCase();
-      if (search.includes('admin') || search.includes('portal=admin') || hash === '#admin') {
+    const checkQueries = () => {
+      const search = window.location.search || '';
+      const hash = window.location.hash || '';
+      const searchLower = search.toLowerCase();
+      const hashLower = hash.toLowerCase();
+
+      // 1. Admin portal query check
+      if (searchLower.includes('admin') || searchLower.includes('portal=admin') || hashLower === '#admin') {
         setIsAdminLoginOpen(true);
       }
+
+      // 2. Referral code query check (?ref=CODE or ?referral=CODE or ?sponsor=CODE)
+      try {
+        const params = new URLSearchParams(search);
+        const hashParams = new URLSearchParams(hash.replace(/^#\/?/, '?'));
+        const refCode = params.get('ref') || params.get('referral') || params.get('referralCode') || params.get('sponsor') || hashParams.get('ref') || hashParams.get('referral');
+        if (refCode) {
+          const cleanRef = refCode.trim().toUpperCase();
+          sessionStorage.setItem('taskcoin_ref_code', cleanRef);
+          localStorage.setItem('taskcoin_ref_code', cleanRef);
+          const leg = params.get('leg') || hashParams.get('leg');
+          if (leg) {
+            sessionStorage.setItem('taskcoin_ref_leg', leg.trim().toUpperCase());
+          }
+        }
+      } catch (err) {
+        console.warn('Error reading URL parameters:', err);
+      }
     };
-    checkAdminQuery();
-    window.addEventListener('popstate', checkAdminQuery);
+    checkQueries();
+    window.addEventListener('popstate', checkQueries);
 
     const handleKeyDown = (e) => {
       // Prevent browser Backspace from navigating back or closing the page if not in an editable field

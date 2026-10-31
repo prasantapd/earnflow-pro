@@ -20,7 +20,14 @@ export default function AuthModal({ isOpen, onClose }) {
       showToast('Please fill in Name, Email, and Phone Number.', 'error');
       return;
     }
-    registerUser(formData);
+    const refCode = sessionStorage.getItem('taskcoin_ref_code') || localStorage.getItem('taskcoin_ref_code');
+    const leg = sessionStorage.getItem('taskcoin_ref_leg');
+    registerUser({
+      ...formData,
+      referralCode: refCode || undefined,
+      referredBy: refCode || undefined,
+      leg: leg || undefined,
+    });
     onClose();
   };
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   TrendingUp, 
   Coins, 
@@ -20,7 +20,7 @@ import {
 import { useApp } from '../context/AppContext';
 
 export default function AuthView({ onOpenAdminLogin }) {
-  const { registerUser, loginUser, requestPasswordReset, showToast } = useApp();
+  const { registerUser, loginUser, requestPasswordReset, showToast, allUsers } = useApp();
   const [isLoginMode, setIsLoginMode] = useState(false); // Default to register or toggle to login
 
   // Registration form (No OTP required!)
@@ -38,6 +38,41 @@ export default function AuthView({ onOpenAdminLogin }) {
     identifier: '', // email or phone
     password: '',
   });
+
+  // Auto-detect referral code from URL or storage
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const hashParams = new URLSearchParams((window.location.hash || '').replace(/^#\/?/, '?'));
+      const urlRef = params.get('ref') || params.get('referral') || params.get('referralCode') || params.get('sponsor') || hashParams.get('ref') || hashParams.get('referral');
+      const storedRef = sessionStorage.getItem('taskcoin_ref_code') || localStorage.getItem('taskcoin_ref_code');
+      const effectiveRef = (urlRef || storedRef || '').trim().toUpperCase();
+
+      if (effectiveRef) {
+        sessionStorage.setItem('taskcoin_ref_code', effectiveRef);
+        localStorage.setItem('taskcoin_ref_code', effectiveRef);
+        setRegForm((prev) => ({
+          ...prev,
+          referralCode: effectiveRef,
+        }));
+        setIsLoginMode(false); // Direct recipient straight to registration form
+
+        const leg = params.get('leg') || hashParams.get('leg');
+        if (leg) {
+          sessionStorage.setItem('taskcoin_ref_leg', leg.trim().toUpperCase());
+        }
+      }
+    } catch (e) {
+      console.warn('Error reading referral params:', e);
+    }
+  }, []);
+
+  // Sponsor lookup based on current referral code
+  const activeSponsor = (allUsers || []).find(
+    (u) => (u.referralCode && u.referralCode.toUpperCase() === regForm.referralCode.trim().toUpperCase()) ||
+           (u.phone && u.phone === regForm.referralCode.trim().toUpperCase()) ||
+           (u.id && u.id.toUpperCase() === regForm.referralCode.trim().toUpperCase())
+  );
 
   // Forgot Password modal state
   const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
@@ -65,15 +100,23 @@ export default function AuthView({ onOpenAdminLogin }) {
       ? regForm.email.trim().toLowerCase()
       : `${regForm.phone.replace(/\D/g, '') || 'user'}@earnflow.app`;
 
+    const legValue = sessionStorage.getItem('taskcoin_ref_leg') || undefined;
+    const refCodeSubmitted = regForm.referralCode.trim().toUpperCase() || undefined;
+
     const success = registerUser({
       name: regForm.name.trim(),
       email: emailValue,
       phone: regForm.phone.trim(),
       password: regForm.password,
-      referralCode: regForm.referralCode.trim().toUpperCase() || undefined,
+      referralCode: refCodeSubmitted,
+      referredBy: refCodeSubmitted,
+      leg: legValue,
     });
 
     if (success) {
+      sessionStorage.removeItem('taskcoin_ref_code');
+      sessionStorage.removeItem('taskcoin_ref_leg');
+      localStorage.removeItem('taskcoin_ref_code');
       showToast('Welcome! Your account is active. Instant login (No OTP required)!', 'success');
     }
   };
@@ -264,6 +307,32 @@ export default function AuthView({ onOpenAdminLogin }) {
         {/* REGISTRATION FORM */}
         {!isLoginMode && (
           <form onSubmit={handleRegisterSubmit}>
+            {regForm.referralCode && (
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(59, 130, 246, 0.1) 100%)',
+                border: '1px solid rgba(52, 211, 153, 0.4)',
+                padding: '0.85rem 1rem',
+                borderRadius: '12px',
+                marginBottom: '1.25rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem'
+              }}>
+                <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(52, 211, 153, 0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#34d399', flexShrink: 0 }}>
+                  <Gift size={20} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#34d399', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <span>Referral Invitation Verified</span>
+                    <CheckCircle2 size={15} />
+                  </div>
+                  <div style={{ fontSize: '0.76rem', color: '#cbd5e1', marginTop: '0.2rem' }}>
+                    Registering under sponsor: <strong style={{ color: '#fbbf24' }}>{activeSponsor ? `${activeSponsor.name} (${regForm.referralCode})` : regForm.referralCode}</strong>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="form-group" style={{ marginBottom: '1rem' }}>
               <label className="form-label">
                 <span>Full Name *</span>
@@ -356,20 +425,38 @@ export default function AuthView({ onOpenAdminLogin }) {
             </div>
 
             <div className="form-group" style={{ marginBottom: '1.25rem' }}>
-              <label className="form-label">
-                <span>Referral Code (Optional)</span>
-              </label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                <label className="form-label" style={{ marginBottom: 0 }}>
+                  <span>Referral Code (Optional)</span>
+                </label>
+                {regForm.referralCode && (
+                  <span style={{ fontSize: '0.72rem', color: '#34d399', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <CheckCircle2 size={12} /> Pre-filled from Referral Link
+                  </span>
+                )}
+              </div>
               <div style={{ position: 'relative' }}>
                 <Gift size={16} color="#fbbf24" style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)' }} />
                 <input
                   type="text"
                   placeholder="e.g. TC100 (optional)"
                   className="input-field"
-                  style={{ paddingLeft: '2.5rem', fontFamily: 'monospace', textTransform: 'uppercase' }}
+                  style={{ 
+                    paddingLeft: '2.5rem', 
+                    fontFamily: 'monospace', 
+                    textTransform: 'uppercase',
+                    borderColor: regForm.referralCode ? 'rgba(52, 211, 153, 0.5)' : undefined,
+                    background: regForm.referralCode ? 'rgba(16, 185, 129, 0.05)' : undefined
+                  }}
                   value={regForm.referralCode}
                   onChange={(e) => setRegForm({ ...regForm, referralCode: e.target.value.toUpperCase() })}
                 />
               </div>
+              {activeSponsor && (
+                <div style={{ fontSize: '0.74rem', color: '#34d399', marginTop: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                  <span>👤 Sponsor: <strong>{activeSponsor.name}</strong> ({activeSponsor.phone || activeSponsor.id})</span>
+                </div>
+              )}
             </div>
 
             <button 

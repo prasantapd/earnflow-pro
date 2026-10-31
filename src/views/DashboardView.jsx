@@ -76,14 +76,22 @@ export default function DashboardView({
   const potentialDailyReward = activeTodayTasks.reduce((sum, t) => sum + (t.reward || 0), 0);
 
   // Referral link
+  const baseUrl = (typeof window !== 'undefined' && window.location.origin && !window.location.origin.includes('localhost') && !window.location.origin.includes('127.0.0.1'))
+    ? window.location.origin
+    : 'https://earnflow-pro-3d5o.onrender.com';
   const referralCode = user?.referralCode || user?.phone || 'TASKCOIN';
-  const referralUrl = `${window.location.origin}/?ref=${referralCode}`;
+  const referralUrl = `${baseUrl}/?ref=${referralCode}`;
 
   const handleCopyReferral = () => {
     navigator.clipboard.writeText(referralUrl);
     setCopiedLink(true);
-    showToast(`Referral link copied! Share with friends to earn 5% binary matching bonuses.`);
+    showToast(`Referral link copied! Share with friends to earn binary matching bonuses.`);
     setTimeout(() => setCopiedLink(false), 2500);
+  };
+
+  const handleShareWhatsApp = () => {
+    const message = encodeURIComponent(`⚡ Join TaskCoin Pro and start earning daily task cash rewards! Register using my referral link: ${referralUrl}`);
+    window.open(`https://api.whatsapp.com/send?text=${message}`, '_blank');
   };
 
   return (
@@ -509,6 +517,17 @@ export default function DashboardView({
             >
               {copiedLink ? <Check size={14} /> : <Copy size={14} />}
               <span>{copiedLink ? 'Copied!' : 'Copy Link'}</span>
+            </button>
+
+            <button 
+              type="button" 
+              className="btn btn-emerald btn-sm"
+              onClick={handleShareWhatsApp}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.78rem', padding: '0.45rem 0.85rem' }}
+              title="Share Referral Link on WhatsApp"
+            >
+              <Share2 size={14} />
+              <span>WhatsApp</span>
             </button>
           </div>
         </div>

@@ -49,13 +49,22 @@ export default function MlmNetworkView() {
     rightMembers: [],
   };
 
-  const referralLink = `https://earnflow.pro/register?ref=${mlm.referralCode}&leg=${mlm.preferredLeg.toLowerCase()}`;
+  const baseUrl = (typeof window !== 'undefined' && window.location.origin && !window.location.origin.includes('localhost') && !window.location.origin.includes('127.0.0.1'))
+    ? window.location.origin
+    : 'https://earnflow-pro-3d5o.onrender.com';
+  const refCode = user?.referralCode || mlm.referralCode || user?.phone || 'TASKCOIN';
+  const referralLink = `${baseUrl}/?ref=${refCode}&leg=${(mlm.preferredLeg || 'auto').toLowerCase()}`;
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(referralLink);
     setCopied(true);
     showToast('Referral link copied to clipboard!');
     setTimeout(() => setCopied(false), 2500);
+  };
+
+  const handleShareWhatsApp = () => {
+    const text = encodeURIComponent(`⚡ Join TaskCoin Pro on my team and earn daily task rewards! Register here: ${referralLink}`);
+    window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
   };
 
   const handleSimulateDownline = (e) => {
@@ -207,10 +216,20 @@ export default function MlmNetworkView() {
             type="button"
             className="btn btn-primary"
             onClick={handleCopyLink}
-            style={{ minWidth: '130px' }}
+            style={{ minWidth: '120px' }}
           >
             {copied ? <CheckCircle2 size={16} /> : <Copy size={16} />}
             <span>{copied ? 'Copied!' : 'Copy Link'}</span>
+          </button>
+          <button
+            type="button"
+            className="btn btn-emerald"
+            onClick={handleShareWhatsApp}
+            style={{ minWidth: '120px', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            title="Share Referral Link on WhatsApp"
+          >
+            <Share2 size={16} />
+            <span>WhatsApp</span>
           </button>
         </div>
       </div>

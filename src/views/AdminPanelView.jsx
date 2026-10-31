@@ -889,6 +889,16 @@ export default function AdminPanelView() {
                                 {tableCopiedId === `id-${u.id}` ? <Check size={11} /> : <Copy size={11} />}
                               </button>
                             </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.2rem' }}>
+                              <span style={{ fontSize: '0.7rem', color: '#34d399', fontFamily: 'monospace', background: 'rgba(52, 211, 153, 0.1)', padding: '1px 5px', borderRadius: '4px' }}>
+                                Ref: {u.referralCode || '—'}
+                              </span>
+                            </div>
+                            {u.referredBy && (
+                              <div style={{ fontSize: '0.68rem', color: '#a78bfa', marginTop: '0.15rem' }}>
+                                👤 By: <strong>{u.sponsorName || u.referredBy}</strong>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </td>

@@ -190,7 +190,14 @@ export const db = {
     }
 
     const newId = `USR-${Math.floor(1000 + Math.random() * 9000)}`;
-    const refCode = userData.name.replace(/[^a-zA-Z]/g, '').toUpperCase().slice(0, 4) + Math.floor(100 + Math.random() * 900);
+    const myOwnRefCode = (userData.name.replace(/[^a-zA-Z]/g, '').toUpperCase().slice(0, 4) || 'USER') + Math.floor(100 + Math.random() * 900);
+
+    const sponsorCode = (userData.referredBy || userData.referralCode || '').trim().toUpperCase();
+    const sponsor = sponsorCode ? (current.allUsers || []).find(
+      u => (u.referralCode && u.referralCode.toUpperCase() === sponsorCode) || 
+           (u.phone && u.phone === sponsorCode) || 
+           (u.id && u.id.toUpperCase() === sponsorCode)
+    ) : null;
 
     const newUser = {
       id: newId,
@@ -198,7 +205,10 @@ export const db = {
       email: emailLower,
       phone: phoneTrim,
       password: userData.password,
-      referralCode: userData.referralCode || refCode,
+      referralCode: myOwnRefCode,
+      referredBy: sponsor ? sponsor.referralCode : (sponsorCode || null),
+      sponsorId: sponsor ? sponsor.id : null,
+      sponsorName: sponsor ? sponsor.name : null,
       joinedDate: new Date().toISOString(),
       status: 'PENDING_ACTIVATION',
       isActivated: false,

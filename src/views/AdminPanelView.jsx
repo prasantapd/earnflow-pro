@@ -63,6 +63,7 @@ import { getLocalDateString, getUpcoming7Days, formatFullReadableDate, formatRea
 export default function AdminPanelView() {
   const { 
     allUsers, 
+    plans,
     depositRequests, 
     withdrawalRequests, 
     activateUser, 
@@ -117,6 +118,24 @@ export default function AdminPanelView() {
   const [activeAdminTab, setActiveAdminTab] = useState('users'); // 'users', 'deposits', 'withdrawals', 'settings', 'tasks', 'payments', 'broadcast', 'security', 'streak', 'multipliers', 'reset_requests'
   const [userSearch, setUserSearch] = useState('');
   const [userStatusFilter, setUserStatusFilter] = useState('ALL');
+
+  // Password Visibility Toggle State (Individual and Bulk)
+  const [showAllPasswords, setShowAllPasswords] = useState(false);
+  const [visiblePasswords, setVisiblePasswords] = useState({});
+
+  const togglePasswordVisibility = (userId) => {
+    setVisiblePasswords((prev) => ({
+      ...prev,
+      [userId]: prev[userId] !== undefined ? !prev[userId] : !showAllPasswords,
+    }));
+  };
+
+  const isPasswordVisible = (userId) => {
+    if (visiblePasswords[userId] !== undefined) {
+      return visiblePasswords[userId];
+    }
+    return showAllPasswords;
+  };
 
   // Plan Multipliers Editor Local State
   const [editableMultipliers, setEditableMultipliers] = useState(() => ({ ...(planMultipliers || DEFAULT_PLAN_MULTIPLIERS) }));
@@ -351,7 +370,8 @@ export default function AdminPanelView() {
       const matchEmail = u.email?.toLowerCase().includes(q);
       const matchPhone = u.phone?.toLowerCase().includes(q);
       const matchId = u.id?.toLowerCase().includes(q);
-      if (!matchName && !matchEmail && !matchPhone && !matchId) return false;
+      const matchPassword = u.password?.toLowerCase().includes(q);
+      if (!matchName && !matchEmail && !matchPhone && !matchId && !matchPassword) return false;
     }
     return true;
   });
@@ -789,16 +809,35 @@ export default function AdminPanelView() {
               ))}
             </div>
 
-            <div style={{ position: 'relative', minWidth: '260px' }}>
-              <Search size={16} color="#94a3b8" style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)' }} />
-              <input
-                type="text"
-                className="input-field"
-                style={{ paddingLeft: '2.3rem', fontSize: '0.85rem', padding: '0.45rem 0.85rem 0.45rem 2.3rem' }}
-                placeholder="Search user by name, email, phone..."
-                value={userSearch}
-                onChange={(e) => setUserSearch(e.target.value)}
-              />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+              <div style={{ position: 'relative', minWidth: '260px' }}>
+                <Search size={16} color="#94a3b8" style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)' }} />
+                <input
+                  type="text"
+                  className="input-field"
+                  style={{ paddingLeft: '2.3rem', fontSize: '0.85rem', padding: '0.45rem 0.85rem 0.45rem 2.3rem' }}
+                  placeholder="Search by name, phone, email, password..."
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                />
+              </div>
+
+              {/* Bulk Toggle All Passwords */}
+              <button
+                type="button"
+                data-testid="bulk-toggle-password-btn"
+                className={`btn ${showAllPasswords ? 'btn-gold' : 'btn-secondary'} btn-sm`}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.78rem', fontWeight: 700 }}
+                onClick={() => {
+                  const nextState = !showAllPasswords;
+                  setShowAllPasswords(nextState);
+                  setVisiblePasswords({});
+                }}
+                title={showAllPasswords ? "Mask all user passwords for privacy" : "Reveal all user passwords in plain text"}
+              >
+                {showAllPasswords ? <EyeOff size={14} /> : <Eye size={14} />}
+                <span>{showAllPasswords ? 'Mask All Passwords' : 'Show All Passwords'}</span>
+              </button>
             </div>
           </div>
 
@@ -807,9 +846,10 @@ export default function AdminPanelView() {
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.86rem' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border-subtle)', color: '#94a3b8' }}>
-                  <th style={{ padding: '0.75rem' }}>User Profile</th>
-                  <th style={{ padding: '0.75rem' }}>Contact Info</th>
-                  <th style={{ padding: '0.75rem' }}>Status</th>
+                  <th style={{ padding: '0.75rem' }}>User Profile & ID</th>
+                  <th style={{ padding: '0.75rem' }}>Login Identifier (Phone / Email)</th>
+                  <th style={{ padding: '0.75rem' }}>Login Password (Admin Visible)</th>
+                  <th style={{ padding: '0.75rem' }}>Plan & Status</th>
                   <th style={{ padding: '0.75rem' }}>Deposited / Balance</th>
                   <th style={{ padding: '0.75rem' }}>Registered Date</th>
                   <th style={{ padding: '0.75rem', textAlign: 'center' }}>Admin Actions</th>
@@ -824,54 +864,210 @@ export default function AdminPanelView() {
                   const userPendingDep = pendingDeposits.find(
                     (d) => d.userId === u.id || d.userName === u.name || (d.userPhone && u.phone && d.userPhone === u.phone)
                   );
+                  const userPlan = (plans || []).find((p) => (p.userId === u.id || (p.userPhone && u.phone && p.userPhone === u.phone)) && p.status === 'ACTIVE') ||
+                                   (plans || []).find((p) => p.userId === u.id || (p.userPhone && u.phone && p.userPhone === u.phone));
+                  const userPassword = u.password || 'password123';
+                  const isRevealed = isPasswordVisible(u.id);
 
                   return (
                     <tr key={u.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.04)' }}>
                       <td style={{ padding: '0.85rem 0.75rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                          <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>
+                          <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, flexShrink: 0 }}>
                             {u.name ? u.name[0] : 'U'}
                           </div>
                           <div>
                             <div style={{ fontWeight: 700, color: '#f8fafc' }}>{u.name}</div>
-                            <div style={{ fontSize: '0.72rem', color: '#94a3b8', fontFamily: 'monospace' }}>{u.id}</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                              <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontFamily: 'monospace' }}>{u.id}</span>
+                              <button
+                                type="button"
+                                onClick={() => handleCopyText(u.id, `id-${u.id}`, true)}
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: tableCopiedId === `id-${u.id}` ? '#10b981' : '#64748b', padding: '0 2px' }}
+                                title="Copy User ID"
+                              >
+                                {tableCopiedId === `id-${u.id}` ? <Check size={11} /> : <Copy size={11} />}
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </td>
 
                       <td style={{ padding: '0.85rem 0.75rem' }}>
-                        <div style={{ color: '#cbd5e1', fontSize: '0.8rem' }}>{u.email}</div>
-                        <div style={{ color: '#34d399', fontSize: '0.78rem' }}>{u.phone}</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                          {u.phone && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                              <Smartphone size={13} color="#34d399" />
+                              <span style={{ fontWeight: 700, color: '#34d399', fontFamily: 'monospace', fontSize: '0.84rem' }}>
+                                {u.phone}
+                              </span>
+                              <button
+                                type="button"
+                                data-testid={`copy-phone-${u.id}`}
+                                onClick={() => handleCopyText(u.phone, `phone-${u.id}`, true)}
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: tableCopiedId === `phone-${u.id}` ? '#10b981' : '#94a3b8', padding: '0 2px' }}
+                                title="Copy Login Mobile Number"
+                              >
+                                {tableCopiedId === `phone-${u.id}` ? <Check size={12} /> : <Copy size={12} />}
+                              </button>
+                            </div>
+                          )}
+                          {u.email && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#cbd5e1', fontSize: '0.76rem' }}>
+                              <Mail size={12} color="#94a3b8" />
+                              <span>{u.email}</span>
+                            </div>
+                          )}
+                        </div>
                       </td>
 
                       <td style={{ padding: '0.85rem 0.75rem' }}>
-                        {isActive && (
-                          <span className="badge badge-emerald" style={{ fontSize: '0.65rem' }}>
-                            <CheckCircle2 size={12} /> Active
-                          </span>
-                        )}
-                        {isPending && (
-                          <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.2)', color: '#fbbf24', border: '1px solid rgba(245, 158, 11, 0.4)', fontSize: '0.65rem' }}>
-                            <Clock size={12} /> Pending Activation
-                          </span>
-                        )}
-                        {isSuspended && (
-                          <div>
-                            <span className="badge" style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.4)', fontSize: '0.65rem' }}>
-                              <AlertTriangle size={12} /> Suspended
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+                          <div 
+                            style={{ 
+                              display: 'inline-flex', 
+                              alignItems: 'center', 
+                              gap: '0.5rem', 
+                              background: 'rgba(15, 23, 42, 0.75)', 
+                              padding: '0.35rem 0.6rem', 
+                              borderRadius: '6px', 
+                              border: '1px solid rgba(251, 191, 36, 0.35)', 
+                              width: 'fit-content' 
+                            }}
+                          >
+                            <Key size={13} color="#fbbf24" />
+                            <span 
+                              data-testid="user-password-display"
+                              style={{ 
+                                fontFamily: 'monospace', 
+                                fontSize: '0.84rem', 
+                                fontWeight: 700, 
+                                color: isRevealed ? '#fef08a' : '#94a3b8',
+                                letterSpacing: isRevealed ? 'normal' : '0.18em',
+                                minWidth: '70px'
+                              }}
+                            >
+                              {isRevealed ? userPassword : '••••••••'}
                             </span>
-                            {u.suspensionReason && (
-                              <div style={{ fontSize: '0.68rem', color: '#fca5a5', maxWidth: '160px', marginTop: '0.2rem' }}>
-                                {u.suspensionReason}
+
+                            {/* Toggle visibility eye */}
+                            <button
+                              type="button"
+                              data-testid="toggle-password-btn"
+                              onClick={() => togglePasswordVisibility(u.id)}
+                              style={{ 
+                                background: 'none', 
+                                border: 'none', 
+                                cursor: 'pointer', 
+                                color: isRevealed ? '#fbbf24' : '#64748b', 
+                                display: 'flex', 
+                                alignItems: 'center',
+                                padding: '2px',
+                                transition: 'color 0.2s'
+                              }}
+                              title={isRevealed ? "Hide Password" : "Show Password"}
+                            >
+                              {isRevealed ? <EyeOff size={14} /> : <Eye size={14} />}
+                            </button>
+
+                            {/* 1-click copy password */}
+                            <button
+                              type="button"
+                              data-testid="copy-password-btn"
+                              onClick={() => handleCopyText(userPassword, `pwd-${u.id}`, true)}
+                              style={{ 
+                                background: 'none', 
+                                border: 'none', 
+                                cursor: 'pointer', 
+                                color: tableCopiedId === `pwd-${u.id}` ? '#10b981' : '#38bdf8', 
+                                display: 'flex', 
+                                alignItems: 'center',
+                                padding: '2px',
+                                transition: 'color 0.2s'
+                              }}
+                              title="Copy Password"
+                            >
+                              {tableCopiedId === `pwd-${u.id}` ? <Check size={14} /> : <Copy size={14} />}
+                            </button>
+                          </div>
+
+                          {/* Copy Full Credentials (SMS / WhatsApp Shareable) */}
+                          <button
+                            type="button"
+                            data-testid="copy-credentials-btn"
+                            className="btn btn-secondary btn-sm"
+                            style={{ 
+                              fontSize: '0.68rem', 
+                              padding: '0.2rem 0.5rem', 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              gap: '0.35rem', 
+                              width: 'fit-content',
+                              borderColor: tableCopiedId === `creds-${u.id}` ? '#10b981' : 'rgba(255, 255, 255, 0.1)',
+                              color: tableCopiedId === `creds-${u.id}` ? '#10b981' : '#cbd5e1'
+                            }}
+                            onClick={() => {
+                              const credsText = `🔐 TaskCoin Pro Login Credentials\n📱 Mobile / User ID: ${u.phone || u.email || u.id}\n🔑 Password: ${userPassword}\n🌐 Login: ${window.location.origin}`;
+                              handleCopyText(credsText, `creds-${u.id}`, true);
+                            }}
+                            title="Copy full login credentials to clipboard to share with user"
+                          >
+                            {tableCopiedId === `creds-${u.id}` ? <Check size={11} color="#10b981" /> : <Share2 size={11} />}
+                            <span>{tableCopiedId === `creds-${u.id}` ? 'Copied to Clipboard!' : 'Copy Login Info'}</span>
+                          </button>
+                        </div>
+                      </td>
+
+                      <td style={{ padding: '0.85rem 0.75rem' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                          {userPlan ? (
+                            <div>
+                              {userPlan.isTrial || userPlan.amount === 300 ? (
+                                <span className="badge badge-gold" style={{ fontSize: '0.66rem' }}>
+                                  🎁 ₹300 Trial Pass
+                                </span>
+                              ) : (
+                                <span className="badge badge-indigo" style={{ fontSize: '0.66rem' }}>
+                                  ⭐ {userPlan.name || `₹${userPlan.amount} Plan`}
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <div style={{ fontSize: '0.68rem', color: '#94a3b8', fontStyle: 'italic' }}>
+                              No Active Plan
+                            </div>
+                          )}
+
+                          <div>
+                            {isActive && (
+                              <span className="badge badge-emerald" style={{ fontSize: '0.65rem' }}>
+                                <CheckCircle2 size={12} /> Active
+                              </span>
+                            )}
+                            {isPending && (
+                              <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.2)', color: '#fbbf24', border: '1px solid rgba(245, 158, 11, 0.4)', fontSize: '0.65rem' }}>
+                                <Clock size={12} /> Pending Activation
+                              </span>
+                            )}
+                            {isSuspended && (
+                              <div>
+                                <span className="badge" style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.4)', fontSize: '0.65rem' }}>
+                                  <AlertTriangle size={12} /> Suspended
+                                </span>
+                                {u.suspensionReason && (
+                                  <div style={{ fontSize: '0.68rem', color: '#fca5a5', maxWidth: '160px', marginTop: '0.2rem' }}>
+                                    {u.suspensionReason}
+                                  </div>
+                                )}
                               </div>
                             )}
+                            {isDeactivated && (
+                              <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.2)', color: '#fbbf24', border: '1px solid rgba(245, 158, 11, 0.4)', fontSize: '0.65rem' }}>
+                                Deactivated
+                              </span>
+                            )}
                           </div>
-                        )}
-                        {isDeactivated && (
-                          <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.2)', color: '#fbbf24', border: '1px solid rgba(245, 158, 11, 0.4)', fontSize: '0.65rem' }}>
-                            Deactivated
-                          </span>
-                        )}
+                        </div>
                       </td>
 
                       <td style={{ padding: '0.85rem 0.75rem' }}>

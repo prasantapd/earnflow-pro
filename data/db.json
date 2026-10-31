@@ -133,11 +133,11 @@
       "password": "111111",
       "referralCode": "HDUD829",
       "joinedDate": "2026-10-29T16:02:21.971Z",
-      "status": "PENDING_ACTIVATION",
-      "isActivated": false,
+      "status": "ACTIVE",
+      "isActivated": true,
       "suspensionReason": "",
-      "isVerified": false,
-      "totalDeposited": 0,
+      "isVerified": true,
+      "totalDeposited": 3500,
       "walletBalance": 0
     },
     {
@@ -346,7 +346,7 @@
       "previousPlanId": null,
       "utr": "UTR3289753762",
       "submittedAt": "2026-10-29T16:02:33.762Z",
-      "status": "PENDING",
+      "status": "APPROVED",
       "rejectionReason": ""
     },
     {
@@ -628,6 +628,26 @@
   ],
   "plans": [
     {
+      "id": "PLN-6179",
+      "userId": "USR-9370",
+      "userName": "Hdudj",
+      "userPhone": "1112223330",
+      "title": "90 Days Membership Tier",
+      "amount": 3500,
+      "months": 3,
+      "days": 90,
+      "startDate": "2026-10-31T08:59:19.717Z",
+      "maturityDate": "2027-01-29T08:59:19.717Z",
+      "totalExpectedGain": 5075,
+      "dailyQuota": 17.5,
+      "earnedSoFar": 0,
+      "status": "active",
+      "isUpgrade": false,
+      "isTrial": false,
+      "depositRef": "DEP-9969",
+      "utr": "UTR3289753762"
+    },
+    {
       "id": "PLN-1708",
       "userId": "USR-8153",
       "userName": "Trial User 99",
@@ -796,27 +816,6 @@
       "isUpgrade": false,
       "depositRef": "DEP-2178",
       "utr": "UTR3288465005"
-    },
-    {
-      "id": "PLN-5335",
-      "userId": "USR-9370",
-      "userName": "Hdudj",
-      "userPhone": "1112223330",
-      "title": "90 Days Membership Tier",
-      "amount": 3500,
-      "months": 3,
-      "days": 90,
-      "startDate": "2026-10-29T16:02:33.762Z",
-      "maturityDate": "2027-01-27T16:02:33.762Z",
-      "totalExpectedGain": 669,
-      "estimatedTotalIncome": 669,
-      "dailyQuota": 7.43,
-      "estimatedDailyQuota": 7.43,
-      "earnedSoFar": 0,
-      "status": "pending_approval",
-      "isUpgrade": false,
-      "depositRef": "DEP-9969",
-      "utr": "UTR3289753762"
     },
     {
       "id": "PLN-9710",
@@ -1115,5 +1114,14 @@
     "50000": 25
   },
   "version": 1,
-  "lastUpdated": 1793436766803
+  "lastUpdated": 1793437723738,
+  "tasks": [
+    {
+      "id": "task-test-custom",
+      "title": "Custom Admin Task",
+      "baseReward": 75,
+      "multiplierOverride": 2,
+      "duration": 45
+    }
+  ]
 }
